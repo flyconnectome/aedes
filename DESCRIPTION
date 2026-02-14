@@ -1,0 +1,39 @@
+Type: Package
+Package: aedes
+Title: Support Access to the Aedes Connectome Dataset
+Version: 0.0.0.9000
+Authors@R:
+    person(given = "Gregory",
+           family = "Jefferis",
+           role = c("aut", "cre"),
+           email = "jefferis@gmail.com",
+           comment = c(ORCID = "0000-0002-0587-9355"))
+Description: Access to the in progress Aedes aegypti dataset. Organised as a 
+    thin wrapper around the fafbseg package. Includes support for adding aedes
+    as a dataset supported by coconatfly.
+License: GPL-3
+Depends:
+    R (>= 4.1.0),
+    fafbseg
+Imports:
+    dplyr,
+    pbapply,
+    withr,
+    nat,
+    igraph,
+    memoise
+Suggests:
+    testthat (>= 3.0.0),
+    coconat
+Enhances:
+    coconatfly
+Config/testthat/edition: 3
+Remotes:
+    natverse/nat,
+    natverse/fafbseg,
+    natverse/coconat,
+    natverse/coconatfly
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
