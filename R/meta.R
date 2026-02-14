@@ -1,3 +1,26 @@
+#' Return metadata about Aedes neurons from FlyTable
+#'
+#' @param ids Root IDs (character/int64) or a query string like `"class:ALPN"`.
+#' @param ignore.case For query strings, whether to ignore case.
+#' @param fixed For query strings, whether to treat queries as fixed strings
+#'   rather than regular expressions (default FALSE).
+#' @param version Optional CAVE materialisation version.
+#' @param timestamp Optional CAVE timestamp.
+#' @param unique Whether to drop duplicate `root_id` rows (with duplicates
+#'   attached as an attribute).
+#' @return For `aedes_meta()`, a data.frame of metadata. For `aedes_ids()`, a
+#'   vector of root IDs.
+#'
+#' @details When `version` or `timestamp` are specified, ids in the returned
+#'   data frame will be updated.
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' aedes_meta("class:ALPN")
+#' aedes_ids("class:ALPN")
+#' }
 aedes_meta <- function(ids = NULL, ignore.case = FALSE, fixed = FALSE, version = NULL,
                        timestamp = NULL, unique = FALSE) {
 
@@ -86,6 +109,8 @@ aedes_get_version <- function(which = getOption("aedes.version", default = "late
   ))
 }
 
+#' @rdname aedes_meta
+#' @export
 aedes_ids <- function(ids, ignore.case = FALSE, fixed = FALSE, unique = FALSE,
                       version = NULL, timestamp = NULL) {
   vi = aedes_get_version("now", timestamp = timestamp, version = version)
