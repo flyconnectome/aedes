@@ -44,8 +44,269 @@
   </div>
 </nav><div class="container template-home">
 <div class="row">
-  <main id="main" class="col-md-9">
-Access to the in progress Aedes aegypti dataset. Organised as a thin wrapper around the fafbseg package. Includes support for adding aedes as a dataset supported by coconatfly.
+  <main id="main" class="col-md-9"><div class="section level1">
+<div class="page-header"><h1 id="aedes">aedes<a class="anchor" aria-label="anchor" href="#aedes"></a>
+</h1></div>
+<!-- badges: start -->
+
+<p>The <strong>aedes</strong> package provides programmatic access to the in progress Aedes aegypti connectome dataset. Note that this dataset is still in an early state of proofreading and annotation and access is currently in a limited pre-release testing phase as we develop a robust community and infrastructure.</p>
+<div class="section level2">
+<h2 id="implementation-details">Implementation Details<a class="anchor" aria-label="anchor" href="#implementation-details"></a>
+</h2>
+<p>The package is delivered as a thin wrapper around <a href="https://natverse.org/natverse/fafbseg" class="external-link">fafbseg</a> with optional registration for <a href="https://natverse.org/coconatfly" class="external-link">coconatfly</a>. This will be familiar to users of the <a href="https://github.com/flyconnectome/fancr" class="external-link">fancr</a> and <a href="https://github.com/flyconnectome/bancr" class="external-link">bancr</a> packages.</p>
+<p>As a CAVE package you must have access and an appropriate token recorded. Metadata for this project is stored in a seatable web-accessible database accessed via <code>fafbseg::flytable_*</code> functions which are wrapped by this package.</p>
+<p>CAVE datasets have a concept of the active <code>materialisation version</code> which defines the state of the segmentation used for analysis. Alternatively a <code>timestamp</code> can be specified to allow an exact point in time to be used.</p>
+</div>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
+<p>The package must be installed from github:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"natmanager"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"natmanager"</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="fu">natmanager</span><span class="fu">::</span><span class="fu">install</span><span class="op">(</span>pkgs <span class="op">=</span> <span class="st">"flyconnectome/aedes"</span><span class="op">)</span></span></code></pre></div>
+<p>You also need to do some additional one time setup.</p>
+<p>CAVe</p>
+<p>In order to start using flytable, you must get an API token. There doesn’t seem to be a convenient way to do this from the seatable web interface but you can get one by calling <code><a href="https://rdrr.io/pkg/fafbseg/man/flytable_login.html" class="external-link">flytable_set_token()</a></code> with your flytable user and password. This should be a once only step. Thereafter you should have a <code>FLYTABLE_TOKEN</code> environment variable set in your <code>.Renviron</code> file.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># required </span></span>
+<span><span class="fu">fafbseg</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/fafbseg/man/simple_python.html" class="external-link">simple_python</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Will open browser to get new token</span></span>
+<span><span class="fu">fafbseg</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/fafbseg/man/flywire_set_token.html" class="external-link">flywire_set_token</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># Writes a known token to correct location</span></span>
+<span><span class="fu">fafbseg</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/fafbseg/man/flywire_set_token.html" class="external-link">flywire_set_token</a></span><span class="op">(</span><span class="st">"2f88e16c4f21bfcb290b2a8288c05bd0"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">fafbseg</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/fafbseg/man/flytable_login.html" class="external-link">flytable_set_token</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="setup-for-coconatfly">Setup for coconatfly<a class="anchor" aria-label="anchor" href="#setup-for-coconatfly"></a>
+</h2>
+<p>We recommend using coconatfly for most analysis. At the moment you must tell coconatfly about the aedes dataset once per R session.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/flyconnectome/aedes" class="external-link">aedes</a></span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="do">## Loading required package: fafbseg</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="do">## Loading required package: nat</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="do">## Loading required package: rgl</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="do">## Registered S3 method overwritten by 'nat':</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="do">##   method             from</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="do">##   as.mesh3d.ashape3d rgl</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="do">## Attaching package: 'nat'</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="do">## The following object is masked from 'package:rgl':</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="do">##     wire3d</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="do">## The following objects are masked from 'package:base':</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="do">##     intersect, setdiff, union</span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="do">## Run dr_fafbseg() for a status report on your installation</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/natverse/coconatfly" class="external-link">coconatfly</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># once per session</span></span>
+<span><span class="fu"><a href="reference/register_aedes_coconat.html">register_aedes_coconat</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="examples">Examples<a class="anchor" aria-label="anchor" href="#examples"></a>
+</h2>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="do">## Attaching package: 'dplyr'</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="do">## The following objects are masked from 'package:nat':</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="do">##     intersect, setdiff, union</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="do">## The following objects are masked from 'package:stats':</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="do">##     filter, lag</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="do">## The following objects are masked from 'package:base':</span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="do">##     intersect, setdiff, setequal, union</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># 1) List neurons with class ALPN</span></span>
+<span><span class="va">alpn_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_meta.html" class="external-link">cf_meta</a></span><span class="op">(</span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_ids.html" class="external-link">cf_ids</a></span><span class="op">(</span>aedes <span class="op">=</span> <span class="st">"/class:ALPN"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="do">## Updating 19 ids</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="do">## flywire_rootid_cached: Looking up 19 missing keys</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="do">## Updating 245 ids</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="do">## flywire_rootid_cached: Looking up 226 missing keys</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">alpn_meta</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">count</a></span><span class="op">(</span><span class="va">subclass</span>, <span class="va">subsubclass</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="do">##   subclass subsubclass   n</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="do">## 1     ALPN      BI_MUL  21</span></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="do">## 2     ALPN      BI_UNI   8</span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="do">## 3     ALPN      II_MUL 214</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="do">## 4     ALPN      II_UNI 329</span></span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">alpn_meta</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">count</a></span><span class="op">(</span><span class="va">type</span>, <span class="va">side</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">tidyr</span><span class="fu">::</span><span class="fu">spread</span><span class="op">(</span><span class="va">side</span>, <span class="va">n</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="do">##           type   L  M   R</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="do">## 1  G0_MD1_ilPN   1 NA   1</span></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="do">## 2  G0_MD1_l2PN   1 NA   1</span></span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="do">## 3      G1_ilPN   1 NA   1</span></span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a><span class="do">## 4       G1_vPN   1 NA   1</span></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a><span class="do">## 5    G10_il2PN   1 NA   1</span></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="do">## 6     G10_ppPN   1 NA   1</span></span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a><span class="do">## 7      G11_lPN   3 NA   4</span></span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a><span class="do">## 8     G12_lvPN   1 NA   1</span></span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a><span class="do">## 9    G13_lPN_a   2 NA   1</span></span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="do">## 10   G13_lPN_b   3 NA   2</span></span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="do">## 11  G13_lvPN_a   2 NA   2</span></span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a><span class="do">## 12  G13_lvPN_b   2 NA   2</span></span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="do">## 13     G14_lPN   1 NA   1</span></span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a><span class="do">## 14    G15_adPN   1 NA   1</span></span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a><span class="do">## 15    G16_adPN   1 NA   1</span></span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a><span class="do">## 16     G18_lPN   1 NA   1</span></span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a><span class="do">## 17    G19_adPN   2 NA   2</span></span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a><span class="do">## 18      G2_lPN   1 NA   1</span></span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a><span class="do">## 19     G20_lPN   2 NA   2</span></span>
+<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a><span class="do">## 20     G21_lPN   3 NA   3</span></span>
+<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a><span class="do">## 21    G22_adPN   1 NA   1</span></span>
+<span id="cb13-23"><a href="#cb13-23" tabindex="-1"></a><span class="do">## 22     G23_lPN   3 NA   3</span></span>
+<span id="cb13-24"><a href="#cb13-24" tabindex="-1"></a><span class="do">## 23     G24_lPN   2 NA   2</span></span>
+<span id="cb13-25"><a href="#cb13-25" tabindex="-1"></a><span class="do">## 24     G25_lPN   1 NA   1</span></span>
+<span id="cb13-26"><a href="#cb13-26" tabindex="-1"></a><span class="do">## 25     G26_lPN   1 NA   1</span></span>
+<span id="cb13-27"><a href="#cb13-27" tabindex="-1"></a><span class="do">## 26    G27_adPN   1 NA   1</span></span>
+<span id="cb13-28"><a href="#cb13-28" tabindex="-1"></a><span class="do">## 27    G28_adPN   1 NA   1</span></span>
+<span id="cb13-29"><a href="#cb13-29" tabindex="-1"></a><span class="do">## 28    G29_adPN   1 NA   1</span></span>
+<span id="cb13-30"><a href="#cb13-30" tabindex="-1"></a><span class="do">## 29    G29_lvPN   1 NA  NA</span></span>
+<span id="cb13-31"><a href="#cb13-31" tabindex="-1"></a><span class="do">## 30     G3_adPN   1 NA   1</span></span>
+<span id="cb13-32"><a href="#cb13-32" tabindex="-1"></a><span class="do">## 31      G3_vPN   1 NA   1</span></span>
+<span id="cb13-33"><a href="#cb13-33" tabindex="-1"></a><span class="do">## 32    G30_adPN   1 NA   1</span></span>
+<span id="cb13-34"><a href="#cb13-34" tabindex="-1"></a><span class="do">## 33     G31_lPN   4 NA   3</span></span>
+<span id="cb13-35"><a href="#cb13-35" tabindex="-1"></a><span class="do">## 34   G32_lPN_a   4 NA   5</span></span>
+<span id="cb13-36"><a href="#cb13-36" tabindex="-1"></a><span class="do">## 35   G32_lPN_b   4 NA   5</span></span>
+<span id="cb13-37"><a href="#cb13-37" tabindex="-1"></a><span class="do">## 36     G33_lPN   5 NA   5</span></span>
+<span id="cb13-38"><a href="#cb13-38" tabindex="-1"></a><span class="do">## 37     G34_lPN   1 NA   1</span></span>
+<span id="cb13-39"><a href="#cb13-39" tabindex="-1"></a><span class="do">## 38     G35_lPN   1 NA   2</span></span>
+<span id="cb13-40"><a href="#cb13-40" tabindex="-1"></a><span class="do">## 39     G35_vPN   2 NA   1</span></span>
+<span id="cb13-41"><a href="#cb13-41" tabindex="-1"></a><span class="do">## 40    G36_adPN   2 NA   2</span></span>
+<span id="cb13-42"><a href="#cb13-42" tabindex="-1"></a><span class="do">## 41     G36_vPN   2 NA   2</span></span>
+<span id="cb13-43"><a href="#cb13-43" tabindex="-1"></a><span class="do">## 42    G37_adPN   1 NA   1</span></span>
+<span id="cb13-44"><a href="#cb13-44" tabindex="-1"></a><span class="do">## 43    G38_adPN   2 NA   2</span></span>
+<span id="cb13-45"><a href="#cb13-45" tabindex="-1"></a><span class="do">## 44    G39_adPN   2 NA   2</span></span>
+<span id="cb13-46"><a href="#cb13-46" tabindex="-1"></a><span class="do">## 45      G4_lPN   1 NA   1</span></span>
+<span id="cb13-47"><a href="#cb13-47" tabindex="-1"></a><span class="do">## 46    G40_adPN   2 NA   2</span></span>
+<span id="cb13-48"><a href="#cb13-48" tabindex="-1"></a><span class="do">## 47    G40_lvPN   6 NA   6</span></span>
+<span id="cb13-49"><a href="#cb13-49" tabindex="-1"></a><span class="do">## 48    G41_adPN   1 NA   2</span></span>
+<span id="cb13-50"><a href="#cb13-50" tabindex="-1"></a><span class="do">## 49    G41_lvPN   1 NA   1</span></span>
+<span id="cb13-51"><a href="#cb13-51" tabindex="-1"></a><span class="do">## 50    G42_adPN   1 NA   1</span></span>
+<span id="cb13-52"><a href="#cb13-52" tabindex="-1"></a><span class="do">## 51    G43_adPN   1 NA   1</span></span>
+<span id="cb13-53"><a href="#cb13-53" tabindex="-1"></a><span class="do">## 52    G44_adPN   3 NA   2</span></span>
+<span id="cb13-54"><a href="#cb13-54" tabindex="-1"></a><span class="do">## 53    G45_adPN   1 NA   2</span></span>
+<span id="cb13-55"><a href="#cb13-55" tabindex="-1"></a><span class="do">## 54     G46_lPN   3 NA   3</span></span>
+<span id="cb13-56"><a href="#cb13-56" tabindex="-1"></a><span class="do">## 55     G47_lPN   2 NA   2</span></span>
+<span id="cb13-57"><a href="#cb13-57" tabindex="-1"></a><span class="do">## 56    G48_adPN   2 NA   2</span></span>
+<span id="cb13-58"><a href="#cb13-58" tabindex="-1"></a><span class="do">## 57     G48_vPN   1 NA   1</span></span>
+<span id="cb13-59"><a href="#cb13-59" tabindex="-1"></a><span class="do">## 58     G49_lPN   4 NA   4</span></span>
+<span id="cb13-60"><a href="#cb13-60" tabindex="-1"></a><span class="do">## 59     G49_vPN   1 NA   1</span></span>
+<span id="cb13-61"><a href="#cb13-61" tabindex="-1"></a><span class="do">## 60     G5_adPN   1 NA   1</span></span>
+<span id="cb13-62"><a href="#cb13-62" tabindex="-1"></a><span class="do">## 61    G50_adPN   1 NA   1</span></span>
+<span id="cb13-63"><a href="#cb13-63" tabindex="-1"></a><span class="do">## 62    G51_adPN   2 NA   3</span></span>
+<span id="cb13-64"><a href="#cb13-64" tabindex="-1"></a><span class="do">## 63    G52_adPN   2 NA   2</span></span>
+<span id="cb13-65"><a href="#cb13-65" tabindex="-1"></a><span class="do">## 64     G53_lPN   1 NA   1</span></span>
+<span id="cb13-66"><a href="#cb13-66" tabindex="-1"></a><span class="do">## 65     G53_vPN   9 NA   4</span></span>
+<span id="cb13-67"><a href="#cb13-67" tabindex="-1"></a><span class="do">## 66    G54_adPN   3 NA   3</span></span>
+<span id="cb13-68"><a href="#cb13-68" tabindex="-1"></a><span class="do">## 67    G56_adPN   2 NA   2</span></span>
+<span id="cb13-69"><a href="#cb13-69" tabindex="-1"></a><span class="do">## 68    G57_adPN   1 NA   1</span></span>
+<span id="cb13-70"><a href="#cb13-70" tabindex="-1"></a><span class="do">## 69    G58_adPN   1 NA   1</span></span>
+<span id="cb13-71"><a href="#cb13-71" tabindex="-1"></a><span class="do">## 70    G59_adPN   3 NA   1</span></span>
+<span id="cb13-72"><a href="#cb13-72" tabindex="-1"></a><span class="do">## 71     G59_vPN   2 NA   2</span></span>
+<span id="cb13-73"><a href="#cb13-73" tabindex="-1"></a><span class="do">## 72    G60_adPN   1 NA   3</span></span>
+<span id="cb13-74"><a href="#cb13-74" tabindex="-1"></a><span class="do">## 73     G61_lPN   2 NA   3</span></span>
+<span id="cb13-75"><a href="#cb13-75" tabindex="-1"></a><span class="do">## 74     G62_lPN   1 NA   1</span></span>
+<span id="cb13-76"><a href="#cb13-76" tabindex="-1"></a><span class="do">## 75     G63_lPN   3 NA   2</span></span>
+<span id="cb13-77"><a href="#cb13-77" tabindex="-1"></a><span class="do">## 76     G64_lPN   2 NA   2</span></span>
+<span id="cb13-78"><a href="#cb13-78" tabindex="-1"></a><span class="do">## 77    G65_adPN   1 NA   1</span></span>
+<span id="cb13-79"><a href="#cb13-79" tabindex="-1"></a><span class="do">## 78    G66_adPN   2 NA   2</span></span>
+<span id="cb13-80"><a href="#cb13-80" tabindex="-1"></a><span class="do">## 79    G67_adPN   2 NA   2</span></span>
+<span id="cb13-81"><a href="#cb13-81" tabindex="-1"></a><span class="do">## 80    G68_adPN   1 NA   1</span></span>
+<span id="cb13-82"><a href="#cb13-82" tabindex="-1"></a><span class="do">## 81    G69_adPN   2 NA   1</span></span>
+<span id="cb13-83"><a href="#cb13-83" tabindex="-1"></a><span class="do">## 82     G7_adPN   5 NA   6</span></span>
+<span id="cb13-84"><a href="#cb13-84" tabindex="-1"></a><span class="do">## 83    G70_lvPN   1 NA   1</span></span>
+<span id="cb13-85"><a href="#cb13-85" tabindex="-1"></a><span class="do">## 84     G71_lPN   3 NA   2</span></span>
+<span id="cb13-86"><a href="#cb13-86" tabindex="-1"></a><span class="do">## 85    G72_adPN   1 NA   1</span></span>
+<span id="cb13-87"><a href="#cb13-87" tabindex="-1"></a><span class="do">## 86    G73_adPN   1 NA   1</span></span>
+<span id="cb13-88"><a href="#cb13-88" tabindex="-1"></a><span class="do">## 87    G74_adPN   1 NA   1</span></span>
+<span id="cb13-89"><a href="#cb13-89" tabindex="-1"></a><span class="do">## 88    G75_adPN   2 NA   2</span></span>
+<span id="cb13-90"><a href="#cb13-90" tabindex="-1"></a><span class="do">## 89    G76_adPN   1 NA   1</span></span>
+<span id="cb13-91"><a href="#cb13-91" tabindex="-1"></a><span class="do">## 90     G8_adPN   1 NA   1</span></span>
+<span id="cb13-92"><a href="#cb13-92" tabindex="-1"></a><span class="do">## 91     G8_lvPN   1 NA  NA</span></span>
+<span id="cb13-93"><a href="#cb13-93" tabindex="-1"></a><span class="do">## 92      G8_vPN   3 NA   2</span></span>
+<span id="cb13-94"><a href="#cb13-94" tabindex="-1"></a><span class="do">## 93     G9_adPN   1 NA   1</span></span>
+<span id="cb13-95"><a href="#cb13-95" tabindex="-1"></a><span class="do">## 94        &lt;NA&gt; 117  2 116</span></span></code></pre></div>
+<p>Select a smaller set of PN neurons with type matching G2X</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">gpn_ids</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_meta.html" class="external-link">cf_meta</a></span><span class="op">(</span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_ids.html" class="external-link">cf_ids</a></span><span class="op">(</span>aedes <span class="op">=</span> <span class="st">"/type:G2[0-9].*PN"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="do">## Updating 3 ids</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a></span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="do">## Updating 245 ids</span></span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">gpn_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_meta.html" class="external-link">cf_meta</a></span><span class="op">(</span><span class="va">gpn_ids</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="do">## Updating 245 ids</span></span></code></pre></div>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">gpn_meta</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">count</a></span><span class="op">(</span><span class="va">type</span>, <span class="va">side</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">tidyr</span><span class="fu">::</span><span class="fu">spread</span><span class="op">(</span><span class="va">side</span>, <span class="va">n</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb19"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a><span class="do">##        type L  R</span></span>
+<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a><span class="do">## 1   G20_lPN 2  2</span></span>
+<span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a><span class="do">## 2   G21_lPN 3  3</span></span>
+<span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a><span class="do">## 3  G22_adPN 1  1</span></span>
+<span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a><span class="do">## 4   G23_lPN 3  3</span></span>
+<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a><span class="do">## 5   G24_lPN 2  2</span></span>
+<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a><span class="do">## 6   G25_lPN 1  1</span></span>
+<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a><span class="do">## 7   G26_lPN 1  1</span></span>
+<span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a><span class="do">## 8  G27_adPN 1  1</span></span>
+<span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a><span class="do">## 9  G28_adPN 1  1</span></span>
+<span id="cb19-11"><a href="#cb19-11" tabindex="-1"></a><span class="do">## 10 G29_adPN 1  1</span></span>
+<span id="cb19-12"><a href="#cb19-12" tabindex="-1"></a><span class="do">## 11 G29_lvPN 1 NA</span></span></code></pre></div>
+<p>Now we can cluster by connectivity. This depends on partner neurons having some kind of identity recorded, typically via the type column (the default) or the numeric group column (which is often set even when a formal type has not been proposed). At the time of writing PN input partners (ORNs) are well typed but downstream partners less so. So let’s just use input partners and also restrict to neurons that have already been typed with n=2 neurons in the type so that we have a small plot.</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">gpn_meta</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">add_count</a></span><span class="op">(</span><span class="va">type</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">n</span><span class="op">==</span><span class="fl">2</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> </span>
+<span>  <span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span>partners <span class="op">=</span> <span class="st">'in'</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb21"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" tabindex="-1"></a><span class="do">## Updating 245 ids</span></span>
+<span id="cb21-2"><a href="#cb21-2" tabindex="-1"></a><span class="do">## Updating 245 ids</span></span>
+<span id="cb21-3"><a href="#cb21-3" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" tabindex="-1"></a><span class="do">## Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =</span></span>
+<span id="cb21-5"><a href="#cb21-5" tabindex="-1"></a><span class="do">## groupcol, : Dropping: 940/1320 neurons representing 12245/27020 synapses due to</span></span>
+<span id="cb21-6"><a href="#cb21-6" tabindex="-1"></a><span class="do">## missing ids!</span></span>
+<span id="cb21-7"><a href="#cb21-7" tabindex="-1"></a></span>
+<span id="cb21-8"><a href="#cb21-8" tabindex="-1"></a><span class="do">## Updating 245 ids</span></span></code></pre></div>
+<p><img src="reference/figures/README-unnamed-chunk-3-1.png"><!-- --></p>
+<p>There are a wealth of options for the clustering. You can select input partners only or using the group column rather than type for defining the neuron-type connectivity matrix. You can turn off partner grouping (which can actually work better in some circumstances when there is limited partner type information available) but you will not be able to co-cluster L and R homologues.</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span><span class="va">gpn_ids</span>, heatmap <span class="op">=</span> <span class="cn">T</span>, partners <span class="op">=</span> <span class="st">'in'</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span><span class="va">gpn_ids</span>, heatmap <span class="op">=</span> <span class="cn">T</span>, partners <span class="op">=</span> <span class="st">'in'</span>, group <span class="op">=</span> <span class="st">'group'</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span><span class="va">gpn_ids</span>, heatmap <span class="op">=</span> <span class="cn">T</span>, partners <span class="op">=</span> <span class="st">'in'</span>, group <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<p>The default threshold setting of 5 synapse may be a little restrictive for this dataset where synapses counts seem to be low (even without considering proofreading).</p>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span><span class="va">gpn_ids</span>, heatmap <span class="op">=</span> <span class="cn">T</span>, partners <span class="op">=</span> <span class="st">'in'</span>, group <span class="op">=</span> <span class="cn">FALSE</span>, threshold <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb24"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a><span class="do">## Updating 245 ids</span></span>
+<span id="cb24-2"><a href="#cb24-2" tabindex="-1"></a><span class="do">## Updating 245 ids</span></span>
+<span id="cb24-3"><a href="#cb24-3" tabindex="-1"></a><span class="do">## Updating 245 ids</span></span></code></pre></div>
+<p><img src="reference/figures/README-unnamed-chunk-5-1.png"><!-- --></p>
+</div>
+<div class="section level2">
+<h2 id="notes">Notes<a class="anchor" aria-label="anchor" href="#notes"></a>
+</h2>
+<ul>
+<li>Access to the Aedes segmentation depends on your CAVE dataset permissions.</li>
+<li>Some functions require access to the FlyTable</li>
+</ul>
+</div>
+</div>
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
@@ -76,7 +337,15 @@ Access to the in progress Aedes aegypti dataset. Organised as a thin wrapper aro
 </ul>
 </div>
 
-
+<div class="dev-status">
+<h2 data-toc-skip>Dev status</h2>
+<ul class="list-unstyled">
+<li><a href="https://github.com/flyconnectome/aedes/actions/workflows/pkgdown.yaml" class="external-link"><img src="https://github.com/flyconnectome/aedes/actions/workflows/pkgdown.yaml/badge.svg" alt="docs"></a></li>
+<li><a href="https://natverse.github.io" class="external-link"><img src="https://img.shields.io/badge/natverse-Part%20of%20the%20natverse-a241b6" alt="natverse"></a></li>
+<li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
+<li><a href="https://github.com/flyconnectome/aedes/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/flyconnectome/aedes/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
+</ul>
+</div>
 
   </aside>
 </div>
