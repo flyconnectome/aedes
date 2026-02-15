@@ -24,6 +24,3 @@ navbar:
     natverse:
       text: natverse
       href: https://natverse.org
-
-template:
-  bootstrap: 5
