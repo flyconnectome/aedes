@@ -48,7 +48,7 @@ register_aedes_coconat <- function(showerror = TRUE) {
       "and registered segmented in collaboration with zetta.ai"),
     metafun = aedes_cfmeta,
     idfun = aedes_cfids,
-    partnerfun = aedes_cfpartners_now
+    partnerfun = aedes_cfpartners
   )
 
   invisible(NULL)
