@@ -11,8 +11,12 @@
 #' @return For `aedes_meta()`, a data.frame of metadata. For `aedes_ids()`, a
 #'   vector of root IDs.
 #'
-#' @details When `version` or `timestamp` are specified, ids in the returned
-#'   data frame will be updated.
+#' @details When `version` or `timestamp` are specified, root ids in the
+#'   returned data frame will be mapped to the corresponding timepoint using the
+#'   `supervoxel_id` column. When no version/timestamp is specified then ids
+#'   will be simply as returned by the flytable (which updates them every half
+#'   hour). If you want to be sure that ids match the most up to date state of
+#'   the segmentation possible then you can ask for `timestamp='now'`.
 #'
 #' @export
 #'
@@ -20,6 +24,9 @@
 #' \dontrun{
 #' aedes_meta("class:ALPN")
 #' aedes_ids("class:ALPN")
+#'
+#' aedes_ids("class:ALPN", timestamp='now')
+#' aedes_ids("class:ALPN", version='latest')
 #' }
 aedes_meta <- function(ids = NULL, ignore.case = FALSE, fixed = FALSE, version = NULL,
                        timestamp = NULL, unique = FALSE) {
@@ -115,7 +122,7 @@ aedes_get_version <- function(which = getOption("aedes.version", default = "late
 #' @export
 aedes_ids <- function(ids, ignore.case = FALSE, fixed = FALSE, unique = FALSE,
                       version = NULL, timestamp = NULL) {
-  vi = aedes_get_version("now", timestamp = timestamp, version = version)
+  vi = aedes_get_version(timestamp = timestamp, version = version)
   am = aedes_meta(ids, ignore.case = ignore.case, fixed = fixed, unique = unique,
                   version = vi$version, timestamp = vi$timestamp)
   am$root_id

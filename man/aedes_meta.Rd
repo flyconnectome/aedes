@@ -46,12 +46,19 @@ vector of root IDs.
 Return metadata about Aedes neurons from FlyTable
 }
 \details{
-When \code{version} or \code{timestamp} are specified, ids in the returned
-data frame will be updated.
+When \code{version} or \code{timestamp} are specified, root ids in the
+returned data frame will be mapped to the corresponding timepoint using the
+\code{supervoxel_id} column. When no version/timestamp is specified then ids
+will be simply as returned by the flytable (which updates them every half
+hour). If you want to be sure that ids match the most up to date state of
+the segmentation possible then you can ask for \code{timestamp='now'}.
 }
 \examples{
 \dontrun{
 aedes_meta("class:ALPN")
 aedes_ids("class:ALPN")
+
+aedes_ids("class:ALPN", timestamp='now')
+aedes_ids("class:ALPN", version='latest')
 }
 }

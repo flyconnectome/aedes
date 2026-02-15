@@ -8,6 +8,15 @@
 \description{
 Access to the in progress Aedes aegypti dataset. Organised as a thin wrapper around the fafbseg package. Includes support for adding aedes as a dataset supported by coconatfly.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/flyconnectome/aedes}
+  \item \url{https://flyconnectome.github.io/aedes/}
+  \item Report bugs at \url{https://github.com/flyconnectome/aedes/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Gregory Jefferis \email{jefferis@gmail.com} (\href{https://orcid.org/0000-0002-0587-9355}{ORCID})
 

@@ -16,8 +16,23 @@ Invisible \code{NULL}.
 Register \code{aedes} dataset adapters for use with
 \href{https://natverse.org/coconatfly}{coconatfly}.
 }
+\details{
+The aedes dataset is continually evolving. You three two main choices for how
+to handle this.
+\enumerate{
+\item use a specific numeric version (aka materialisation) of the segmentation.
+\item use the latest materialisation version (\code{version='latest'})
+\item map ids to the current time (\code{version='now'})
+}
+
+Option 2 is the default since this can make queries somewhat faster and
+stable but note that 'latest' can be several days old.
+}
 \examples{
 \dontrun{
 register_aedes_coconat()
+
+aedes_set_version('now')
+ades
 }
 }
