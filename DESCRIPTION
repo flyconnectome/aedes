@@ -19,9 +19,11 @@ Depends:
     fafbseg
 Imports:
     dplyr,
+    magrittr,
     withr,
     nat,
-    memoise
+    memoise,
+    rlang
 Suggests:
     testthat (>= 3.0.0),
     coconat,
