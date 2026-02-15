@@ -8,10 +8,12 @@ Authors@R:
            role = c("aut", "cre"),
            email = "jefferis@gmail.com",
            comment = c(ORCID = "0000-0002-0587-9355"))
-Description: Access to the in progress Aedes aegypti dataset. Organised as a 
+Description: Access to the in progress Aedes aegypti dataset. Organised as a
     thin wrapper around the fafbseg package. Includes support for adding aedes
     as a dataset supported by coconatfly.
 License: GPL-3
+URL: https://github.com/flyconnectome/aedes, https://flyconnectome.github.io/aedes/
+BugReports: https://github.com/flyconnectome/aedes/issues
 Depends:
     R (>= 4.1.0),
     fafbseg
