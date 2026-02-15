@@ -9,3 +9,6 @@
 ^vignettes/articles$
 
 ^data-raw$
+^PLAN\.md$
+^check$
+^\.claude$
