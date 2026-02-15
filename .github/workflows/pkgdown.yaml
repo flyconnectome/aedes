@@ -43,10 +43,19 @@ jobs:
 
       - name: Install fafbseg + python
         run: |
+          Sys.unsetenv(c("RETICULATE_PYTHON", "UV_PYTHON", "VIRTUAL_ENV", "PYTHONHOME", "PYTHONPATH"))
           pak::local_install()
           library(fafbseg)
+          library(reticulate)
           simple_python()
+          simple_python(pkgs = "fafbseg")
+          simple_python(pkgs = "seatable_api")
           dr_fafbseg()
+          condaenv <- getOption("fafbseg.condaenv")
+          py <- miniconda_python(condaenv = condaenv)
+          if (!file.exists(py)) stop("Cannot find miniconda python for env: ", condaenv)
+          cat(sprintf("RETICULATE_PYTHON=%s\n", py), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
+          message("Using RETICULATE_PYTHON=", py)
         shell: Rscript {0}
 
       - name: Write FlyWire token

@@ -21,9 +21,9 @@
 #' @examples
 #' \dontrun{
 #' register_aedes_coconat()
-#'
+#' cf_meta(cf_ids(aedes="/class:MBON.*"))
 #' aedes_set_version('now')
-#' ades
+#' cf_meta(cf_ids(aedes="/class:MBON.*"))
 #' }
 register_aedes_coconat <- function(showerror = TRUE) {
   if (!requireNamespace("coconatfly", quietly = !showerror)) {

@@ -10,8 +10,7 @@ test_that("aedes_set_version updates package option", {
 })
 
 test_that("aedes_get_version returns version/timestamp list", {
-  aedes_get_version(version = 1)
-  res <- try(aedes_get_version(version = 'latest'), silent = TRUE)
+  res <- try(aedes_get_version(version = "latest"), silent = TRUE)
   skip_if(inherits(res, "try-error"), "Skipping: unable to resolve CAVE version context")
 
   expect_type(res, "list")

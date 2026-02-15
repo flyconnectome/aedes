@@ -1,8 +1,7 @@
 #' @noRd
 aedes_scene <- function() {
   u = "https://spelunker.cave-explorer.org/#!middleauth+https://global.daf-apis.com/nglstate/api/v1/6213916184018944"
-  # TODO: use exported fafbseg::flywire_expandurl when available
-  u2 = fafbseg:::flywire_expandurl(u)
+  u2 = fafbseg::flywire_expandurl(u)
   u2
 }
 
@@ -19,7 +18,7 @@ choose_aedes <- function(set = TRUE, url = NULL, datastack_name = NULL) {
 
   if (is.null(datastack_name)) {
     sc <- fafbseg::ngl_decode_scene(url)
-    ll <- fafbseg::ngl_layers(sc, type == "segmentation")
+    ll <- Filter(function(x) identical(x$type, "segmentation"), fafbseg::ngl_layers(sc))
     datastack_name <- basename(ll[[1]]$source$url)
   }
 

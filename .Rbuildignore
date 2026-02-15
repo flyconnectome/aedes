@@ -10,5 +10,6 @@
 
 ^data-raw$
 ^PLAN\.md$
+^README\.Rmd$
 ^check$
 ^\.claude$
