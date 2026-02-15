@@ -14,7 +14,10 @@ Low level access to Aedes CAVE annotation infrastructure
 }
 \examples{
 \dontrun{
-fac <- aedes_cave_client()
-fac$annotation$get_tables()
+acc <- aedes_cave_client()
+#
+acc$annotation$get_tables()
+# summary of materialisations
+acc$materialize$get_versions_metadata() \%>\% dplyr::bind_rows()
 }
 }
