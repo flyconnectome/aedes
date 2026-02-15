@@ -1,4 +1,13 @@
-sequential_update <- function(df) {
+#' Update root_ids and supervoxel_ids from point information as necessary
+#'
+#' @details Note that point information will only be used if supervoxel
+#'   information is missing. Therefore it is essential to delete supervoxel_id
+#'   for any rows in which the point_xyz is changed.
+#'
+#' @param df A dataframe containing columns root_id, supervoxel_id, point_xyz
+#' @return A new dataframe with updated ids
+#' @keywords internal
+aedes_sequential_update <- function(df) {
   op <- choose_aedes(set = TRUE)
   on.exit(options(op))
 
@@ -15,6 +24,24 @@ sequential_update <- function(df) {
   df
 }
 
+#' Update ids in aedes_main table manually
+#'
+#' @param update.serial_ids Whether to update the serial_id column uniquely
+#'   defining each row
+#' @param update_dups Whether to update rows with "duplicate" status (now the
+#'   default) and also set the root_duplicated column.
+#' @param dry_run Whether to show what would happen rather than doing it.
+#'
+#' @details This is now part of the scripted updates on flyem but even in future
+#'   it may occasionally be useful to trigger this manually.
+#'
+#'   Expert use only: there is a scheduled job that updates root IDs on
+#'   FlyTable every 30 minutes, so this function should normally not be needed.
+#'
+#'   The root_duplicated column will only be ticked for root_ids when there is
+#'   more than one entry \emph{after} setting aside any rows with
+#'   status=duplicate.
+#' @keywords internal
 aedes_flytable_update <- function(update.serial_ids = TRUE, update_dups = TRUE, dry_run = FALSE) {
   aedes_main = fafbseg::flytable_query("select `_id`, root_id, supervoxel_id, point_xyz, serial_id, root_duplicated, status from aedes_main")
   cands <- if (update_dups) {
@@ -25,7 +52,7 @@ aedes_flytable_update <- function(update.serial_ids = TRUE, update_dups = TRUE, 
       dplyr::select(`_id`, root_id, supervoxel_id, point_xyz)
   }
 
-  updated = sequential_update(cands)
+  updated = aedes_sequential_update(cands)
   if (update_dups) {
     updated <- updated %>%
       dplyr::mutate(good_status = is.na(status) | status != "duplicate") %>%
@@ -68,6 +95,11 @@ aedes_flytable_update <- function(update.serial_ids = TRUE, update_dups = TRUE, 
   invisible(TRUE)
 }
 
+#' Write annotations to neuroglancer info file
+#'
+#' @param anndf Annotation data frame
+#' @param dir Output directory
+#' @noRd
 write_info <- function(anndf, dir) {
   dir = normalizePath(dir)
   if (!file.exists(dir))

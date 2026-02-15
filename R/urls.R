@@ -1,5 +1,7 @@
+#' @noRd
 aedes_scene <- function() {
   u = "https://spelunker.cave-explorer.org/#!middleauth+https://global.daf-apis.com/nglstate/api/v1/6213916184018944"
+  # TODO: use exported fafbseg::flywire_expandurl when available
   u2 = fafbseg:::flywire_expandurl(u)
   u2
 }

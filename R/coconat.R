@@ -40,6 +40,7 @@ register_aedes_coconat <- function(showerror = TRUE) {
   invisible(NULL)
 }
 
+#' @noRd
 aedes_cfmeta <- function(ids = NULL, ignore.case = FALSE, fixed = FALSE,
                          which = NULL,
                          version = NULL, timestamp = NULL,
@@ -59,6 +60,7 @@ aedes_cfmeta <- function(ids = NULL, ignore.case = FALSE, fixed = FALSE,
     ))
 }
 
+#' @noRd
 aedes_partner_summary <- function(rootids,
                                   partners = c("outputs", "inputs"),
                                   threshold = 0,
@@ -68,6 +70,7 @@ aedes_partner_summary <- function(rootids,
   rootids = aedes_ids(rootids, version = version, timestamp = timestamp)
   withr::with_options(choose_aedes(set = FALSE), {
     if (!is.null(version)) {
+      # TODO: use exported fafbseg::flywire_version when available
       version = fafbseg:::flywire_version(version)
       rootids = fafbseg::flywire_latestid(rootids, version = version)
     } else if (!is.null(timestamp)) {
@@ -87,12 +90,14 @@ aedes_partner_summary <- function(rootids,
   })
 }
 
+#' @noRd
 aedes_cfpartners <- function(ids, partners = c("outputs", "inputs"),
                              threshold = 1, version = "latest", ...) {
   partners = match.arg(partners)
   aedes_partner_summary(ids, partners = partners, threshold = threshold - 1L, version = version, ...)
 }
 
+#' @noRd
 aedes_cfpartners_now <- function(ids, partners = c("outputs", "inputs"),
                                  threshold = 1, ...) {
   vi = aedes_get_version()

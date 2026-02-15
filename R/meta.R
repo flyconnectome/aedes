@@ -24,6 +24,7 @@
 aedes_meta <- function(ids = NULL, ignore.case = FALSE, fixed = FALSE, version = NULL,
                        timestamp = NULL, unique = FALSE) {
 
+  # TODO: replace fafbseg:::valid_id with exported version (nat.utils or coconat)
   if (is.character(ids) && length(ids) == 1 && !fafbseg:::valid_id(ids) && !grepl(":", ids))
     ids = paste0("type:", ids)
   if (is.character(ids) && length(ids) == 1 && !fafbseg:::valid_id(ids) && substr(ids, 1, 1) == "/")
@@ -95,7 +96,7 @@ aedes_get_version <- function(which = getOption("aedes.version", default = "late
       warning("ignoring timestamp since version was provided")
       timestamp = NULL
     }
-  } else if (is.null(timestamp) & length(which) >= 1) {
+  } else if (is.null(timestamp) && length(which) >= 1) {
     if (is.character(which) && length(which) > 1)
       which = match.arg(which, c("now", "latest"))
     if (which == "latest" || is.numeric(which))
@@ -104,6 +105,7 @@ aedes_get_version <- function(which = getOption("aedes.version", default = "late
       timestamp = which
   }
   with_aedes(list(
+    # TODO: use exported fafbseg::flywire_version when available
     version = fafbseg:::flywire_version(version = version),
     timestamp = fafbseg::flywire_timestamp(timestamp = timestamp)
   ))
