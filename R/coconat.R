@@ -63,14 +63,13 @@ aedes_cfmeta <- function(ids = NULL, ignore.case = FALSE, fixed = FALSE,
   df = aedes_meta(ids, ignore.case = ignore.case, fixed = fixed, unique = unique,
                   version = vi$version, timestamp = vi$timestamp, ...)
   df %>%
-    dplyr::select(-subsubclass) %>%
-    dplyr::rename(id = root_id) %>%
-    dplyr::rename(class1 = superclass, class2 = class, subsubclass = subclass) %>%
-    dplyr::rename(class = class1, subclass = class2) %>%
-    dplyr::rename(lineage = hemilineage) %>%
+    dplyr::select(-dplyr::any_of("subsubclass")) %>%
+    dplyr::rename(id = "root_id", lineage = "hemilineage") %>%
+    dplyr::mutate(subsubclass = .data$subclass, subclass = .data$class, class = .data$superclass) %>%
+    dplyr::select(-dplyr::any_of("superclass")) %>%
     dplyr::mutate(instance = dplyr::case_when(
-      is.na(instance) ~ paste0(type, "_", ifelse(is.na(side), "", side)),
-      TRUE ~ instance
+      is.na(.data$instance) ~ paste0(.data$type, "_", ifelse(is.na(.data$side), "", .data$side)),
+      TRUE ~ .data$instance
     ))
 }
 

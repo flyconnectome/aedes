@@ -19,7 +19,7 @@ aedes_sequential_update <- function(df) {
                                    voxdims = c(16, 16, 45), method = "cloud"))
   }
   df <- df %>% dplyr::mutate(
-    root_id = fafbseg::flywire_updateids(root_id, svids = supervoxel_id)
+    root_id = fafbseg::flywire_updateids(.data$root_id, svids = .data$supervoxel_id)
   )
   df
 }
@@ -45,23 +45,25 @@ aedes_sequential_update <- function(df) {
 aedes_flytable_update <- function(update.serial_ids = TRUE, update_dups = TRUE, dry_run = FALSE) {
   aedes_main = fafbseg::flytable_query("select `_id`, root_id, supervoxel_id, point_xyz, serial_id, root_duplicated, status from aedes_main")
   cands <- if (update_dups) {
-    dplyr::select(aedes_main, `_id`, root_id, supervoxel_id, point_xyz, root_duplicated, status)
+    dplyr::select(aedes_main, dplyr::all_of(c("_id", "root_id", "supervoxel_id", "point_xyz", "root_duplicated", "status")))
   } else {
     aedes_main %>%
-      dplyr::filter(status != "duplicate" | is.na(status)) %>%
-      dplyr::select(`_id`, root_id, supervoxel_id, point_xyz)
+      dplyr::filter(.data$status != "duplicate" | is.na(.data$status)) %>%
+      dplyr::select(dplyr::all_of(c("_id", "root_id", "supervoxel_id", "point_xyz")))
   }
 
   updated = aedes_sequential_update(cands)
   if (update_dups) {
     updated <- updated %>%
-      dplyr::mutate(good_status = is.na(status) | status != "duplicate") %>%
-      dplyr::add_count(root_id, good_status) %>%
+      dplyr::mutate(good_status = is.na(.data$status) | .data$status != "duplicate") %>%
+      dplyr::group_by(.data$root_id, .data$good_status) %>%
+      dplyr::mutate(n = dplyr::n()) %>%
+      dplyr::ungroup() %>%
       dplyr::mutate(root_duplicated = dplyr::case_when(
-        good_status ~ n > 1,
+        .data$good_status ~ .data$n > 1,
         TRUE ~ FALSE
       )) %>%
-      dplyr::select(-n, -good_status)
+      dplyr::select(-dplyr::all_of(c("n", "good_status")))
   }
   changed_cells = (updated != cands) | (is.na(cands) & !is.na(updated))
   changed_rows = rowSums(changed_cells, na.rm = TRUE) > 0
@@ -76,8 +78,8 @@ aedes_flytable_update <- function(update.serial_ids = TRUE, update_dups = TRUE, 
   }
 
   missing_serial = aedes_main %>%
-    dplyr::select(`_id`, serial_id) %>%
-    dplyr::filter(is.na(serial_id))
+    dplyr::select(dplyr::all_of(c("_id", "serial_id"))) %>%
+    dplyr::filter(is.na(.data$serial_id))
   if (isTRUE(nrow(missing_serial) > 0)) {
     if (isFALSE(update.serial_ids)) {
       message("Not updating ", nrow(missing_serial), " aedes serial_ids.")
