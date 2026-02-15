@@ -1,0 +1,29 @@
+url: ~
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left:
+      - home
+      - reference
+      - news
+    right:
+      - github
+      - natverse
+  components:
+    home:
+      icon: fas fa-home fa-lg
+      href: index.html
+    reference:
+      text: Reference
+      href: reference/index.html
+    github:
+      icon: fab fa-github fa-lg
+      href: https://github.com/flyconnectome/aedes/
+    natverse:
+      text: natverse
+      href: https://natverse.org
+
+template:
+  bootstrap: 5
