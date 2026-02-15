@@ -24,7 +24,8 @@ Imports:
     memoise
 Suggests:
     testthat (>= 3.0.0),
-    coconat
+    coconat,
+    reticulate
 Enhances:
     coconatfly
 Config/testthat/edition: 3

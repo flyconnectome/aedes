@@ -31,7 +31,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          extra-packages: any::rcmdcheck, any::reticulate
           needs: check
 
       - name: Install fafbseg + python
