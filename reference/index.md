@@ -1,0 +1,22 @@
+# Package index
+
+## All functions
+
+- [`aedes_cave_client()`](aedes_cave_client.md) : Low level access to
+  Aedes CAVE annotation infrastructure
+- [`aedes_cave_query()`](aedes_cave_query.md) : Query Aedes tables in
+  the CAVE annotation system
+- [`aedes_get_version()`](aedes_get_version.md) : Resolve Aedes
+  materialisation version and timestamp
+- [`aedes_meta()`](aedes_meta.md) [`aedes_ids()`](aedes_meta.md) :
+  Return metadata about Aedes neurons from FlyTable
+- [`aedes_set_version()`](aedes_set_version.md) : Set default version
+  selection for Aedes helpers
+- [`aedes_voxdims()`](aedes_voxdims.md)
+  [`aedes_nm2raw()`](aedes_voxdims.md)
+  [`aedes_raw2nm()`](aedes_voxdims.md) : Handle raw and nm calibrated
+  Aedes coordinates
+- [`choose_aedes()`](choose_aedes.md) [`with_aedes()`](choose_aedes.md)
+  : Choose or temporarily use the Aedes autosegmentation
+- [`register_aedes_coconat()`](register_aedes_coconat.md) : Register
+  Aedes dataset for coconatfly
