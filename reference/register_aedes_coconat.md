@@ -39,8 +39,8 @@ stable but note that 'latest' can be several days old.
 ``` r
 if (FALSE) { # \dontrun{
 register_aedes_coconat()
-
+cf_meta(cf_ids(aedes="/class:MBON.*"))
 aedes_set_version('now')
-ades
+cf_meta(cf_ids(aedes="/class:MBON.*"))
 } # }
 ```
