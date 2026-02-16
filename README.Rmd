@@ -55,7 +55,10 @@ natmanager::install(pkgs = "flyconnectome/aedes")
 
 You also need to do some additional one time setup.
 
-CAVe
+Access to the segmentation / connectivity information is via CAVE. 
+We use the python CAVE client under the hood and this must be installed via
+`simple_python()`. Authentication is via a token, which is typically shared across CAVE projects (e.g. flywire, FANC, BANC etc). You can make a new one linked to the email
+address authorised to access web resources via neuroglancer.
 
 In order to start using flytable, you must get an API token. There doesn't seem to be a convenient way to do this from the seatable web interface but you can get one by calling `flytable_set_token()` with your flytable user and password. This should be a once only step. Thereafter you should have a `FLYTABLE_TOKEN` environment variable set in your `.Renviron` file.
 ```{r, eval=FALSE}
@@ -76,7 +79,7 @@ fafbseg::flytable_set_token()
 We recommend using coconatfly for most analysis. At the moment you must tell
 coconatfly about the aedes dataset once per R session.
 
-```{r setup}
+```{r setup, message=FALSE}
 library(aedes)
 library(coconatfly)
 
@@ -86,13 +89,12 @@ register_aedes_coconat()
 
 ## Examples
 
-```{r examples}
+```{r examples, message=FALSE}
 library(dplyr)
 
 # 1) List neurons with class ALPN
 alpn_meta <- cf_meta(cf_ids(aedes = "/class:ALPN"))
 alpn_meta %>% count(subclass, subsubclass)
-alpn_meta %>% count(type, side) %>% tidyr::spread(side, n)
 ```
 
 Select a smaller set of PN neurons with type matching G2X
