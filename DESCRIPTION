@@ -1,7 +1,7 @@
 Type: Package
 Package: aedes
 Title: Support Access to the Aedes Connectome Dataset
-Version: 0.0.0.9000
+Version: 0.1
 Authors@R:
     person(given = "Gregory",
            family = "Jefferis",
