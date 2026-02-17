@@ -13,6 +13,11 @@ cam_meta_aedes <- function(...) {
   fafbseg::cam_meta(..., table = "aedes_main")
 }
 
+skip_unless_equiv_tests <- function() {
+  skip_if_not(identical(tolower(Sys.getenv("AEDES_RUN_EQUIV_TESTS", "false")), "true"),
+              "Skipping: set AEDES_RUN_EQUIV_TESTS=true to run live aedes/cam equivalence tests")
+}
+
 expect_meta_core_equal <- function(a, b) {
   common_cols <- intersect(names(a), names(b))
   core_cols <- intersect(c("root_id", "supervoxel_id", "type", "class", "subclass", "side", "status"), common_cols)
@@ -60,6 +65,7 @@ test_that("aedes_ids resolves ids when metadata access is available", {
 })
 
 test_that("aedes_meta and cam_meta agree for fixed class query", {
+  skip_unless_equiv_tests()
   probe <- probe_aedes_main()
   cls <- probe$class[which(!is.na(probe$class))[1]]
   skip_if(is.na(cls) || !nzchar(cls), "Skipping: no non-missing class values in probe data")
@@ -74,6 +80,7 @@ test_that("aedes_meta and cam_meta agree for fixed class query", {
 })
 
 test_that("aedes_meta and cam_meta agree for slash-prefixed query", {
+  skip_unless_equiv_tests()
   probe <- probe_aedes_main()
   cls <- probe$class[which(!is.na(probe$class))[1]]
   skip_if(is.na(cls) || !nzchar(cls), "Skipping: no non-missing class values in probe data")
@@ -88,6 +95,7 @@ test_that("aedes_meta and cam_meta agree for slash-prefixed query", {
 })
 
 test_that("aedes_meta and cam_meta agree for explicit root_id subset", {
+  skip_unless_equiv_tests()
   probe <- probe_aedes_main()
   seed_ids <- unique(head(probe$root_id[!is.na(probe$root_id)], 10))
   skip_if(length(seed_ids) < 5, "Skipping: insufficient root IDs in probe data")
@@ -101,6 +109,7 @@ test_that("aedes_meta and cam_meta agree for explicit root_id subset", {
 })
 
 test_that("aedes_meta and cam_meta unique mode agree on row ids", {
+  skip_unless_equiv_tests()
   probe <- probe_aedes_main()
   cls <- probe$class[which(!is.na(probe$class))[1]]
   skip_if(is.na(cls) || !nzchar(cls), "Skipping: no non-missing class values in probe data")

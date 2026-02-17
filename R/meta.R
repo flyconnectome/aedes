@@ -8,6 +8,8 @@
 #' @param timestamp Optional CAVE timestamp.
 #' @param unique Whether to drop duplicate `root_id` rows (with duplicates
 #'   attached as an attribute).
+#' @param ... Additional arguments passed to [fafbseg::cam_meta()] (e.g.
+#'   cache controls such as `expiry`, `refresh`).
 #' @return For `aedes_meta()`, a data.frame of metadata. For `aedes_ids()`, a
 #'   vector of root IDs.
 #'
@@ -29,55 +31,17 @@
 #' aedes_ids("class:ALPN", version='latest')
 #' }
 aedes_meta <- function(ids = NULL, ignore.case = FALSE, fixed = FALSE, version = NULL,
-                       timestamp = NULL, unique = FALSE) {
-
-  # TODO: replace fafbseg:::valid_id with exported version (nat.utils or coconat)
-  if (is.character(ids) && length(ids) == 1 && !fafbseg:::valid_id(ids) && !grepl(":", ids))
-    ids = paste0("type:", ids)
-  if (is.character(ids) && length(ids) == 1 && !fafbseg:::valid_id(ids) && substr(ids, 1, 1) == "/")
-    ids = substr(ids, 2, nchar(ids))
-  aedes_main = fafbseg::flytable_query("select * from aedes_main WHERE status NOT IN ('duplicate', 'bad_nucleus')")
-  if (is.character(ids) && length(ids) == 1 && grepl(":", ids)) {
-    ul = unlist(strsplit(ids, ":", fixed = TRUE))
-    if (length(ul) != 2)
-      stop("Unable to parse aedes id specification!")
-    target = ul[1]
-    if (!target %in% colnames(aedes_main))
-      stop("Unknown field in flywire id specification!")
-    query = ul[2]
-    if (!fixed && substr(query, 1, 1) != "^") {
-      query = paste0("^", query, "$")
-    }
-    df = dplyr::filter(aedes_main, grepl(query, .data[[target]], ignore.case = ignore.case, fixed = fixed))
-  } else if (is.null(ids)) {
-    df = aedes_main
-  } else {
-    ids <- fafbseg::flywire_ids(ids, integer64 = FALSE, unique = TRUE)
-    df = data.frame(root_id = ids)
-    if (!is.null(version) || !is.null(timestamp))
-      aedes_main$root_id = with_aedes(fafbseg::flywire_updateids(aedes_main$root_id, svids = aedes_main$supervoxel_id, version = version, timestamp = timestamp))
-    df = dplyr::left_join(df, aedes_main, by = "root_id")
-  }
-
-  if (isTRUE(unique)) {
-    dups = duplicated(df$root_id)
-    ndups = sum(dups)
-    if (ndups > 0) {
-      dupids = unique(df$root_id[dups])
-      duprows = df[df$root_id %in% dupids, , drop = FALSE]
-      duprows = duprows[order(duprows$root_id), , drop = FALSE]
-      df = df[!dups, , drop = FALSE]
-      attr(df, "duprows") = duprows
-      warning("Dropping ", sum(dups), " rows containing duplicate root_ids!\n",
-              "You can inspect all ", nrow(duprows), " rows with duplicate ids by doing:\n",
-              "attr(df, 'duprows')\n", "on your returned data frame (replacing df as appropriate).")
-    }
-  }
-
-  if (!is.null(version) || !is.null(timestamp)) {
-    df$root_id = with_aedes(fafbseg::flywire_updateids(df$root_id, svids = df$supervoxel_id, version = version, timestamp = timestamp))
-  }
-  df
+                       timestamp = NULL, unique = FALSE, ...) {
+  with_aedes(fafbseg::cam_meta(
+    ids = ids,
+    ignore.case = ignore.case,
+    fixed = fixed,
+    table = "aedes_main",
+    version = version,
+    timestamp = timestamp,
+    unique = unique,
+    ...
+  ))
 }
 
 #' Set default version selection for Aedes helpers
@@ -121,9 +85,9 @@ aedes_get_version <- function(which = getOption("aedes.version", default = "late
 #' @rdname aedes_meta
 #' @export
 aedes_ids <- function(ids, ignore.case = FALSE, fixed = FALSE, unique = FALSE,
-                      version = NULL, timestamp = NULL) {
+                      version = NULL, timestamp = NULL, ...) {
   vi = aedes_get_version(timestamp = timestamp, version = version)
   am = aedes_meta(ids, ignore.case = ignore.case, fixed = fixed, unique = unique,
-                  version = vi$version, timestamp = vi$timestamp)
+                  version = vi$version, timestamp = vi$timestamp, ...)
   am$root_id
 }

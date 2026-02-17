@@ -11,7 +11,8 @@ aedes_meta(
   fixed = FALSE,
   version = NULL,
   timestamp = NULL,
-  unique = FALSE
+  unique = FALSE,
+  ...
 )
 
 aedes_ids(
@@ -20,7 +21,8 @@ aedes_ids(
   fixed = FALSE,
   unique = FALSE,
   version = NULL,
-  timestamp = NULL
+  timestamp = NULL,
+  ...
 )
 }
 \arguments{
@@ -37,6 +39,9 @@ rather than regular expressions (default FALSE).}
 
 \item{unique}{Whether to drop duplicate \code{root_id} rows (with duplicates
 attached as an attribute).}
+
+\item{...}{Additional arguments passed to \code{\link[fafbseg:cam_meta]{fafbseg::cam_meta()}} (e.g.
+cache controls such as \code{expiry}, \code{refresh}).}
 }
 \value{
 For \code{aedes_meta()}, a data.frame of metadata. For \code{aedes_ids()}, a
