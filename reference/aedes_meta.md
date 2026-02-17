@@ -11,7 +11,8 @@ aedes_meta(
   fixed = FALSE,
   version = NULL,
   timestamp = NULL,
-  unique = FALSE
+  unique = FALSE,
+  ...
 )
 
 aedes_ids(
@@ -20,7 +21,8 @@ aedes_ids(
   fixed = FALSE,
   unique = FALSE,
   version = NULL,
-  timestamp = NULL
+  timestamp = NULL,
+  ...
 )
 ```
 
@@ -51,6 +53,12 @@ aedes_ids(
 
   Whether to drop duplicate `root_id` rows (with duplicates attached as
   an attribute).
+
+- ...:
+
+  Additional arguments passed to
+  [`fafbseg::cam_meta()`](https://rdrr.io/pkg/fafbseg/man/cam_meta.html)
+  (e.g. cache controls such as `expiry`, `refresh`).
 
 ## Value
 

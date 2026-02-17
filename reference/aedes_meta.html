@@ -44,7 +44,8 @@
 <span>  fixed <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  version <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  timestamp <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  unique <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  unique <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">aedes_ids</span><span class="op">(</span></span>
@@ -53,7 +54,8 @@
 <span>  fixed <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  unique <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  version <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  timestamp <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  timestamp <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -85,6 +87,11 @@ rather than regular expressions (default FALSE).</p></dd>
 <dt id="arg-unique">unique<a class="anchor" aria-label="anchor" href="#arg-unique"></a></dt>
 <dd><p>Whether to drop duplicate <code>root_id</code> rows (with duplicates
 attached as an attribute).</p></dd>
+
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Additional arguments passed to <code><a href="https://rdrr.io/pkg/fafbseg/man/cam_meta.html" class="external-link">fafbseg::cam_meta()</a></code> (e.g.
+cache controls such as <code>expiry</code>, <code>refresh</code>).</p></dd>
 
 </dl></div>
     <div class="section level2">
