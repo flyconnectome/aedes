@@ -6,6 +6,8 @@ output: github_document
 
 <!-- devtools::build_readme() is a good way to build this -->
 
+<a href="man/figures/aedes-coconut-hex.png"><img src="man/figures/aedes-coconut.png" align="right" height="200" alt="An Aedes aegypti mosquito sipping coconut milk on a starry purple background. See coconatfly and natverse links for the significance of this image." /></a>
+
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -24,8 +26,10 @@ knitr::opts_chunk$set(
 [![R-CMD-check](https://github.com/flyconnectome/aedes/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/flyconnectome/aedes/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-The **aedes** package provides programmatic access to the in progress Aedes aegypti connectome dataset. Note that this dataset is still in an early state of proofreading and annotation and access is currently in a limited pre-release testing phase as we develop a robust community and infrastructure.
+The **aedes** package provides programmatic access to the in progress *Aedes aegypti* connectome dataset. It integrates with [coconatfly](https://natverse.org/coconatfly) and the wider [natverse](https://natverse.org/) ecosystem.
+We recommend that you use the [coconatfly](https://natverse.org/coconatfly) package where possible in order to ensure a uniform experience across different insect connectome datasets and sophisticated out of the box analyses.
 
+Note that this dataset is still in an early state of proofreading and annotation and access is currently in a limited pre-release testing phase as we develop a robust community and infrastructure.
 
 ## Implementation Details
 

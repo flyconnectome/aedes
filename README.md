@@ -3,6 +3,8 @@
 
 <!-- devtools::build_readme() is a good way to build this -->
 
+<a href="man/figures/aedes-coconut-hex.png"><img src="man/figures/aedes-coconut.png" align="right" height="200" alt="An Aedes aegypti mosquito sipping coconut milk on a starry purple background. See coconatfly and natverse links for the significance of this image." /></a>
+
 # aedes
 
 <!-- badges: start -->
@@ -15,10 +17,16 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 <!-- badges: end -->
 
 The **aedes** package provides programmatic access to the in progress
-Aedes aegypti connectome dataset. Note that this dataset is still in an
-early state of proofreading and annotation and access is currently in a
-limited pre-release testing phase as we develop a robust community and
-infrastructure.
+*Aedes aegypti* connectome dataset. It integrates with
+[coconatfly](https://natverse.org/coconatfly) and the wider
+[natverse](https://natverse.org/) ecosystem. We recommend that you use
+the [coconatfly](https://natverse.org/coconatfly) package where possible
+in order to ensure a uniform experience across different insect
+connectome datasets and sophisticated out of the box analyses.
+
+Note that this dataset is still in an early state of proofreading and
+annotation and access is currently in a limited pre-release testing
+phase as we develop a robust community and infrastructure.
 
 ## Implementation Details
 
@@ -104,16 +112,16 @@ alpn_meta %>% count(subclass, subsubclass)
 #> 2     ALPN      BI_UNI   8
 #> 3     ALPN      II_MUL 214
 #> 4     ALPN      II_UNI 329
+#> 5     ALPN        <NA>   1
 ```
 
 Select a smaller set of PN neurons with type matching G2X
 
 ``` r
 gpn_ids <- cf_meta(cf_ids(aedes = "/type:G2[0-9].*PN"))
-#> Updating 3 ids
-#> Updating 245 ids
+#> Updating 73 ids
 gpn_meta <- cf_meta(gpn_ids)
-#> Updating 245 ids
+#> Updating 73 ids
 gpn_meta %>% count(type, side) %>% tidyr::spread(side, n)
 #>        type L  R
 #> 1   G20_lPN 2  2
@@ -142,12 +150,12 @@ gpn_meta %>%
   add_count(type) %>% 
   filter(n==2) %>% 
   cf_cosine_plot(partners = 'in')
-#> Updating 245 ids
-#> Updating 245 ids
+#> Updating 73 ids
+#> Updating 73 ids
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
-#> groupcol, : Dropping: 940/1320 neurons representing 12245/27020 synapses due to
+#> groupcol, : Dropping: 942/1323 neurons representing 12328/27228 synapses due to
 #> missing ids!
-#> Updating 245 ids
+#> Updating 73 ids
 ```
 
 <img src="man/figures/README-unnamed-chunk-4-1.png" alt="" width="100%" />
@@ -171,9 +179,13 @@ considering proofreading).
 
 ``` r
 cf_cosine_plot(gpn_ids, heatmap = T, partners = 'in', group = FALSE, threshold = 2)
-#> Updating 245 ids
-#> Updating 245 ids
-#> Updating 245 ids
+#> Updating 73 ids
+#> Updating 73 ids
+#> Warning in fafbseg::cam_meta(ids = ids, ignore.case = ignore.case, fixed = fixed, : Dropping 1 rows containing duplicate root_ids!
+#> You can inspect all 2 rows with duplicate ids by doing:
+#> attr(df, 'duprows')
+#> on your returned data frame (replacing df as appropriate).
+#> Updating 73 ids
 ```
 
 <img src="man/figures/README-unnamed-chunk-6-1.png" alt="" width="100%" />
