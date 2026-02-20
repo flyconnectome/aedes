@@ -45,12 +45,14 @@
   </div>
 </nav><div class="container template-home">
 <div class="row">
-  <main id="main" class="col-md-9"><div class="section level1">
+  <main id="main" class="col-md-9"><p><a href="man/figures/aedes-coconut-hex.png"><img src="reference/figures/aedes-coconut.png" align="right" height="200" alt="An Aedes aegypti mosquito sipping coconut milk on a starry purple background. See coconatfly and natverse links for the significance of this image."></a></p>
+<div class="section level1">
 <div class="page-header"><h1 id="aedes">aedes<a class="anchor" aria-label="anchor" href="#aedes"></a>
 </h1></div>
 <!-- badges: start -->
 
-<p>The <strong>aedes</strong> package provides programmatic access to the in progress Aedes aegypti connectome dataset. Note that this dataset is still in an early state of proofreading and annotation and access is currently in a limited pre-release testing phase as we develop a robust community and infrastructure.</p>
+<p>The <strong>aedes</strong> package provides programmatic access to the in progress <em>Aedes aegypti</em> connectome dataset. It integrates with <a href="https://natverse.org/coconatfly" class="external-link">coconatfly</a> and the wider <a href="https://natverse.org/" class="external-link">natverse</a> ecosystem. We recommend that you use the <a href="https://natverse.org/coconatfly" class="external-link">coconatfly</a> package where possible in order to ensure a uniform experience across different insect connectome datasets and sophisticated out of the box analyses.</p>
+<p>Note that this dataset is still in an early state of proofreading and annotation and access is currently in a limited pre-release testing phase as we develop a robust community and infrastructure.</p>
 <div class="section level2">
 <h2 id="implementation-details">Implementation Details<a class="anchor" aria-label="anchor" href="#implementation-details"></a>
 </h2>
@@ -105,14 +107,14 @@
 <span><span class="co">#&gt; 1     ALPN      BI_MUL  21</span></span>
 <span><span class="co">#&gt; 2     ALPN      BI_UNI   8</span></span>
 <span><span class="co">#&gt; 3     ALPN      II_MUL 214</span></span>
-<span><span class="co">#&gt; 4     ALPN      II_UNI 329</span></span></code></pre></div>
+<span><span class="co">#&gt; 4     ALPN      II_UNI 329</span></span>
+<span><span class="co">#&gt; 5     ALPN        &lt;NA&gt;   1</span></span></code></pre></div>
 <p>Select a smaller set of PN neurons with type matching G2X</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gpn_ids</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_meta.html" class="external-link">cf_meta</a></span><span class="op">(</span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_ids.html" class="external-link">cf_ids</a></span><span class="op">(</span>aedes <span class="op">=</span> <span class="st">"/type:G2[0-9].*PN"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Updating 3 ids</span></span>
-<span><span class="co">#&gt; Updating 245 ids</span></span>
+<span><span class="co">#&gt; Updating 73 ids</span></span>
 <span><span class="va">gpn_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_meta.html" class="external-link">cf_meta</a></span><span class="op">(</span><span class="va">gpn_ids</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Updating 245 ids</span></span>
+<span><span class="co">#&gt; Updating 73 ids</span></span>
 <span><span class="va">gpn_meta</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">count</a></span><span class="op">(</span><span class="va">type</span>, <span class="va">side</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">tidyr</span><span class="fu">::</span><span class="fu">spread</span><span class="op">(</span><span class="va">side</span>, <span class="va">n</span><span class="op">)</span></span>
 <span><span class="co">#&gt;        type L  R</span></span>
 <span><span class="co">#&gt; 1   G20_lPN 2  2</span></span>
@@ -132,12 +134,12 @@
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">add_count</a></span><span class="op">(</span><span class="va">type</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">n</span><span class="op">==</span><span class="fl">2</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> </span>
 <span>  <span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span>partners <span class="op">=</span> <span class="st">'in'</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Updating 245 ids</span></span>
-<span><span class="co">#&gt; Updating 245 ids</span></span>
+<span><span class="co">#&gt; Updating 73 ids</span></span>
+<span><span class="co">#&gt; Updating 73 ids</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =</span></span>
-<span><span class="co">#&gt; groupcol, : Dropping: 940/1320 neurons representing 12245/27020 synapses due to</span></span>
+<span><span class="co">#&gt; groupcol, : Dropping: 942/1323 neurons representing 12328/27228 synapses due to</span></span>
 <span><span class="co">#&gt; missing ids!</span></span>
-<span><span class="co">#&gt; Updating 245 ids</span></span></code></pre></div>
+<span><span class="co">#&gt; Updating 73 ids</span></span></code></pre></div>
 <p><img src="reference/figures/README-unnamed-chunk-4-1.png" alt="" width="100%"></p>
 <p>There are a wealth of options for the clustering. You can select input partners only or using the group column rather than type for defining the neuron-type connectivity matrix. You can turn off partner grouping (which can actually work better in some circumstances when there is limited partner type information available) but you will not be able to co-cluster L and R homologues.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
@@ -147,9 +149,13 @@
 <p>The default threshold setting of 5 synapse may be a little restrictive for this dataset where synapses counts seem to be low (even without considering proofreading).</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span><span class="va">gpn_ids</span>, heatmap <span class="op">=</span> <span class="cn">T</span>, partners <span class="op">=</span> <span class="st">'in'</span>, group <span class="op">=</span> <span class="cn">FALSE</span>, threshold <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Updating 245 ids</span></span>
-<span><span class="co">#&gt; Updating 245 ids</span></span>
-<span><span class="co">#&gt; Updating 245 ids</span></span></code></pre></div>
+<span><span class="co">#&gt; Updating 73 ids</span></span>
+<span><span class="co">#&gt; Updating 73 ids</span></span>
+<span><span class="co">#&gt; Warning in fafbseg::cam_meta(ids = ids, ignore.case = ignore.case, fixed = fixed, : Dropping 1 rows containing duplicate root_ids!</span></span>
+<span><span class="co">#&gt; You can inspect all 2 rows with duplicate ids by doing:</span></span>
+<span><span class="co">#&gt; attr(df, 'duprows')</span></span>
+<span><span class="co">#&gt; on your returned data frame (replacing df as appropriate).</span></span>
+<span><span class="co">#&gt; Updating 73 ids</span></span></code></pre></div>
 <p><img src="reference/figures/README-unnamed-chunk-6-1.png" alt="" width="100%"></p>
 </div>
 <div class="section level2">
@@ -161,6 +167,7 @@
 </ul>
 </div>
 </div>
+
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
