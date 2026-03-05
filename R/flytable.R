@@ -85,7 +85,13 @@ aedes_flytable_update <- function(update.serial_ids = FALSE, update_dups = TRUE,
       return(invisible(FALSE))
     }
     last_serial = max(as.integer(aedes_main$serial_id), na.rm = TRUE)
-    missing_serial$serial_id = seq_len(nrow(missing_serial)) + last_serial
+    # check how many digits and zero pad if necessary
+    tn=table(nchar(aedes_main$serial_id))
+    ndigits=names(which.max(tn))
+    formatstr=paste0('%0', ndigits, 'd')
+    missing_serial$serial_id = sprintf(
+      formatstr,
+      seq_len(nrow(missing_serial)) + last_serial)
     if (dry_run)
       message("dry run: there are ", nrow(missing_serial), " aedes serial_ids to update.")
     else {
