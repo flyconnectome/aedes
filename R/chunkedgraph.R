@@ -59,7 +59,7 @@ aedes_xyz2id <- function(
 
   na_rows <- !stats::complete.cases(xyz_raw)
   n <- nrow(xyz_raw)
-  zero_ids <- if (integer64) bit64::as.integer64(rep("0", n)) else rep("0", n)
+  zero_ids <- rep(flywire_ids(0L, integer64 = integer64), n)
 
   if (all(na_rows)) {
     return(zero_ids)
