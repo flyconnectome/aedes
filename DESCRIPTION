@@ -19,11 +19,13 @@ Depends:
     fafbseg (>= 0.15.5)
 Imports:
     dplyr,
-    magrittr,
-    withr,
-    nat,
+    glue,
+    httr,
     memoise,
-    rlang
+    nat,
+    magrittr,
+    rlang,
+    withr
 Suggests:
     testthat (>= 3.0.0),
     coconat,

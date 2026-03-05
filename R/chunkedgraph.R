@@ -1,38 +1,102 @@
-#' Query Aedes supervoxel IDs from point coordinates
+#' Find Aedes root or supervoxel (leaf) IDs for XYZ locations
 #'
-#' @param x 3D coordinates in any form compatible with [nat::xyzmatrix()].
-#' @param rawcoords Whether `x` is already in raw voxel coordinates (`TRUE`) or
-#'   in nm coordinates (`FALSE`).
-#' @param voxdims Voxel dimensions in nm used to convert nm coordinates to raw
-#'   voxel coordinates when `rawcoords = FALSE`.
-#' @param mip MIP scale (`s` in the transform-service URL).
-#' @param format Response/input format suffix for the transform-service URL.
-#' @param dataset Transform-service dataset name.
-#' @param base_url Transform-service base URL.
+#' @param method Lookup method: `"auto"` and `"spine"` use the Aedes transform
+#'   service; `"cloudvolume"` delegates to [fafbseg::flywire_xyz2id()].
+#' @inheritParams fafbseg::flywire_xyz2id
+#' @param ... Additional arguments passed to backend helpers.
 #'
-#' @return A character vector of supervoxel IDs (`uint64`) of length `nrow(x)`.
+#' @return A vector of segment IDs (`character` or `integer64`).
+#' @details Method auto (which maps to spine) should be much faster for look ups
+#' with many points, especially points in the same region of space.
+#'
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' aedes_supervoxels(c(159144, 22192, 3560))
+#' aedes_xyz2id(c(24606, 12450, 5798), rawcoords = TRUE, root = FALSE)
 #' }
+aedes_xyz2id <- function(
+    xyz,
+    rawcoords = FALSE,
+    voxdims = aedes_voxdims(),
+    cloudvolume.url = NULL,
+    root = TRUE,
+    timestamp = NULL,
+    version = NULL,
+    stop_layer = NULL,
+    integer64 = FALSE,
+    method = c("auto", "cloudvolume", "spine"),
+    ...) {
+  method <- match.arg(method)
+
+  if (isTRUE(is.numeric(xyz) && is.vector(xyz) && length(xyz) == 3)) {
+    xyz <- matrix(xyz, ncol = 3)
+  } else {
+    xyz <- nat::xyzmatrix(xyz)
+  }
+
+  if (method == "cloudvolume") {
+    return(with_aedes(fafbseg::flywire_xyz2id(
+      xyz = xyz,
+      rawcoords = rawcoords,
+      voxdims = voxdims,
+      cloudvolume.url = cloudvolume.url,
+      root = root,
+      timestamp = timestamp,
+      version = version,
+      stop_layer = stop_layer,
+      integer64 = integer64,
+      method = "cloudvolume",
+      ...
+    )))
+  }
+
+  xyz_raw <- if (isTRUE(rawcoords)) {
+    xyz
+  } else {
+    scale(xyz, scale = voxdims, center = FALSE)
+  }
+
+  na_rows <- !stats::complete.cases(xyz_raw)
+  n <- nrow(xyz_raw)
+  zero_ids <- if (integer64) bit64::as.integer64(rep("0", n)) else rep("0", n)
+
+  if (all(na_rows)) {
+    return(zero_ids)
+  }
+
+  res <- aedes_supervoxels(xyz_raw[!na_rows, , drop = FALSE])
+  if (!root) {
+    looked_up <- fafbseg::flywire_ids(res, integer64 = integer64)
+    out <- zero_ids
+    out[!na_rows] <- looked_up
+    return(out)
+  }
+  if (root) {
+    res <- with_aedes(fafbseg::flywire_rootid(
+      res,
+      cloudvolume.url = cloudvolume.url,
+      timestamp = timestamp,
+      version = version,
+      stop_layer = stop_layer,
+      integer64 = integer64
+    ))
+    out <- zero_ids
+    out[!na_rows] <- res
+    return(out)
+  }
+}
+
+#' @noRd
 aedes_supervoxels <- function(
     x,
-    rawcoords = TRUE,
-    voxdims = aedes_voxdims(),
     mip = 0,
     format = "array_float_Nx3",
     dataset = "wclee_aedes_brain",
     base_url = "https://flyem.mrc-lmb.cam.ac.uk/transform-service/query/dataset") {
-  xyz <- nat::xyzmatrix(x)
-  pts <- if (isTRUE(rawcoords)) {
-    xyz
-  } else {
-    scale(xyz, center = FALSE, scale = voxdims)
-  }
+  pts <- nat::xyzmatrix(x)
   ptsb <- writeBin(as.vector(pts), con = raw(), size = 4)
-  u <- sprintf("%s/%s/s/%d/values_binary/format/%s", base_url, dataset, mip, format)
+  u <- glue::glue("{base_url}/{dataset}/s/{mip}/values_binary/format/{format}")
 
   res <- httr::POST(u, body = ptsb, encode = "raw")
   httr::stop_for_status(res)
