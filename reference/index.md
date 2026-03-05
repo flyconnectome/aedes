@@ -16,6 +16,8 @@
   [`aedes_nm2raw()`](aedes_voxdims.md)
   [`aedes_raw2nm()`](aedes_voxdims.md) : Handle raw and nm calibrated
   Aedes coordinates
+- [`aedes_xyz2id()`](aedes_xyz2id.md) : Find Aedes root or supervoxel
+  (leaf) IDs for XYZ locations
 - [`choose_aedes()`](choose_aedes.md) [`with_aedes()`](choose_aedes.md)
   : Choose or temporarily use the Aedes autosegmentation
 - [`register_aedes_coconat()`](register_aedes_coconat.md) : Register

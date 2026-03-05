@@ -6,7 +6,7 @@ Update ids in aedes_main table manually
 
 ``` r
 aedes_flytable_update(
-  update.serial_ids = TRUE,
+  update.serial_ids = FALSE,
   update_dups = TRUE,
   dry_run = FALSE
 )
@@ -16,7 +16,9 @@ aedes_flytable_update(
 
 - update.serial_ids:
 
-  Whether to update the serial_id column uniquely defining each row
+  Whether to update the serial_id column uniquely defining each row.
+  This is off by default as the serial_id is auto-incremented by the
+  server.
 
 - update_dups:
 

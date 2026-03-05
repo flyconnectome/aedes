@@ -40,7 +40,7 @@
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">aedes_flytable_update</span><span class="op">(</span></span>
-<span>  update.serial_ids <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  update.serial_ids <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  update_dups <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  dry_run <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -52,7 +52,8 @@
 
 <dl><dt id="arg-update-serial-ids">update.serial_ids<a class="anchor" aria-label="anchor" href="#arg-update-serial-ids"></a></dt>
 <dd><p>Whether to update the serial_id column uniquely
-defining each row</p></dd>
+defining each row. This is off by default as the serial_id is
+auto-incremented by the server.</p></dd>
 
 
 <dt id="arg-update-dups">update_dups<a class="anchor" aria-label="anchor" href="#arg-update-dups"></a></dt>
@@ -68,8 +69,8 @@ default) and also set the root_duplicated column.</p></dd>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>This is now part of the scripted updates on flyem but even in future
 it may occasionally be useful to trigger this manually.</p>
-<p>Expert use only: there is a scheduled job that updates root IDs on
-FlyTable every 30 minutes, so this function should normally not be needed.</p>
+<p>Expert use only: there is a scheduled job that updates root IDs on FlyTable
+every 30 minutes, so this function should normally not be needed.</p>
 <p>The root_duplicated column will only be ticked for root_ids when there is
 more than one entry <em>after</em> setting aside any rows with
 status=duplicate.</p>
