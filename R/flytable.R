@@ -25,7 +25,8 @@ aedes_sequential_update <- function(df) {
 #' Update ids in aedes_main table manually
 #'
 #' @param update.serial_ids Whether to update the serial_id column uniquely
-#'   defining each row
+#'   defining each row. This is off by default as the serial_id is
+#'   auto-incremented by the server.
 #' @param update_dups Whether to update rows with "duplicate" status (now the
 #'   default) and also set the root_duplicated column.
 #' @param dry_run Whether to show what would happen rather than doing it.
@@ -33,14 +34,14 @@ aedes_sequential_update <- function(df) {
 #' @details This is now part of the scripted updates on flyem but even in future
 #'   it may occasionally be useful to trigger this manually.
 #'
-#'   Expert use only: there is a scheduled job that updates root IDs on
-#'   FlyTable every 30 minutes, so this function should normally not be needed.
+#'   Expert use only: there is a scheduled job that updates root IDs on FlyTable
+#'   every 30 minutes, so this function should normally not be needed.
 #'
 #'   The root_duplicated column will only be ticked for root_ids when there is
 #'   more than one entry \emph{after} setting aside any rows with
 #'   status=duplicate.
 #' @keywords internal
-aedes_flytable_update <- function(update.serial_ids = TRUE, update_dups = TRUE, dry_run = FALSE) {
+aedes_flytable_update <- function(update.serial_ids = FALSE, update_dups = TRUE, dry_run = FALSE) {
   aedes_main = fafbseg::flytable_query("select `_id`, root_id, supervoxel_id, point_xyz, serial_id, root_duplicated, status from aedes_main")
   cands <- if (update_dups) {
     dplyr::select(aedes_main, dplyr::all_of(c("_id", "root_id", "supervoxel_id", "point_xyz", "root_duplicated", "status")))
@@ -83,7 +84,7 @@ aedes_flytable_update <- function(update.serial_ids = TRUE, update_dups = TRUE, 
       message("Not updating ", nrow(missing_serial), " aedes serial_ids.")
       return(invisible(FALSE))
     }
-    last_serial = max(aedes_main$serial_id, na.rm = TRUE)
+    last_serial = max(as.integer(aedes_main$serial_id), na.rm = TRUE)
     missing_serial$serial_id = seq_len(nrow(missing_serial)) + last_serial
     if (dry_run)
       message("dry run: there are ", nrow(missing_serial), " aedes serial_ids to update.")

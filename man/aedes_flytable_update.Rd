@@ -5,14 +5,15 @@
 \title{Update ids in aedes_main table manually}
 \usage{
 aedes_flytable_update(
-  update.serial_ids = TRUE,
+  update.serial_ids = FALSE,
   update_dups = TRUE,
   dry_run = FALSE
 )
 }
 \arguments{
 \item{update.serial_ids}{Whether to update the serial_id column uniquely
-defining each row}
+defining each row. This is off by default as the serial_id is
+auto-incremented by the server.}
 
 \item{update_dups}{Whether to update rows with "duplicate" status (now the
 default) and also set the root_duplicated column.}
@@ -26,8 +27,8 @@ Update ids in aedes_main table manually
 This is now part of the scripted updates on flyem but even in future
 it may occasionally be useful to trigger this manually.
 
-Expert use only: there is a scheduled job that updates root IDs on
-FlyTable every 30 minutes, so this function should normally not be needed.
+Expert use only: there is a scheduled job that updates root IDs on FlyTable
+every 30 minutes, so this function should normally not be needed.
 
 The root_duplicated column will only be ticked for root_ids when there is
 more than one entry \emph{after} setting aside any rows with
