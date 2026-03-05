@@ -90,12 +90,51 @@ aedes_xyz2id <- function(
 #' @noRd
 aedes_supervoxels <- function(
     x,
+    chunksize = 2000L,
     mip = 0,
     format = "array_float_Nx3",
     dataset = "wclee_aedes_brain",
     base_url = "https://flyem.mrc-lmb.cam.ac.uk/transform-service/query/dataset") {
   pts <- nat::xyzmatrix(x)
-  ptsb <- writeBin(as.vector(pts), con = raw(), size = 4)
+  if (nrow(pts) > chunksize) {
+    chunks <- nat.utils::make_chunks(seq_len(nrow(pts)), chunksize = chunksize)
+    resmain <- list()
+    while (length(chunks) > 0) {
+      res <- pbapply::pblapply(chunks, function(idx) {
+        tryCatch(
+          aedes_supervoxels_one(pts[idx, , drop = FALSE], mip = mip,
+                                format = format, dataset = dataset,
+                                base_url = base_url),
+          error = function(e) NULL
+        )
+      })
+      badchunks <- vapply(res, is.null, logical(1))
+      resmain <- c(resmain, res[!badchunks])
+      if (!any(badchunks)) {
+        chunks <- NULL
+      } else {
+        chunksize <- max(round(chunksize / 2), 1L)
+        chunks <- nat.utils::make_chunks(
+          unlist(chunks[badchunks]), chunksize = chunksize
+        )
+        message("Refetching ", sum(lengths(chunks)),
+                " points after reducing chunksize to: ", chunksize)
+      }
+    }
+    return(unlist(resmain))
+  }
+  aedes_supervoxels_one(pts, mip = mip, format = format,
+                         dataset = dataset, base_url = base_url)
+}
+
+#' @noRd
+aedes_supervoxels_one <- function(
+    pts,
+    mip = 0,
+    format = "array_float_Nx3",
+    dataset = "wclee_aedes_brain",
+    base_url = "https://flyem.mrc-lmb.cam.ac.uk/transform-service/query/dataset") {
+  ptsb <- writeBin(as.vector(t(pts)), con = raw(), size = 4)
   u <- glue::glue("{base_url}/{dataset}/s/{mip}/values_binary/format/{format}")
 
   res <- httr::POST(u, body = ptsb, encode = "raw")

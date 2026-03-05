@@ -23,7 +23,9 @@ Imports:
     httr,
     memoise,
     nat,
+    nat.utils,
     magrittr,
+    pbapply,
     rlang,
     withr
 Suggests:
