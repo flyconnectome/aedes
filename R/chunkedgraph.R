@@ -65,7 +65,7 @@ aedes_xyz2id <- function(
     return(zero_ids)
   }
 
-  res <- aedes_supervoxels(xyz_raw[!na_rows, , drop = FALSE])
+  res <- aedes_supervoxels(xyz_raw[!na_rows, , drop = FALSE], ...)
   if (!root) {
     looked_up <- fafbseg::flywire_ids(res, integer64 = integer64)
     out <- zero_ids
