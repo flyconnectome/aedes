@@ -14,9 +14,7 @@ aedes_sequential_update <- function(df) {
   pts_toupdate = with(df, (is.na(supervoxel_id) | supervoxel_id == 0) & !is.na(point_xyz))
   if (any(pts_toupdate)) {
     df[pts_toupdate, "supervoxel_id"] <-
-      with(df[pts_toupdate, , drop = FALSE],
-           fafbseg::flywire_xyz2id(point_xyz, rawcoords = TRUE, root = FALSE,
-                                   voxdims = c(16, 16, 45), method = "cloud"))
+      aedes_xyz2id(df$point_xyz[pts_toupdate], rawcoords = TRUE, root = FALSE)
   }
   df <- df %>% dplyr::mutate(
     root_id = fafbseg::flywire_updateids(.data$root_id, svids = .data$supervoxel_id)
