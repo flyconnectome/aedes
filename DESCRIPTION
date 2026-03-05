@@ -21,7 +21,6 @@ Imports:
     dplyr,
     glue,
     httr,
-    memoise,
     nat,
     nat.utils,
     magrittr,
