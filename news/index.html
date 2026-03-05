@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">aedes</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,12 +33,24 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.2" id="aedes-v02">aedes v0.2<a class="anchor" aria-label="anchor" href="#aedes-v02"></a></h2>
+<ul><li>Fast supervoxel lookups via the MRC LMB transform service (<code><a href="../reference/aedes_xyz2id.html">aedes_xyz2id()</a></code> with <code>method="auto"</code>), &gt; 100x faster than cloudvolume for bulk queries.</li>
+<li>also features chunked requests with progress reporting and automatic retry at reduced chunk size on failure.</li>
+<li>
+<code><a href="../reference/aedes_sequential_update.html">aedes_sequential_update()</a></code> now uses the fast transform service for supervoxel lookups.</li>
+<li>
+<code><a href="../reference/aedes_meta.html">aedes_meta()</a></code> now wraps <code><a href="https://rdrr.io/pkg/fafbseg/man/cam_meta.html" class="external-link">fafbseg::cam_meta()</a></code> for metadata queries, with improved documentation of version/timestamp handling.</li>
+<li>Refactored <code>aedes_cfmeta()</code> column renaming for robustness.</li>
+<li>Package hygiene: removed unused imports, added <code>glue</code>, <code>httr</code>, <code>nat.utils</code>, <code>pbapply</code> to Imports, pinned <code>fafbseg (&gt;= 0.15.5)</code>.</li>
+</ul></div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1" id="aedes-v01">aedes v0.1<a class="anchor" aria-label="anchor" href="#aedes-v01"></a></h2>
 <ul><li>Initial version on github with basic functions from 2025aedes aedes-dataset-funs.R</li>
 <li>also has docs at <a href="https://flyconnectome.github.io/aedes" class="external-link uri">https://flyconnectome.github.io/aedes</a>
 </li>
 </ul></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
