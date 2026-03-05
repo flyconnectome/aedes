@@ -134,7 +134,7 @@ aedes_supervoxels_one <- function(
     format = "array_float_Nx3",
     dataset = "wclee_aedes_brain",
     base_url = "https://flyem.mrc-lmb.cam.ac.uk/transform-service/query/dataset") {
-  ptsb <- writeBin(as.vector(t(pts)), con = raw(), size = 4)
+  ptsb <- writeBin(as.numeric(t(pts)), con = raw(), size = 4)
   u <- glue::glue("{base_url}/{dataset}/s/{mip}/values_binary/format/{format}")
 
   res <- httr::POST(u, body = ptsb, encode = "raw")

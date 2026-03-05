@@ -6,6 +6,8 @@ test_that("aedes_xyz2id auto matches cloudvolume for ids", {
   skip_if(inherits(got, "try-error"), "Skipping: transform service unavailable")
 
   expect_equal(got, '648518347566403105')
+  # check string input can work as well
+  expect_equal(aedes_xyz2id('24606, 12450, 5798', rawcoords = TRUE, version=333), got)
   expect_equal(
     aedes_xyz2id('393696 199200 260910', rawcoords = F, version=333),
     '648518347566403105')
