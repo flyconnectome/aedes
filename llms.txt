@@ -3,7 +3,7 @@
 [![An Aedes aegypti mosquito sipping coconut milk on a starry purple
 background. See coconatfly and natverse links for the significance of
 this
-image.](reference/figures/aedes-coconut.png)](man/figures/aedes-coconut-hex.png)
+image.](reference/figures/aedes-coconut-200.png)](man/figures/aedes-coconut-hex.png)
 
 The **aedes** package provides programmatic access to the in progress
 *Aedes aegypti* connectome dataset. It integrates with
