@@ -3,7 +3,7 @@
 
 <!-- devtools::build_readme() is a good way to build this -->
 
-<a href="man/figures/aedes-coconut-hex.png"><img src="man/figures/aedes-coconut.png" align="right" height="200" alt="An Aedes aegypti mosquito sipping coconut milk on a starry purple background. See coconatfly and natverse links for the significance of this image." /></a>
+<a href="man/figures/aedes-coconut-hex.png"><img src="man/figures/aedes-coconut-200.png" align="right" alt="An Aedes aegypti mosquito sipping coconut milk on a starry purple background. See coconatfly and natverse links for the significance of this image." /></a>
 
 # aedes
 
