@@ -84,6 +84,9 @@ aedes_edit_movie <- function(dat, name = "aedes_frames", fps = 10,
   bins <- findInterval(ts, frame_breaks, rightmost.closed = TRUE)
   timestamps <- as.POSIXct(frame_breaks[-1], origin = "1970-01-01", tz = "UTC")
 
+  pb <- pbapply::startpb(min = 0, max = nframes)
+  on.exit(pbapply::closepb(pb), add = TRUE)
+
   for (i in seq_len(nframes)) {
     batch <- which(bins == i)
     if (length(batch) > 0)
@@ -106,7 +109,7 @@ aedes_edit_movie <- function(dat, name = "aedes_frames", fps = 10,
     })
 
     rgl::snapshot3d(file.path(frames_dir, sprintf("frame%04d.png", i)))
-    if (i %% 10 == 0) message(sprintf("Frame %d/%d", i, nframes))
+    pbapply::setpb(pb, i)
   }
 
   pngs <- list.files(frames_dir, pattern = "\\.png$", full.names = TRUE)
