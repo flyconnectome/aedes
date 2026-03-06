@@ -28,6 +28,9 @@ Imports:
     rlang,
     withr
 Suggests:
+    gifski,
+    RcppSimdJson,
+    rgl,
     testthat (>= 3.0.0),
     coconat,
     reticulate
