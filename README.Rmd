@@ -6,7 +6,7 @@ output: github_document
 
 <!-- devtools::build_readme() is a good way to build this -->
 
-<a href="man/figures/aedes-coconut-hex.png"><img src="man/figures/aedes-coconut.png" align="right" height="100" alt="An Aedes aegypti mosquito sipping coconut milk on a starry purple background. See coconatfly and natverse links for the significance of this image." /></a>
+<a href="man/figures/aedes-coconut-hex.png"><img src="man/figures/aedes-coconut.png" align="right" style="height: 100px;" alt="An Aedes aegypti mosquito sipping coconut milk on a starry purple background. See coconatfly and natverse links for the significance of this image." /></a>
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
