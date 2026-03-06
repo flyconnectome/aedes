@@ -10,6 +10,7 @@ chunkedgraph_operation_details(
   datastack_name,
   chunksize = 50,
   return.data.frame = TRUE,
+  compute_centroids = FALSE,
   ...
 )
 
@@ -24,6 +25,10 @@ aedes_operation_details(ops, ...)
 
 \item{return.data.frame}{If \code{TRUE} (default), return a data.frame; otherwise
 return a raw named list.}
+
+\item{compute_centroids}{If \code{TRUE}, add centroid columns for sink and source
+coordinates (\code{sink_x/y/z}, \code{source_x/y/z}). Only applies when
+\code{return.data.frame = TRUE}.}
 
 \item{...}{Additional arguments (currently unused).}
 }

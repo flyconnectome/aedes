@@ -9,6 +9,9 @@
 #' @param chunksize Number of operations per API request.
 #' @param return.data.frame If `TRUE` (default), return a data.frame; otherwise
 #'   return a raw named list.
+#' @param compute_centroids If `TRUE`, add centroid columns for sink and source
+#'   coordinates (`sink_x/y/z`, `source_x/y/z`). Only applies when
+#'   `return.data.frame = TRUE`.
 #' @param ... Additional arguments (currently unused).
 #'
 #' @return A data.frame with one row per operation (or a named list if
@@ -16,22 +19,29 @@
 #' @keywords internal
 chunkedgraph_operation_details <- function(ops, datastack_name,
                                            chunksize = 50,
-                                           return.data.frame = TRUE, ...) {
+                                           return.data.frame = TRUE,
+                                           compute_centroids = FALSE, ...) {
   acc <- fafbseg::flywire_cave_client(datastack_name = datastack_name)
-  .chunkedgraph_operation_details(ops, acc = acc, chunksize = chunksize,
-                                  return.data.frame = return.data.frame, ...)
+  pyjson <- reticulate::import("json")
+  df <- .chunkedgraph_operation_details(ops, acc = acc, chunksize = chunksize,
+                                        return.data.frame = return.data.frame, ...)
+  if (compute_centroids && return.data.frame)
+    df <- add_operation_centroids(df)
+  df
 }
 
 #' @noRd
 .chunkedgraph_operation_details <- function(ops, acc, chunksize = 50,
-                                            return.data.frame = TRUE, ...) {
+                                            return.data.frame = TRUE,
+                                            pyjson = reticulate::import("json"), ...) {
   nops <- length(ops)
   if (nops > chunksize) {
     nchunks <- ceiling(nops / chunksize)
     chunks <- rep(seq_len(nchunks), rep(chunksize, nchunks))[seq_len(nops)]
     sops <- split(ops, chunks)
     ll <- pbapply::pblapply(sops, .chunkedgraph_operation_details, acc = acc,
-                            chunksize = Inf, return.data.frame = FALSE, ...)
+                            chunksize = Inf, return.data.frame = FALSE,
+                            pyjson = pyjson, ...)
     l2 <- unlist(ll, recursive = FALSE, use.names = FALSE)
     if (return.data.frame) {
       df <- fafbseg:::list2df(l2)
@@ -44,7 +54,6 @@ chunkedgraph_operation_details <- function(ops, datastack_name,
     }
   }
 
-  pyjson <- reticulate::import("json")
   v <- reticulate::py_call(acc$chunkedgraph$get_operation_details,
                            operation_ids = as.list(as.integer(ops)))
   ps <- RcppSimdJson::fparse(pyjson$dumps(v), int64_policy = "string",
@@ -110,37 +119,32 @@ last_chunkedgraph_edit <- function(datastack_name, start = 1e5, stop = 1e6) {
 #' @param datastack_name CAVE datastack name.
 #' @param last Optional integer; if `NULL` (default), determined automatically
 #'   via [last_chunkedgraph_edit()].
+#' @param compute_centroids Passed to [chunkedgraph_operation_details()].
 #' @param ... Additional arguments passed to [chunkedgraph_operation_details()].
 #'
 #' @return A data.frame of all operation details.
 #' @keywords internal
-all_chunkedgraph_operations <- function(datastack_name, last = NULL, ...) {
+all_chunkedgraph_operations <- function(datastack_name, last = NULL,
+                                        compute_centroids = FALSE, ...) {
   if (is.null(last))
     last <- last_chunkedgraph_edit(datastack_name)
-  chunkedgraph_operation_details(seq_len(last), datastack_name = datastack_name, ...)
-}
-
-#' @noRd
-.parse_op_coords <- function(s) {
-  if (is.na(s) || s == "NA") return(NULL)
-  v <- as.numeric(strsplit(s, ",", fixed = TRUE)[[1]])
-  n <- length(v) / 3L
-  matrix(v, nrow = n, ncol = 3, dimnames = list(NULL, c("x", "y", "z")))
+  chunkedgraph_operation_details(seq_len(last), datastack_name = datastack_name,
+                                 compute_centroids = compute_centroids, ...)
 }
 
 #' @noRd
 .coord_centroid <- function(s) {
-  m <- .parse_op_coords(s)
-  if (is.null(m)) return(c(x = NA_real_, y = NA_real_, z = NA_real_))
-  colMeans(m)
+  if (is.na(s) || s == "NA") return(c(x = NA_real_, y = NA_real_, z = NA_real_))
+  v <- as.numeric(strsplit(s, ",", fixed = TRUE)[[1]])
+  colMeans(matrix(v, ncol = 3, dimnames = list(NULL, c("x", "y", "z"))))
 }
 
 #' @noRd
 add_operation_centroids <- function(df) {
-  sink_ctr   <- do.call(rbind, lapply(df$sink_coords,   .coord_centroid))
-  source_ctr <- do.call(rbind, lapply(df$source_coords, .coord_centroid))
-  df$sink_x <- sink_ctr[, "x"];   df$sink_y <- sink_ctr[, "y"];   df$sink_z <- sink_ctr[, "z"]
-  df$source_x <- source_ctr[, "x"]; df$source_y <- source_ctr[, "y"]; df$source_z <- source_ctr[, "z"]
+  for (col in c("sink", "source")) {
+    ctr <- t(vapply(df[[paste0(col, "_coords")]], .coord_centroid, numeric(3)))
+    df[paste0(col, c("_x", "_y", "_z"))] <- ctr
+  }
   df
 }
 

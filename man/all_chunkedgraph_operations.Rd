@@ -5,7 +5,12 @@
 \alias{aedes_all_operations}
 \title{Fetch all edit operations for a CAVE dataset}
 \usage{
-all_chunkedgraph_operations(datastack_name, last = NULL, ...)
+all_chunkedgraph_operations(
+  datastack_name,
+  last = NULL,
+  compute_centroids = FALSE,
+  ...
+)
 
 aedes_all_operations(...)
 }
@@ -14,6 +19,8 @@ aedes_all_operations(...)
 
 \item{last}{Optional integer; if \code{NULL} (default), determined automatically
 via \code{\link[=last_chunkedgraph_edit]{last_chunkedgraph_edit()}}.}
+
+\item{compute_centroids}{Passed to \code{\link[=chunkedgraph_operation_details]{chunkedgraph_operation_details()}}.}
 
 \item{...}{Additional arguments passed to \code{\link[=chunkedgraph_operation_details]{chunkedgraph_operation_details()}}.}
 }

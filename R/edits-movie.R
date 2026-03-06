@@ -20,8 +20,7 @@
 #' @examples
 #' \dontrun{
 #' # Fetch edit operations and add user metadata
-#' ops <- aedes:::aedes_all_operations()
-#' ops <- aedes:::add_operation_centroids(ops)
+#' ops <- aedes:::aedes_all_operations(compute_centroids=TRUE)
 #' user_info <- googlesheets4::read_sheet(
 #'   "https://docs.google.com/spreadsheets/d/1W0CLjIvgX9rl4ttqgjI3xr3zlL_hA86ZRW0-3-CGQTU/"
 #' )
