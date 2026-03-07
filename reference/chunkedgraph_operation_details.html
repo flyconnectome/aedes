@@ -44,6 +44,7 @@
 <span>  <span class="va">datastack_name</span>,</span>
 <span>  chunksize <span class="op">=</span> <span class="fl">50</span>,</span>
 <span>  return.data.frame <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  compute_centroids <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -69,6 +70,12 @@
 <dt id="arg-return-data-frame">return.data.frame<a class="anchor" aria-label="anchor" href="#arg-return-data-frame"></a></dt>
 <dd><p>If <code>TRUE</code> (default), return a data.frame; otherwise
 return a raw named list.</p></dd>
+
+
+<dt id="arg-compute-centroids">compute_centroids<a class="anchor" aria-label="anchor" href="#arg-compute-centroids"></a></dt>
+<dd><p>If <code>TRUE</code>, add centroid columns for sink and source
+coordinates (<code>sink_x/y/z</code>, <code>source_x/y/z</code>). Only applies when
+<code>return.data.frame = TRUE</code>.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

@@ -6,7 +6,12 @@ IDs from 1 to that maximum.
 ## Usage
 
 ``` r
-all_chunkedgraph_operations(datastack_name, last = NULL, ...)
+all_chunkedgraph_operations(
+  datastack_name,
+  last = NULL,
+  compute_centroids = FALSE,
+  ...
+)
 
 aedes_all_operations(...)
 ```
@@ -21,6 +26,11 @@ aedes_all_operations(...)
 
   Optional integer; if `NULL` (default), determined automatically via
   [`last_chunkedgraph_edit()`](last_chunkedgraph_edit.md).
+
+- compute_centroids:
+
+  Passed to
+  [`chunkedgraph_operation_details()`](chunkedgraph_operation_details.md).
 
 - ...:
 

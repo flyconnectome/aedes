@@ -10,6 +10,7 @@ chunkedgraph_operation_details(
   datastack_name,
   chunksize = 50,
   return.data.frame = TRUE,
+  compute_centroids = FALSE,
   ...
 )
 
@@ -34,6 +35,12 @@ aedes_operation_details(ops, ...)
 
   If `TRUE` (default), return a data.frame; otherwise return a raw named
   list.
+
+- compute_centroids:
+
+  If `TRUE`, add centroid columns for sink and source coordinates
+  (`sink_x/y/z`, `source_x/y/z`). Only applies when
+  `return.data.frame = TRUE`.
 
 - ...:
 

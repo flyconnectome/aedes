@@ -42,7 +42,12 @@ from 1 to that maximum.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">all_chunkedgraph_operations</span><span class="op">(</span><span class="va">datastack_name</span>, last <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">all_chunkedgraph_operations</span><span class="op">(</span></span>
+<span>  <span class="va">datastack_name</span>,</span>
+<span>  last <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  compute_centroids <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">aedes_all_operations</span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -58,6 +63,10 @@ from 1 to that maximum.</p>
 <dt id="arg-last">last<a class="anchor" aria-label="anchor" href="#arg-last"></a></dt>
 <dd><p>Optional integer; if <code>NULL</code> (default), determined automatically
 via <code><a href="last_chunkedgraph_edit.html">last_chunkedgraph_edit()</a></code>.</p></dd>
+
+
+<dt id="arg-compute-centroids">compute_centroids<a class="anchor" aria-label="anchor" href="#arg-compute-centroids"></a></dt>
+<dd><p>Passed to <code><a href="chunkedgraph_operation_details.html">chunkedgraph_operation_details()</a></code>.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
