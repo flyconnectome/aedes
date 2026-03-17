@@ -116,7 +116,14 @@ aedes_supervoxels <- function(
       if (!any(badchunks)) {
         chunks <- NULL
       } else {
-        chunksize <- max(round(chunksize / 2), 1L)
+        new_chunksize <- max(round(chunksize / 2), 1L)
+        if (new_chunksize >= chunksize) {
+          # chunksize can't shrink further; give up on remaining points
+          warning(sum(lengths(chunks[badchunks])),
+                  " points failed supervoxel lookup after retries")
+          break
+        }
+        chunksize <- new_chunksize
         chunks <- nat.utils::make_chunks(
           unlist(chunks[badchunks]), chunksize = chunksize
         )
