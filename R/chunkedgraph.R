@@ -96,9 +96,10 @@ aedes_supervoxels <- function(
     dataset = "wclee_aedes_brain",
     base_url = "https://flyem.mrc-lmb.cam.ac.uk/transform-service/query/dataset") {
   pts <- nat::xyzmatrix(x)
-  if (nrow(pts) > chunksize) {
-    chunks <- nat.utils::make_chunks(seq_len(nrow(pts)), chunksize = chunksize)
-    resmain <- list()
+  n <- nrow(pts)
+  if (n > chunksize) {
+    chunks <- nat.utils::make_chunks(seq_len(n), chunksize = chunksize)
+    out <- rep("0", n)
     while (length(chunks) > 0) {
       res <- pbapply::pblapply(chunks, function(idx) {
         tryCatch(
@@ -109,11 +110,20 @@ aedes_supervoxels <- function(
         )
       })
       badchunks <- vapply(res, is.null, logical(1))
-      resmain <- c(resmain, res[!badchunks])
+      for (i in which(!badchunks)) {
+        out[chunks[[i]]] <- res[[i]]
+      }
       if (!any(badchunks)) {
         chunks <- NULL
       } else {
-        chunksize <- max(round(chunksize / 2), 1L)
+        new_chunksize <- max(round(chunksize / 2), 1L)
+        if (new_chunksize >= chunksize) {
+          # chunksize can't shrink further; give up on remaining points
+          warning(sum(lengths(chunks[badchunks])),
+                  " points failed supervoxel lookup after retries")
+          break
+        }
+        chunksize <- new_chunksize
         chunks <- nat.utils::make_chunks(
           unlist(chunks[badchunks]), chunksize = chunksize
         )
@@ -121,7 +131,10 @@ aedes_supervoxels <- function(
                 " points after reducing chunksize to: ", chunksize)
       }
     }
-    return(unlist(resmain))
+    nfailed <- sum(out == "0")
+    if (nfailed > 0)
+      warning(nfailed, " points failed supervoxel lookup and were set to 0")
+    return(out)
   }
   aedes_supervoxels_one(pts, mip = mip, format = format,
                          dataset = dataset, base_url = base_url)
