@@ -24,7 +24,8 @@ chunkedgraph_operation_details <- function(ops, datastack_name,
   acc <- fafbseg::flywire_cave_client(datastack_name = datastack_name)
   pyjson <- reticulate::import("json")
   df <- .chunkedgraph_operation_details(ops, acc = acc, chunksize = chunksize,
-                                        return.data.frame = return.data.frame, ...)
+                                        return.data.frame = return.data.frame,
+                                        pyjson = pyjson, ...)
   if (compute_centroids && return.data.frame)
     df <- add_operation_centroids(df)
   df
@@ -42,13 +43,9 @@ chunkedgraph_operation_details <- function(ops, datastack_name,
     ll <- pbapply::pblapply(sops, .chunkedgraph_operation_details, acc = acc,
                             chunksize = Inf, return.data.frame = FALSE,
                             pyjson = pyjson, ...)
-    l2 <- unlist(ll, recursive = FALSE, use.names = FALSE)
+    l2 <- unlist(ll, recursive = FALSE, use.names = TRUE)
     if (return.data.frame) {
-      df <- fafbseg:::list2df(l2)
-      df$operation_id <- as.integer(unlist(sapply(ll, names), use.names = FALSE))
-      df <- df[c("operation_id", setdiff(colnames(df), "operation_id"))]
-      df$timestamp <- as.POSIXct(df$timestamp, tz = "UTC")
-      return(df)
+      return(.operation_details_list_to_df(l2))
     } else {
       return(l2)
     }
@@ -60,15 +57,27 @@ chunkedgraph_operation_details <- function(ops, datastack_name,
                              always_list = FALSE)
 
   if (return.data.frame) {
-    df <- fafbseg:::list2df(ps)
-    df$operation_id <- as.integer(names(ps))
-    df <- df[c("operation_id", setdiff(colnames(df), "operation_id"))]
-    if (!is.null(df$timestamp))
-      df$timestamp <- as.POSIXct(df$timestamp, tz = "UTC")
-    df
+    .operation_details_list_to_df(ps)
   } else {
     ps
   }
+}
+
+#' @noRd
+.operation_details_list_to_df <- function(x) {
+  if (!length(x))
+    return(data.frame(operation_id = integer()))
+
+  op_ids <- as.integer(names(x))
+  if (length(op_ids) != length(x) || anyNA(op_ids))
+    stop("Operation detail response did not include valid operation IDs")
+
+  df <- fafbseg:::list2df(unname(x))
+  df$operation_id <- op_ids
+  df <- df[c("operation_id", setdiff(colnames(df), "operation_id"))]
+  if (!is.null(df$timestamp))
+    df$timestamp <- as.POSIXct(df$timestamp, tz = "UTC")
+  df
 }
 
 #' Use binary search to find the last edit operation ID for a CAVE dataset
@@ -141,6 +150,9 @@ all_chunkedgraph_operations <- function(datastack_name, last = NULL,
 
 #' @noRd
 add_operation_centroids <- function(df) {
+  coord_cols <- paste0(c("sink", "source"), "_coords")
+  if (!nrow(df) || !all(coord_cols %in% colnames(df)))
+    return(df)
   for (col in c("sink", "source")) {
     ctr <- t(vapply(df[[paste0(col, "_coords")]], .coord_centroid, numeric(3)))
     df[paste0(col, c("_x", "_y", "_z"))] <- ctr
