@@ -9,6 +9,7 @@ all_chunkedgraph_operations(
   datastack_name,
   last = NULL,
   compute_centroids = FALSE,
+  cache = rappdirs::user_cache_dir("aedes", appauthor = FALSE),
   ...
 )
 
