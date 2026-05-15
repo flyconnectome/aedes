@@ -16,3 +16,49 @@ test_that("aedes_voxdims returns a numeric 3-vector", {
   expect_length(vd, 3)
   expect_true(all(is.finite(vd)))
 })
+
+test_that("aedes_mirror landmarks method mirrors points from explicit landmarks", {
+  pts_a <- rbind(
+    c(0, 0, 0),
+    c(0, 1, 0),
+    c(0, 0, 1),
+    c(0, 1, 1)
+  )
+  pts_b <- pts_a
+  pts_b[, 1] <- 10
+
+  mirrored <- aedes_mirror(
+    rbind(c(2, 0.5, 0.5), c(8, 0.5, 0.5)),
+    method = "landmarks",
+    landmarks = list(pointA = pts_a, pointB = pts_b),
+    raw = FALSE
+  )
+
+  expect_equal(unname(mirrored), rbind(c(8, 0.5, 0.5), c(2, 0.5, 0.5)))
+})
+
+test_that("internal landmarks mirror registration validates input", {
+  expect_error(
+    aedes:::.aedes_mirror_reg_landmarks(landmarks = list(pointA = diag(3)), raw = FALSE),
+    "pointA.*pointB"
+  )
+})
+
+test_that("aedes_mirror tps method mirrors through bundled registration", {
+  pts <- rbind(c(100, 200, 150), c(300, 250, 120))
+
+  mirrored <- aedes_mirror(pts, method = "tps")
+
+  expect_equal(dim(mirrored), dim(pts))
+  expect_true(all(is.finite(mirrored)))
+  expect_false(isTRUE(all.equal(unname(mirrored), unname(pts))))
+})
+
+test_that("aedes_mirror defaults to tps method", {
+  pts <- rbind(c(100, 200, 150), c(300, 250, 120))
+
+  expect_equal(
+    unname(aedes_mirror(pts)),
+    unname(aedes_mirror(pts, method = "tps"))
+  )
+})
