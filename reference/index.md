@@ -10,6 +10,8 @@
   materialisation version and timestamp
 - [`aedes_meta()`](aedes_meta.md) [`aedes_ids()`](aedes_meta.md) :
   Return metadata about Aedes neurons from FlyTable
+- [`aedes_mirror()`](aedes_mirror.md) : Mirror Aedes neurons or points
+  to the opposite side of the brain
 - [`aedes_set_version()`](aedes_set_version.md) : Set default version
   selection for Aedes helpers
 - [`aedes_voxdims()`](aedes_voxdims.md)

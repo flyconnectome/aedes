@@ -10,6 +10,7 @@
 <url><loc>/reference/aedes_flytable_update.html</loc></url>
 <url><loc>/reference/aedes_get_version.html</loc></url>
 <url><loc>/reference/aedes_meta.html</loc></url>
+<url><loc>/reference/aedes_mirror.html</loc></url>
 <url><loc>/reference/aedes_sequential_update.html</loc></url>
 <url><loc>/reference/aedes_set_version.html</loc></url>
 <url><loc>/reference/aedes_voxdims.html</loc></url>
@@ -19,6 +20,7 @@
 <url><loc>/reference/chunkedgraph_operation_details.html</loc></url>
 <url><loc>/reference/index.html</loc></url>
 <url><loc>/reference/last_chunkedgraph_edit.html</loc></url>
+<url><loc>/reference/populate_chunkedgraph_ops_cache.html</loc></url>
 <url><loc>/reference/register_aedes_coconat.html</loc></url>
 </urlset>
 

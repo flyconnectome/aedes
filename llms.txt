@@ -41,6 +41,7 @@ time to be used.
 The package must be installed from github:
 
 ``` r
+
 if (!requireNamespace("natmanager", quietly = TRUE)) {
   install.packages("natmanager")
 }
@@ -66,6 +67,7 @@ Thereafter you should have a `FLYTABLE_TOKEN` environment variable set
 in your `.Renviron` file.
 
 ``` r
+
 # required 
 fafbseg::simple_python()
 
@@ -83,6 +85,7 @@ We recommend using coconatfly for most analysis. At the moment you must
 tell coconatfly about the aedes dataset once per R session.
 
 ``` r
+
 library(aedes)
 library(coconatfly)
 
@@ -93,6 +96,7 @@ register_aedes_coconat()
 ## Examples
 
 ``` r
+
 library(dplyr)
 
 # 1) List neurons with class ALPN
@@ -109,6 +113,7 @@ alpn_meta %>% count(subclass, subsubclass)
 Select a smaller set of PN neurons with type matching G2X
 
 ``` r
+
 gpn_ids <- cf_meta(cf_ids(aedes = "/type:G2[0-9].*PN"))
 #> Updating 73 ids
 gpn_meta <- cf_meta(gpn_ids)
@@ -137,6 +142,7 @@ just use input partners and also restrict to neurons that have already
 been typed with n=2 neurons in the type so that we have a small plot.
 
 ``` r
+
 gpn_meta %>% 
   add_count(type) %>% 
   filter(n==2) %>% 
@@ -159,6 +165,7 @@ limited partner type information available) but you will not be able to
 co-cluster L and R homologues.
 
 ``` r
+
 cf_cosine_plot(gpn_ids, heatmap = T, partners = 'in')
 cf_cosine_plot(gpn_ids, heatmap = T, partners = 'in', group = 'group')
 cf_cosine_plot(gpn_ids, heatmap = T, partners = 'in', group = FALSE)
@@ -169,6 +176,7 @@ for this dataset where synapses counts seem to be low (even without
 considering proofreading).
 
 ``` r
+
 cf_cosine_plot(gpn_ids, heatmap = T, partners = 'in', group = FALSE, threshold = 2)
 #> Updating 73 ids
 #> Updating 73 ids
@@ -199,6 +207,8 @@ cf_cosine_plot(gpn_ids, heatmap = T, partners = 'in', group = FALSE, threshold =
   materialisation version and timestamp
 - [`aedes_meta()`](aedes_meta.md) [`aedes_ids()`](aedes_meta.md) :
   Return metadata about Aedes neurons from FlyTable
+- [`aedes_mirror()`](aedes_mirror.md) : Mirror Aedes neurons or points
+  to the opposite side of the brain
 - [`aedes_set_version()`](aedes_set_version.md) : Set default version
   selection for Aedes helpers
 - [`aedes_voxdims()`](aedes_voxdims.md)

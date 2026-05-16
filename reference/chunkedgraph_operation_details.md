@@ -11,6 +11,7 @@ chunkedgraph_operation_details(
   chunksize = 50,
   return.data.frame = TRUE,
   compute_centroids = FALSE,
+  cache = rappdirs::user_cache_dir("aedes", appauthor = FALSE),
   ...
 )
 
@@ -41,6 +42,11 @@ aedes_operation_details(ops, ...)
   If `TRUE`, add centroid columns for sink and source coordinates
   (`sink_x/y/z`, `source_x/y/z`). Only applies when
   `return.data.frame = TRUE`.
+
+- cache:
+
+  Path to a cache directory. Set to `NULL` to disable caching. Defaults
+  to the user cache dir managed by `rappdirs`.
 
 - ...:
 
