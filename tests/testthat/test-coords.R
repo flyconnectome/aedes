@@ -44,6 +44,13 @@ test_that("internal landmarks mirror registration validates input", {
   )
 })
 
+test_that("suggested package check reports missing packages clearly", {
+  expect_error(
+    aedes:::check_package_available("definitelynotapackage"),
+    "Please install suggested package: definitelynotapackage"
+  )
+})
+
 test_that("aedes_mirror tps method mirrors through bundled registration", {
   pts <- rbind(c(100, 200, 150), c(300, 250, 120))
 

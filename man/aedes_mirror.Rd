@@ -52,6 +52,9 @@ A transformed object of the same kind as \code{x}.
 \code{aedes_mirror()} mirrors objects supported by \code{\link[nat:xform]{nat::xform()}}, including
 neurons, neuronlists, dotprops and coordinate matrices.
 }
+\details{
+TPS mirroring requires the suggested \code{Morpho} package at runtime.
+}
 \examples{
 \dontrun{
 sk <- with_aedes(fafbseg::read_l2skel(aedes_ids("class:DNa")[1]))

@@ -26,12 +26,12 @@ Imports:
     nat.utils,
     magrittr,
     memoise,
-    Morpho,
     pbapply,
     rappdirs,
     rlang,
     withr
 Suggests:
+    Morpho,
     gifski,
     RcppSimdJson,
     rgl,

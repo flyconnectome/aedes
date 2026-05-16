@@ -74,6 +74,9 @@ aedes_raw2nm <- function(x, vd = aedes_voxdims()) {
 #' @param vd Optional voxel dimensions in nm. Advanced use; when `NULL` and
 #'   `raw = TRUE`, these are detected automatically.
 #'
+#' @details
+#' TPS mirroring requires the suggested `Morpho` package at runtime.
+#'
 #' @return A transformed object of the same kind as `x`.
 #' @export
 #'
@@ -104,19 +107,23 @@ aedes_mirror <- function(x,
 
   switch(
     method,
-    landmarks = nat::xform(
-      x,
-      reg = .aedes_mirror_reg_landmarks(
-        units = units,
-        landmarks = landmarks,
-        raw = raw,
-        url = url,
-        vd = vd
-      ),
-      subset = subset,
-      ...
-    ),
+    landmarks = {
+      check_package_available("Morpho")
+      nat::xform(
+        x,
+        reg = .aedes_mirror_reg_landmarks(
+          units = units,
+          landmarks = landmarks,
+          raw = raw,
+          url = url,
+          vd = vd
+        ),
+        subset = subset,
+        ...
+      )
+    },
     tps = {
+      check_package_available("Morpho")
       if (!is.null(subset)) {
         stop("`subset` is not currently supported for method = \"tps\".",
              call. = FALSE)
@@ -135,6 +142,14 @@ aedes_mirror <- function(x,
       if (units == "nm") x_mirrored_um * 1e3 else x_mirrored_um
     }
   )
+}
+
+check_package_available <- function(pkg) {
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    stop("Please install suggested package: ", pkg, call. = FALSE)
+  }
+
+  invisible(TRUE)
 }
 
 .aedes_mirror_reg_landmarks <- memoise::memoise(function(units = c("microns", "nm"),
