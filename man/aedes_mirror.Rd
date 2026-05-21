@@ -7,7 +7,7 @@
 aedes_mirror(
   x,
   method = c("tps", "landmarks", "symmetric"),
-  units = c("microns", "nm"),
+  units = c("nm", "microns"),
   subset = NULL,
   landmarks = NULL,
   raw = TRUE,
@@ -28,8 +28,8 @@ space, flip across the X axis, then map back to original Aedes space.
 The symmetric registration is defined in microns; nm inputs are scaled
 before and after transformation.}
 
-\item{subset}{Optional subset passed to \code{\link[nat:xform]{nat::xform()}} for the landmarks
-method. The TPS method currently mirrors the whole object.}
+\item{subset}{Optional subset passed to \code{\link[nat:xform]{nat::xform()}}, for example when
+transforming selected elements of a neuronlist.}
 
 \item{landmarks}{Optional landmark data with \code{pointA} and \code{pointB} entries.
 When \code{NULL}, landmarks are read from \code{url} using
@@ -53,16 +53,17 @@ A transformed object of the same kind as \code{x}.
 neurons, neuronlists, dotprops and coordinate matrices.
 }
 \details{
-TPS mirroring requires the suggested \code{Morpho} package at runtime.
+Mirroring requires the suggested \code{Morpho} package at runtime.
 }
 \examples{
 \dontrun{
 sk <- with_aedes(fafbseg::read_l2skel(aedes_ids("class:DNa")[1]))
-sk.tps.mirror <- aedes_mirror(sk / 1000)
-sk.landmark.mirror <- aedes_mirror(sk / 1000, method = "landmarks")
+sk.mirror <- aedes_mirror(sk, units = "nm")
+
+plot3d(sk, col = "grey")
+plot3d(sk.mirror, col = "red", add = TRUE)
 
 dps <- with_aedes(fafbseg::read_l2dp(aedes_ids("class:DNa")))
-dps.tps.mirror <- aedes_mirror(dps)
-dps.landmark.mirror <- aedes_mirror(dps, method = "landmarks")
+dps.mirror <- aedes_mirror(dps, units = "microns")
 }
 }

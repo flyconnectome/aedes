@@ -37,6 +37,38 @@ test_that("aedes_mirror landmarks method mirrors points from explicit landmarks"
   expect_equal(unname(mirrored), rbind(c(8, 0.5, 0.5), c(2, 0.5, 0.5)))
 })
 
+test_that("aedes_mirror landmarks method respects nm units for raw landmarks", {
+  pts_a <- rbind(
+    c(0, 0, 0),
+    c(0, 1, 0),
+    c(0, 0, 1),
+    c(0, 1, 1)
+  )
+  pts_b <- pts_a
+  pts_b[, 1] <- 5
+
+  mirrored <- aedes_mirror(
+    rbind(c(2, 0.5, 0.5), c(8, 0.5, 0.5)),
+    method = "landmarks",
+    units = "nm",
+    landmarks = list(pointA = pts_a, pointB = pts_b),
+    raw = TRUE,
+    vd = c(2, 1, 1)
+  )
+
+  expect_equal(unname(mirrored), rbind(c(8, 0.5, 0.5), c(2, 0.5, 0.5)))
+  expect_equal(
+    unname(aedes_mirror(
+      rbind(c(2, 0.5, 0.5), c(8, 0.5, 0.5)),
+      method = "landmarks",
+      landmarks = list(pointA = pts_a, pointB = pts_b),
+      raw = TRUE,
+      vd = c(2, 1, 1)
+    )),
+    unname(mirrored)
+  )
+})
+
 test_that("internal landmarks mirror registration validates input", {
   expect_error(
     aedes:::.aedes_mirror_reg_landmarks(landmarks = list(pointA = diag(3)), raw = FALSE),

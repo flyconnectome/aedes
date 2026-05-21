@@ -62,8 +62,8 @@ aedes_raw2nm <- function(x, vd = aedes_voxdims()) {
 #' @param units Coordinate units for `x` and the returned object.
 #'   The symmetric registration is defined in microns; nm inputs are scaled
 #'   before and after transformation.
-#' @param subset Optional subset passed to [nat::xform()] for the landmarks
-#'   method. The TPS method currently mirrors the whole object.
+#' @param subset Optional subset passed to [nat::xform()], for example when
+#'   transforming selected elements of a neuronlist.
 #' @param ... Additional arguments passed to [nat::xform()].
 #' @param landmarks Optional landmark data with `pointA` and `pointB` entries.
 #'   When `NULL`, landmarks are read from `url` using
@@ -75,7 +75,7 @@ aedes_raw2nm <- function(x, vd = aedes_voxdims()) {
 #'   `raw = TRUE`, these are detected automatically.
 #'
 #' @details
-#' TPS mirroring requires the suggested `Morpho` package at runtime.
+#' Mirroring requires the suggested `Morpho` package at runtime.
 #'
 #' @return A transformed object of the same kind as `x`.
 #' @export
@@ -83,16 +83,17 @@ aedes_raw2nm <- function(x, vd = aedes_voxdims()) {
 #' @examples
 #' \dontrun{
 #' sk <- with_aedes(fafbseg::read_l2skel(aedes_ids("class:DNa")[1]))
-#' sk.tps.mirror <- aedes_mirror(sk / 1000)
-#' sk.landmark.mirror <- aedes_mirror(sk / 1000, method = "landmarks")
+#' sk.mirror <- aedes_mirror(sk, units = "nm")
+#'
+#' plot3d(sk, col = "grey")
+#' plot3d(sk.mirror, col = "red", add = TRUE)
 #'
 #' dps <- with_aedes(fafbseg::read_l2dp(aedes_ids("class:DNa")))
-#' dps.tps.mirror <- aedes_mirror(dps)
-#' dps.landmark.mirror <- aedes_mirror(dps, method = "landmarks")
+#' dps.mirror <- aedes_mirror(dps, units = "microns")
 #' }
 aedes_mirror <- function(x,
                          method = c("tps", "landmarks", "symmetric"),
-                         units = c("microns", "nm"),
+                         units = c("nm", "microns"),
                          subset = NULL,
                          landmarks = NULL,
                          raw = TRUE,
@@ -104,11 +105,11 @@ aedes_mirror <- function(x,
     method <- "tps"
   }
   units <- match.arg(units)
+  check_package_available("Morpho")
 
   switch(
     method,
     landmarks = {
-      check_package_available("Morpho")
       nat::xform(
         x,
         reg = .aedes_mirror_reg_landmarks(
@@ -123,22 +124,21 @@ aedes_mirror <- function(x,
       )
     },
     tps = {
-      check_package_available("Morpho")
-      if (!is.null(subset)) {
-        stop("`subset` is not currently supported for method = \"tps\".",
-             call. = FALSE)
-      }
-
       x_um <- if (units == "nm") x / 1e3 else x
       reg <- .aedes_mirror_reg_symmetric()
-      x_sym <- nat::xform(x_um, reg = reg, ...)
+      x_sym <- nat::xform(x_um, reg = reg, subset = subset, ...)
       x_sym_flipped <- nat::mirror(
         x_sym,
         mirrorAxisSize = .aedes_symmetric_mirror_axis_size,
         mirrorAxis = "X",
         transform = "flip"
       )
-      x_mirrored_um <- nat::xform(x_sym_flipped, reg = nat::reglist(reg, swap = TRUE), ...)
+      x_mirrored_um <- nat::xform(
+        x_sym_flipped,
+        reg = nat::reglist(reg, swap = TRUE),
+        subset = subset,
+        ...
+      )
       if (units == "nm") x_mirrored_um * 1e3 else x_mirrored_um
     }
   )
@@ -152,7 +152,7 @@ check_package_available <- function(pkg) {
   invisible(TRUE)
 }
 
-.aedes_mirror_reg_landmarks <- memoise::memoise(function(units = c("microns", "nm"),
+.aedes_mirror_reg_landmarks <- memoise::memoise(function(units = c("nm", "microns"),
                                                          landmarks = NULL,
                                                          raw = TRUE,
                                                          url = .aedes_mirror_landmarks_url,
