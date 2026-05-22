@@ -10,7 +10,7 @@ neurons, neuronlists, dotprops and coordinate matrices.
 aedes_mirror(
   x,
   method = c("tps", "landmarks", "symmetric"),
-  units = c("microns", "nm"),
+  units = c("nm", "microns"),
   subset = NULL,
   landmarks = NULL,
   raw = TRUE,
@@ -42,8 +42,8 @@ aedes_mirror(
 - subset:
 
   Optional subset passed to
-  [`nat::xform()`](https://rdrr.io/pkg/nat/man/xform.html) for the
-  landmarks method. The TPS method currently mirrors the whole object.
+  [`nat::xform()`](https://rdrr.io/pkg/nat/man/xform.html), for example
+  when transforming selected elements of a neuronlist.
 
 - landmarks:
 
@@ -76,18 +76,19 @@ A transformed object of the same kind as `x`.
 
 ## Details
 
-TPS mirroring requires the suggested `Morpho` package at runtime.
+Mirroring requires the suggested `Morpho` package at runtime.
 
 ## Examples
 
 ``` r
 if (FALSE) { # \dontrun{
 sk <- with_aedes(fafbseg::read_l2skel(aedes_ids("class:DNa")[1]))
-sk.tps.mirror <- aedes_mirror(sk / 1000)
-sk.landmark.mirror <- aedes_mirror(sk / 1000, method = "landmarks")
+sk.mirror <- aedes_mirror(sk, units = "nm")
+
+plot3d(sk, col = "grey")
+plot3d(sk.mirror, col = "red", add = TRUE)
 
 dps <- with_aedes(fafbseg::read_l2dp(aedes_ids("class:DNa")))
-dps.tps.mirror <- aedes_mirror(dps)
-dps.landmark.mirror <- aedes_mirror(dps, method = "landmarks")
+dps.mirror <- aedes_mirror(dps, units = "microns")
 } # }
 ```

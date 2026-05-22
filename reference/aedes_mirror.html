@@ -45,7 +45,7 @@ neurons, neuronlists, dotprops and coordinate matrices.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">aedes_mirror</span><span class="op">(</span></span>
 <span>  <span class="va">x</span>,</span>
 <span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"tps"</span>, <span class="st">"landmarks"</span>, <span class="st">"symmetric"</span><span class="op">)</span>,</span>
-<span>  units <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"microns"</span>, <span class="st">"nm"</span><span class="op">)</span>,</span>
+<span>  units <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"nm"</span>, <span class="st">"microns"</span><span class="op">)</span>,</span>
 <span>  subset <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  landmarks <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  raw <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -77,8 +77,8 @@ before and after transformation.</p></dd>
 
 
 <dt id="arg-subset">subset<a class="anchor" aria-label="anchor" href="#arg-subset"></a></dt>
-<dd><p>Optional subset passed to <code><a href="https://rdrr.io/pkg/nat/man/xform.html" class="external-link">nat::xform()</a></code> for the landmarks
-method. The TPS method currently mirrors the whole object.</p></dd>
+<dd><p>Optional subset passed to <code><a href="https://rdrr.io/pkg/nat/man/xform.html" class="external-link">nat::xform()</a></code>, for example when
+transforming selected elements of a neuronlist.</p></dd>
 
 
 <dt id="arg-landmarks">landmarks<a class="anchor" aria-label="anchor" href="#arg-landmarks"></a></dt>
@@ -111,19 +111,20 @@ When <code>NULL</code>, landmarks are read from <code>url</code> using
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>TPS mirroring requires the suggested <code>Morpho</code> package at runtime.</p>
+    <p>Mirroring requires the suggested <code>Morpho</code> package at runtime.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span><span class="va">sk</span> <span class="op">&lt;-</span> <span class="fu"><a href="choose_aedes.html">with_aedes</a></span><span class="op">(</span><span class="fu">fafbseg</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/fafbseg/man/read_l2skel.html" class="external-link">read_l2skel</a></span><span class="op">(</span><span class="fu"><a href="aedes_meta.html">aedes_ids</a></span><span class="op">(</span><span class="st">"class:DNa"</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">sk.tps.mirror</span> <span class="op">&lt;-</span> <span class="fu">aedes_mirror</span><span class="op">(</span><span class="va">sk</span> <span class="op">/</span> <span class="fl">1000</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">sk.landmark.mirror</span> <span class="op">&lt;-</span> <span class="fu">aedes_mirror</span><span class="op">(</span><span class="va">sk</span> <span class="op">/</span> <span class="fl">1000</span>, method <span class="op">=</span> <span class="st">"landmarks"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">sk.mirror</span> <span class="op">&lt;-</span> <span class="fu">aedes_mirror</span><span class="op">(</span><span class="va">sk</span>, units <span class="op">=</span> <span class="st">"nm"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="fu">plot3d</span><span class="op">(</span><span class="va">sk</span>, col <span class="op">=</span> <span class="st">"grey"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">plot3d</span><span class="op">(</span><span class="va">sk.mirror</span>, col <span class="op">=</span> <span class="st">"red"</span>, add <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">dps</span> <span class="op">&lt;-</span> <span class="fu"><a href="choose_aedes.html">with_aedes</a></span><span class="op">(</span><span class="fu">fafbseg</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/fafbseg/man/read_l2skel.html" class="external-link">read_l2dp</a></span><span class="op">(</span><span class="fu"><a href="aedes_meta.html">aedes_ids</a></span><span class="op">(</span><span class="st">"class:DNa"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">dps.tps.mirror</span> <span class="op">&lt;-</span> <span class="fu">aedes_mirror</span><span class="op">(</span><span class="va">dps</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">dps.landmark.mirror</span> <span class="op">&lt;-</span> <span class="fu">aedes_mirror</span><span class="op">(</span><span class="va">dps</span>, method <span class="op">=</span> <span class="st">"landmarks"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">dps.mirror</span> <span class="op">&lt;-</span> <span class="fu">aedes_mirror</span><span class="op">(</span><span class="va">dps</span>, units <span class="op">=</span> <span class="st">"microns"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
