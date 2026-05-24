@@ -9,7 +9,7 @@ read_aedes_neurons(
   units = c("nm", "raw", "microns"),
   reroot = TRUE,
   method = c("auto", "flytable", "nucleus", "mesh", "none"),
-  mesh = aedes_neuropil_mesh,
+  mesh = aedes::aedes_neuropil_mesh,
   OmitFailures = TRUE,
   version = NULL,
   timestamp = NULL,
