@@ -231,7 +231,9 @@ aedes_root_point <- function(x, point = NULL,
 #'
 #' @return A [nat::neuronlist()] of L2 skeletons. When rerooted, each neuron's
 #'   `data` slot gains `soma_source` (`"flytable"`, `"nucleus"`, `"mesh"`, or
-#'   `NA`) and `n_nuclei` columns. `n_nuclei > 1` indicates the chosen nucleus
+#'   `NA`), `n_nuclei` (count of distinct-position nucleus candidates
+#'   considered, or `NA`), and `nucleus_id` (the `nuclei_v1_aedes` primary key
+#'   of the chosen row, or `NA`). `n_nuclei > 1` indicates the chosen nucleus
 #'   was one of several at distinct positions for that root id; see
 #'   [aedes_soma_position()] for the full candidate list.
 #' @seealso [aedes_soma_position()], [aedes_neuropil_mesh]
@@ -285,8 +287,9 @@ read_aedes_neurons <- function(ids,
     # 2. decide whether mesh fallback is in play
     mesh_active <- !is.null(mesh) && method %in% c("auto", "mesh")
 
-    sources  <- rep(NA_character_, length(res))
-    n_nuclei <- rep(NA_integer_,   length(res))
+    sources    <- rep(NA_character_, length(res))
+    n_nuclei   <- rep(NA_integer_,   length(res))
+    nucleus_id <- rep(NA_integer_,   length(res))
     for (i in seq_along(res)) {
       j <- match(names(res)[i], soma$root_id)
       pt <- if (!is.na(j) && !is.na(soma$position[j]))
@@ -298,8 +301,9 @@ read_aedes_neurons <- function(ids,
       if (have_point) {
         res[[i]] <- aedes_root_point(res[[i]], point = pt,
                                      method = "point", rval = "neuron")
-        sources[i]  <- src
-        n_nuclei[i] <- if (!is.na(j)) soma$n_nuclei[j] else NA_integer_
+        sources[i]    <- src
+        n_nuclei[i]   <- if (!is.na(j)) soma$n_nuclei[j]   else NA_integer_
+        nucleus_id[i] <- if (!is.na(j)) soma$nucleus_id[j] else NA_integer_
       } else if (mesh_active) {
         res[[i]] <- aedes_root_point(res[[i]], mesh = mesh,
                                      method = "mesh", rval = "neuron")
@@ -312,6 +316,7 @@ read_aedes_neurons <- function(ids,
     ord <- match(rownames(md), names(res))
     md$soma_source <- sources[ord]
     md$n_nuclei    <- n_nuclei[ord]
+    md$nucleus_id  <- nucleus_id[ord]
     res[, ] <- md
 
     if (anyNA(sources))

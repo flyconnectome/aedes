@@ -41,7 +41,9 @@ packaged \link{aedes_neuropil_mesh}. Pass \code{NULL} to disable the mesh fallba
 \value{
 A \code{\link[nat:neuronlist]{nat::neuronlist()}} of L2 skeletons. When rerooted, each neuron's
 \code{data} slot gains \code{soma_source} (\code{"flytable"}, \code{"nucleus"}, \code{"mesh"}, or
-\code{NA}) and \code{n_nuclei} columns. \code{n_nuclei > 1} indicates the chosen nucleus
+\code{NA}), \code{n_nuclei} (count of distinct-position nucleus candidates
+considered, or \code{NA}), and \code{nucleus_id} (the \code{nuclei_v1_aedes} primary key
+of the chosen row, or \code{NA}). \code{n_nuclei > 1} indicates the chosen nucleus
 was one of several at distinct positions for that root id; see
 \code{\link[=aedes_soma_position]{aedes_soma_position()}} for the full candidate list.
 }

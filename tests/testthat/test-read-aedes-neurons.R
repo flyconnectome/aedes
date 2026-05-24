@@ -235,8 +235,12 @@ test_that("read_aedes_neurons reroots 648518347399768369 near its FlyTable soma"
           "Skipping: l2skel/FlyTable service unavailable for test id")
 
   expect_length(ns, 1L)
-  expect_true("soma_source" %in% colnames(ns[, , drop = FALSE]))
-  expect_equal(ns[, "soma_source"][1], "flytable")
+  md <- ns[, , drop = FALSE]
+  expect_true(all(c("soma_source", "n_nuclei", "nucleus_id") %in% colnames(md)))
+  expect_equal(md$soma_source, "flytable")
+  # flytable source -> nucleus columns NA on the neuronlist data slot
+  expect_true(is.na(md$n_nuclei))
+  expect_true(is.na(md$nucleus_id))
 
   # Rerooted root should land near the recorded soma. l2skel node spacing is
   # ~1 micron; allow a generous 10 micron tolerance.
