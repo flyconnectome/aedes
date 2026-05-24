@@ -8,6 +8,7 @@ aedes_soma_position(
   ids,
   method = c("auto", "flytable", "nucleus"),
   units = c("nm", "raw"),
+  nuclei = c("largest", "all"),
   version = NULL,
   timestamp = NULL
 )
@@ -25,13 +26,28 @@ voxel coordinates. FlyTable's \code{soma_xyz} is always stored as raw voxel
 coordinates and is converted to nm via \code{\link[=aedes_raw2nm]{aedes_raw2nm()}} before being
 returned (unless \code{units = "raw"}).}
 
+\item{nuclei}{How to handle root ids with more than one \emph{distinct-position}
+nucleus in the nucleus segmentation. \code{"largest"} (the default) returns
+one row per input id, picking the nucleus with the largest \code{volume} (or
+the first row when no \code{volume} column is available). \code{"all"} returns
+every candidate row, so an ambiguous root id contributes more than one
+row. Either way, bookkeeping duplicates (rows with identical position
+for the same root id) are silently collapsed, and \code{n_nuclei} records how
+many distinct-position candidates were considered.}
+
 \item{version, timestamp}{Optional CAVE materialisation selectors passed
 through to \code{\link[=aedes_meta]{aedes_meta()}} and \code{\link[fafbseg:flywire_nuclei]{fafbseg::flywire_nuclei()}}.}
 }
 \value{
-A data.frame with one row per input id (in the same order), with
-columns \code{root_id}, \code{x}, \code{y}, \code{z} (in the requested \code{units}), and \code{source}
-(\code{"flytable"}, \code{"nucleus"}, or \code{NA}).
+A data.frame with columns \code{root_id}; \code{position} (a \code{"x,y,z"} string
+in the requested \code{units}; convert back with \code{\link[nat:xyzmatrix]{nat::xyzmatrix()}}); \code{source}
+(\code{"flytable"}, \code{"nucleus"}, or \code{NA}); \code{n_nuclei} (the number of
+distinct-position nucleus candidates for that root id, or \code{NA} when the
+soma came from FlyTable / was not found); and \code{nucleus_id} (the
+\code{nuclei_v1_aedes} primary key of the chosen row, or \code{NA} for FlyTable /
+not-found sources). With \code{nuclei = "largest"} there is one row per input
+id in input order; with \code{nuclei = "all"} rows are ordered by input id
+but ambiguous ids contribute multiple rows (sorted by descending volume).
 }
 \description{
 Returns the recorded soma position (in nm) for each input root id, using
@@ -41,6 +57,7 @@ FlyTable annotations and/or the FlyWire nucleus segmentation.
 \dontrun{
 aedes_soma_position("class:DNa")
 aedes_soma_position("class:DNa", units = "raw")
+aedes_soma_position("648518347517945383", nuclei = "all")
 aedes_soma_position(c("648518347528739642", "648518347497973071"),
                     method = "flytable")
 }

@@ -17,40 +17,62 @@
 #'   voxel coordinates. FlyTable's `soma_xyz` is always stored as raw voxel
 #'   coordinates and is converted to nm via [aedes_raw2nm()] before being
 #'   returned (unless `units = "raw"`).
+#' @param nuclei How to handle root ids with more than one *distinct-position*
+#'   nucleus in the nucleus segmentation. `"largest"` (the default) returns
+#'   one row per input id, picking the nucleus with the largest `volume` (or
+#'   the first row when no `volume` column is available). `"all"` returns
+#'   every candidate row, so an ambiguous root id contributes more than one
+#'   row. Either way, bookkeeping duplicates (rows with identical position
+#'   for the same root id) are silently collapsed, and `n_nuclei` records how
+#'   many distinct-position candidates were considered.
 #' @param version,timestamp Optional CAVE materialisation selectors passed
 #'   through to [aedes_meta()] and [fafbseg::flywire_nuclei()].
 #'
-#' @return A data.frame with one row per input id (in the same order), with
-#'   columns `root_id`, `x`, `y`, `z` (in the requested `units`), and `source`
-#'   (`"flytable"`, `"nucleus"`, or `NA`).
+#' @return A data.frame with columns `root_id`; `position` (a `"x,y,z"` string
+#'   in the requested `units`; convert back with [nat::xyzmatrix()]); `source`
+#'   (`"flytable"`, `"nucleus"`, or `NA`); `n_nuclei` (the number of
+#'   distinct-position nucleus candidates for that root id, or `NA` when the
+#'   soma came from FlyTable / was not found); and `nucleus_id` (the
+#'   `nuclei_v1_aedes` primary key of the chosen row, or `NA` for FlyTable /
+#'   not-found sources). With `nuclei = "largest"` there is one row per input
+#'   id in input order; with `nuclei = "all"` rows are ordered by input id
+#'   but ambiguous ids contribute multiple rows (sorted by descending volume).
 #' @seealso [read_aedes_neurons()]
 #' @export
 #' @examples
 #' \dontrun{
 #' aedes_soma_position("class:DNa")
 #' aedes_soma_position("class:DNa", units = "raw")
+#' aedes_soma_position("648518347517945383", nuclei = "all")
 #' aedes_soma_position(c("648518347528739642", "648518347497973071"),
 #'                     method = "flytable")
 #' }
 aedes_soma_position <- function(ids,
                                 method = c("auto", "flytable", "nucleus"),
                                 units = c("nm", "raw"),
+                                nuclei = c("largest", "all"),
                                 version = NULL,
                                 timestamp = NULL) {
   method <- match.arg(method)
   units  <- match.arg(units)
+  nuclei <- match.arg(nuclei)
   vi <- aedes_get_version(version = version, timestamp = timestamp)
   root_ids <- as.character(aedes_ids(ids, version = vi$version,
                                      timestamp = vi$timestamp))
 
-  out <- data.frame(
-    root_id = root_ids,
-    x = NA_real_, y = NA_real_, z = NA_real_,
-    source = NA_character_,
-    stringsAsFactors = FALSE
-  )
+  empty_row <- function(ids) {
+    data.frame(
+      root_id    = ids,
+      position   = NA_character_,
+      source     = NA_character_,
+      n_nuclei   = NA_integer_,
+      nucleus_id = NA_integer_,
+      stringsAsFactors = FALSE
+    )
+  }
 
-  # FlyTable soma_xyz ------------------------------------------------------
+  # FlyTable soma_xyz (raw voxel coords) -> nm position string -------------
+  flytable_rows <- NULL
   if (method %in% c("auto", "flytable")) {
     meta <- aedes_meta(root_ids, version = vi$version,
                        timestamp = vi$timestamp, unique = TRUE)
@@ -59,23 +81,30 @@ aedes_soma_position <- function(ids,
       raw <- meta$soma_xyz[idx]
       ok  <- !is.na(raw) & nzchar(raw)
       if (any(ok)) {
-        xyz <- suppressWarnings(nat::xyzmatrix(raw[ok]))
-        storage.mode(xyz) <- "numeric"
-        xyz <- aedes_raw2nm(xyz)              # FlyTable soma_xyz is raw
+        xyz <- aedes_raw2nm(nat::xyzmatrix(raw[ok]))
         good <- stats::complete.cases(xyz)
         rows <- which(ok)[good]
-        out[rows, c("x", "y", "z")] <- xyz[good, , drop = FALSE]
-        out$source[rows] <- "flytable"
+        flytable_rows <- data.frame(
+          root_id    = root_ids[rows],
+          position   = nat::xyzmatrix2str(xyz[good, , drop = FALSE]),
+          source     = "flytable",
+          n_nuclei   = NA_integer_,
+          nucleus_id = NA_integer_,
+          stringsAsFactors = FALSE
+        )
       }
     }
   }
+  flytable_ids <- if (!is.null(flytable_rows)) flytable_rows$root_id
+                  else character(0)
 
-  # flywire_nuclei fallback -----------------------------------------------
-  need <- is.na(out$source)
-  if (method %in% c("auto", "nucleus") && any(need)) {
+  # flywire_nuclei (positions already in nm) -------------------------------
+  need_ids <- setdiff(root_ids, flytable_ids)
+  nucleus_rows <- NULL
+  if (method %in% c("auto", "nucleus") && length(need_ids)) {
     nuc <- tryCatch(
       with_aedes(fafbseg::flywire_nuclei(
-        rootids = out$root_id[need], rawcoords = FALSE,
+        rootids = need_ids, rawcoords = FALSE,
         version = vi$version, timestamp = vi$timestamp
       )),
       error = function(e) {
@@ -84,26 +113,37 @@ aedes_soma_position <- function(ids,
       }
     )
     if (!is.null(nuc) && nrow(nuc)) {
-      picked <- .aedes_dedup_nuclei(nuc)
-      if (!is.null(picked)) {
-        idx <- match(out$root_id, picked$root_id)
-        hit <- need & !is.na(idx)
-        if (any(hit)) {
-          out[hit, c("x", "y", "z")] <- picked[idx[hit], c("x", "y", "z"),
-                                               drop = FALSE]
-          out$source[hit] <- "nucleus"
-        }
-      }
+      nucleus_rows <- .aedes_dedup_nuclei(nuc, nuclei = nuclei)
+      if (!is.null(nucleus_rows))
+        nucleus_rows <- nucleus_rows[nucleus_rows$root_id %in% need_ids, ,
+                                     drop = FALSE]
     }
   }
 
-  # convert to raw if requested -------------------------------------------
+  found_ids <- c(flytable_ids,
+                 if (!is.null(nucleus_rows)) unique(nucleus_rows$root_id)
+                 else character(0))
+  missing_ids <- setdiff(root_ids, found_ids)
+  missing_rows <- if (length(missing_ids)) empty_row(missing_ids) else NULL
+
+  out <- do.call(rbind, Filter(Negate(is.null),
+                               list(flytable_rows, nucleus_rows, missing_rows)))
+
+  # Order to match input. nuclei = "largest" gives one row per input id;
+  # nuclei = "all" may give several -- sort by input order, candidate order
+  # within an id is already largest-first.
+  out$.ord <- match(out$root_id, root_ids)
+  out <- out[order(out$.ord, seq_len(nrow(out))), ]
+  out$.ord <- NULL
+  rownames(out) <- NULL
+
+  # units conversion (parse -> scale -> stringify) ------------------------
   if (identical(units, "raw")) {
-    has_xyz <- !is.na(out$source)
-    if (any(has_xyz)) {
-      raw <- aedes_nm2raw(as.matrix(out[has_xyz, c("x", "y", "z"), drop = FALSE]))
-      out[has_xyz, c("x", "y", "z")] <- raw
-    }
+    has_pos <- !is.na(out$position)
+    if (any(has_pos))
+      out$position[has_pos] <- nat::xyzmatrix2str(
+        aedes_nm2raw(nat::xyzmatrix(out$position[has_pos]))
+      )
   }
 
   out
@@ -190,8 +230,10 @@ aedes_root_point <- function(x, point = NULL,
 #' @param ... Additional arguments passed to [fafbseg::read_l2skel()].
 #'
 #' @return A [nat::neuronlist()] of L2 skeletons. When rerooted, each neuron's
-#'   `data` slot gains a `soma_source` column (one of `"flytable"`,
-#'   `"nucleus"`, `"mesh"`, or `NA`).
+#'   `data` slot gains `soma_source` (`"flytable"`, `"nucleus"`, `"mesh"`, or
+#'   `NA`) and `n_nuclei` columns. `n_nuclei > 1` indicates the chosen nucleus
+#'   was one of several at distinct positions for that root id; see
+#'   [aedes_soma_position()] for the full candidate list.
 #' @seealso [aedes_soma_position()], [aedes_neuropil_mesh]
 #' @export
 #' @examples
@@ -243,17 +285,21 @@ read_aedes_neurons <- function(ids,
     # 2. decide whether mesh fallback is in play
     mesh_active <- !is.null(mesh) && method %in% c("auto", "mesh")
 
-    sources <- rep(NA_character_, length(res))
+    sources  <- rep(NA_character_, length(res))
+    n_nuclei <- rep(NA_integer_,   length(res))
     for (i in seq_along(res)) {
       j <- match(names(res)[i], soma$root_id)
-      pt <- if (!is.na(j)) unlist(soma[j, c("x", "y", "z")]) else c(NA, NA, NA)
+      pt <- if (!is.na(j) && !is.na(soma$position[j]))
+              as.numeric(nat::xyzmatrix(soma$position[j])[1, ])
+            else c(NA, NA, NA)
       src <- if (!is.na(j)) soma$source[j] else NA_character_
       have_point <- all(is.finite(pt))
 
       if (have_point) {
         res[[i]] <- aedes_root_point(res[[i]], point = pt,
                                      method = "point", rval = "neuron")
-        sources[i] <- src
+        sources[i]  <- src
+        n_nuclei[i] <- if (!is.na(j)) soma$n_nuclei[j] else NA_integer_
       } else if (mesh_active) {
         res[[i]] <- aedes_root_point(res[[i]], mesh = mesh,
                                      method = "mesh", rval = "neuron")
@@ -261,9 +307,11 @@ read_aedes_neurons <- function(ids,
       } # else: leave the neuron untouched
     }
 
-    # 3. attach per-neuron soma_source so it survives subsetting
+    # 3. attach per-neuron provenance so it survives subsetting
     md <- res[, , drop = FALSE]
-    md$soma_source <- sources[match(rownames(md), names(res))]
+    ord <- match(rownames(md), names(res))
+    md$soma_source <- sources[ord]
+    md$n_nuclei    <- n_nuclei[ord]
     res[, ] <- md
 
     if (anyNA(sources))
@@ -279,56 +327,36 @@ read_aedes_neurons <- function(ids,
 }
 
 
-# Collapse a `flywire_nuclei()` result to one row per root_id. When a root_id
-# has >1 nucleus, picks the largest by `volume` if that column is present, or
-# the first row otherwise. Always warns if any duplicates were found.
-#
-# Returns a data.frame(root_id, x, y, z) in nm, or NULL if the input lacks the
-# expected columns / has no valid rows.
-#' @noRd
-.aedes_dedup_nuclei <- function(nuc) {
-  pos_col  <- grep("position$", colnames(nuc), value = TRUE)[1]
-  root_col <- intersect(c("pt_root_id", "root_id"), colnames(nuc))[1]
-  if (is.na(pos_col) || is.na(root_col)) return(NULL)
+# Reduce a `flywire_nuclei()` result to one (`nuclei = "largest"`) or all
+# (`nuclei = "all"`) candidate row(s) per root_id. The `position` column is
+# stringified via [nat::xyzmatrix2str()] in nm coordinates and is also used
+# to dedup bookkeeping duplicates (rows with identical position for the same
+# root_id, e.g. 648518347517945383). Errors if any of the required columns
+# are missing from the input.
+.aedes_dedup_nuclei <- function(nuc, nuclei = c("largest", "all")) {
+  nuclei <- match.arg(nuclei)
+  required <- c("id", "pt_root_id", "pt_position", "volume")
+  missing  <- setdiff(required, colnames(nuc))
+  if (length(missing))
+    stop("flywire_nuclei() result missing required column(s): ",
+         paste(missing, collapse = ", "), call. = FALSE)
+  if (!nrow(nuc)) return(NULL)
 
-  nuc_ids <- as.character(nuc[[root_col]])
-  nuc_xyz <- suppressWarnings(nat::xyzmatrix(nuc[[pos_col]]))
-  storage.mode(nuc_xyz) <- "numeric"
-  valid <- stats::complete.cases(nuc_xyz)
-  if (!any(valid)) return(NULL)
-  nuc_ids <- nuc_ids[valid]
-  nuc_xyz <- nuc_xyz[valid, , drop = FALSE]
-  vol <- if ("volume" %in% colnames(nuc)) nuc[["volume"]][valid] else NULL
+  picked <- nuc %>%
+    mutate(
+      root_id    = as.character(.data$pt_root_id),
+      position   = nat::xyzmatrix2str(.data$pt_position),
+      nucleus_id = as.integer(.data$id),
+      source     = "nucleus"
+    ) %>%
+    filter(!is.na(.data$position) & !is.na(.data$root_id)) %>%
+    arrange(.data$root_id, desc(.data$volume)) %>%
+    distinct(.data$root_id, .data$position, .keep_all = TRUE) %>%
+    add_count(.data$root_id, name = "n_nuclei") %>%
+    select("root_id", "position", "source", "n_nuclei", "nucleus_id")
 
-  # Order by root_id then descending volume so the largest-volume nucleus per
-  # root_id comes first.
-  ord <- if (!is.null(vol)) order(nuc_ids, -vol) else seq_along(nuc_ids)
-  nuc_ids <- nuc_ids[ord]
-  nuc_xyz <- nuc_xyz[ord, , drop = FALSE]
-
-  # Silently collapse rows that share the same (root_id, x, y, z): these are
-  # bookkeeping duplicates of the same nucleus, not a real choice to make.
-  pos_keys <- paste(nuc_ids, nuc_xyz[, 1], nuc_xyz[, 2], nuc_xyz[, 3], sep = "|")
-  pos_dups <- duplicated(pos_keys)
-  nuc_ids <- nuc_ids[!pos_dups]
-  nuc_xyz <- nuc_xyz[!pos_dups, , drop = FALSE]
-
-  # Only warn for genuine duplicates: same root_id, different positions.
-  dup_ids <- unique(nuc_ids[duplicated(nuc_ids)])
-  if (length(dup_ids)) {
-    warning(length(dup_ids), " root id(s) have >1 nucleus at distinct ",
-            "positions; ",
-            if (!is.null(vol)) "picking the largest by volume: "
-            else "picking the first match: ",
-            paste(utils::head(dup_ids, 5), collapse = ", "),
-            if (length(dup_ids) > 5) ", ...",
-            call. = FALSE)
-  }
-
-  keep <- !duplicated(nuc_ids)
-  data.frame(root_id = nuc_ids[keep],
-             x = nuc_xyz[keep, 1],
-             y = nuc_xyz[keep, 2],
-             z = nuc_xyz[keep, 3],
-             stringsAsFactors = FALSE)
+  if (!nrow(picked)) return(NULL)
+  if (nuclei == "largest")
+    picked <- distinct(picked, .data$root_id, .keep_all = TRUE)
+  as.data.frame(picked)
 }

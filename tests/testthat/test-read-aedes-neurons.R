@@ -84,31 +84,46 @@ test_that("aedes_root_point with method='mesh' picks endpoint furthest outside t
 })
 
 
-test_that(".aedes_dedup_nuclei picks the largest nucleus per root_id and warns", {
-  # id "A" has two candidates at *different* positions (volumes 1000 and 5000);
-  # id "B" has one.
+test_that(".aedes_dedup_nuclei (nuclei='largest') picks largest by volume", {
   nuc <- data.frame(
+    id          = c(101L, 102L, 103L),
     pt_root_id  = c("A", "A", "B"),
     pt_position = c("10,10,10", "20,20,20", "30,30,30"),
     volume      = c(1000, 5000, 2000),
     stringsAsFactors = FALSE
   )
-  expect_warning(
-    picked <- aedes:::.aedes_dedup_nuclei(nuc),
-    "1 root id\\(s\\) have >1 nucleus at distinct positions.*largest by volume.*\\bA\\b"
+  expect_silent(picked <- aedes:::.aedes_dedup_nuclei(nuc))
+  expect_equal(picked$root_id,    c("A", "B"))
+  expect_equal(picked$position,   c("20,20,20", "30,30,30"))
+  expect_equal(picked$source,     c("nucleus", "nucleus"))
+  expect_equal(picked$n_nuclei,   c(2L, 1L))
+  expect_equal(picked$nucleus_id, c(102L, 103L))
+})
+
+
+test_that(".aedes_dedup_nuclei (nuclei='all') returns every candidate, largest first", {
+  nuc <- data.frame(
+    id          = c(101L, 102L, 103L),
+    pt_root_id  = c("A", "A", "B"),
+    pt_position = c("10,10,10", "20,20,20", "30,30,30"),
+    volume      = c(1000, 5000, 2000),
+    stringsAsFactors = FALSE
   )
-  expect_equal(picked$root_id, c("A", "B"))
-  expect_equal(picked[picked$root_id == "A", c("x","y","z")][1, , drop = TRUE],
-               list(x = 20, y = 20, z = 20))
-  expect_equal(picked[picked$root_id == "B", c("x","y","z")][1, , drop = TRUE],
-               list(x = 30, y = 30, z = 30))
+  picked <- aedes:::.aedes_dedup_nuclei(nuc, nuclei = "all")
+  expect_equal(nrow(picked), 3L)
+  expect_equal(picked$root_id,    c("A", "A", "B"))
+  expect_equal(picked$position,   c("20,20,20", "10,10,10", "30,30,30"))
+  expect_equal(picked$source,     rep("nucleus", 3))
+  expect_equal(picked$n_nuclei,   c(2L, 2L, 1L))
+  expect_equal(picked$nucleus_id, c(102L, 101L, 103L))
 })
 
 
 test_that(".aedes_dedup_nuclei silently collapses positional duplicates", {
-  # Mimics the real 648518347517945383 case: two rows at the same position
-  # with the same volume (bookkeeping duplicate, not a real choice).
+  # Mimics 648518347517945383: two rows at the same position (bookkeeping
+  # duplicate). Dedup on the position string collapses them.
   nuc <- data.frame(
+    id          = c(13899L, 16468L),
     pt_root_id  = c("A", "A"),
     pt_position = c("488832,112816,158850", "488832,112816,158850"),
     volume      = c(775.9, 775.9),
@@ -116,49 +131,39 @@ test_that(".aedes_dedup_nuclei silently collapses positional duplicates", {
   )
   expect_silent(picked <- aedes:::.aedes_dedup_nuclei(nuc))
   expect_equal(picked$root_id, "A")
-  expect_equal(c(picked$x, picked$y, picked$z), c(488832, 112816, 158850))
+  expect_equal(picked$position, "488832,112816,158850")
+  expect_equal(picked$n_nuclei, 1L)
 })
 
 
 test_that(".aedes_dedup_nuclei handles a mix of positional and real duplicates", {
-  # id "A" has a real choice between (10,10,10) and (20,20,20); the (20,20,20)
-  # row also appears twice (bookkeeping dup that should be collapsed).
-  # id "B" has only a single positional duplicate (collapsed, no warning).
   nuc <- data.frame(
+    id          = 101:105,
     pt_root_id  = c("A", "A", "A", "B", "B"),
     pt_position = c("10,10,10", "20,20,20", "20,20,20",
                     "30,30,30", "30,30,30"),
     volume      = c(1000, 5000, 5000, 2000, 2000),
     stringsAsFactors = FALSE
   )
-  expect_warning(
-    picked <- aedes:::.aedes_dedup_nuclei(nuc),
-    "1 root id\\(s\\) have >1 nucleus at distinct positions.*\\bA\\b"
-  )
+  expect_silent(picked <- aedes:::.aedes_dedup_nuclei(nuc))
   expect_equal(sort(picked$root_id), c("A", "B"))
-  # A's larger (volume 5000) nucleus wins
-  expect_equal(picked[picked$root_id == "A", c("x","y","z")][1, , drop = TRUE],
-               list(x = 20, y = 20, z = 20))
+  expect_equal(picked$position[picked$root_id == "A"], "20,20,20")
+  expect_equal(picked$n_nuclei,
+               setNames(c(2L, 1L), c("A","B"))[picked$root_id] |> unname())
 })
 
 
-test_that(".aedes_dedup_nuclei falls back to first row when no volume column", {
-  nuc <- data.frame(
-    pt_root_id  = c("A", "A"),
-    pt_position = c("10,10,10", "20,20,20"),
-    stringsAsFactors = FALSE
-  )
-  expect_warning(
-    picked <- aedes:::.aedes_dedup_nuclei(nuc),
-    "picking the first match"
-  )
-  expect_equal(picked$root_id, "A")
-  expect_equal(c(picked$x, picked$y, picked$z), c(10, 10, 10))
+test_that(".aedes_dedup_nuclei errors when required columns are missing", {
+  nuc <- data.frame(pt_root_id = "A", pt_position = "1,2,3",
+                    stringsAsFactors = FALSE)  # no volume / id
+  expect_error(aedes:::.aedes_dedup_nuclei(nuc),
+               "missing required column.*(volume|id)")
 })
 
 
 test_that(".aedes_dedup_nuclei is a no-op for unique inputs", {
   nuc <- data.frame(
+    id          = c(1L, 2L),
     pt_root_id  = c("A", "B"),
     pt_position = c("10,10,10", "30,30,30"),
     volume      = c(1000, 2000),
@@ -166,6 +171,9 @@ test_that(".aedes_dedup_nuclei is a no-op for unique inputs", {
   )
   expect_silent(picked <- aedes:::.aedes_dedup_nuclei(nuc))
   expect_equal(picked$root_id, c("A", "B"))
+  expect_equal(picked$position, c("10,10,10", "30,30,30"))
+  expect_equal(picked$source, c("nucleus", "nucleus"))
+  expect_equal(picked$n_nuclei, c(1L, 1L))
 })
 
 
@@ -180,12 +188,12 @@ test_that("aedes_soma_position returns the expected FlyTable soma for a known id
           "Skipping: no FlyTable access for test id")
 
   expect_equal(sp_raw$source, "flytable")
-  expect_equal(unname(unlist(sp_raw[, c("x", "y", "z")])), expected_raw)
+  expect_equal(sp_raw$position, nat::xyzmatrix2str(matrix(expected_raw, ncol = 3)))
 
   # nm units should match the raw round-trip
   sp_nm <- aedes_soma_position(id)
   expect_equal(sp_nm$source, "flytable")
-  expect_equal(unname(unlist(sp_nm[, c("x", "y", "z")])), unname(expected_nm))
+  expect_equal(sp_nm$position, nat::xyzmatrix2str(matrix(expected_nm, ncol = 3)))
 })
 
 
@@ -206,13 +214,15 @@ test_that("aedes_soma_position silently collapses real nucleus-table positional 
   skip_if(inherits(sp_probe, "try-error") || is.na(sp_probe$source[1]),
           "Skipping: nucleus lookup unavailable for this supervoxel")
 
-  # Real assertion: lookup is silent (no dedup warning) and returns finite xyz.
+  # Real assertion: lookup is silent (no dedup warning) and returns a finite
+  # parseable position.
   expect_warning(
     sp <- aedes_soma_position(rid, method = "nucleus"),
     regexp = NA
   )
   expect_equal(sp$source, "nucleus")
-  expect_true(all(is.finite(unlist(sp[, c("x","y","z")]))))
+  expect_false(is.na(sp$position))
+  expect_true(all(is.finite(as.numeric(nat::xyzmatrix(sp$position)))))
 })
 
 
