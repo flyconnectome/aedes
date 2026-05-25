@@ -8,8 +8,10 @@ read_aedes_neurons(
   ids,
   units = c("nm", "raw", "microns"),
   reroot = TRUE,
-  method = c("auto", "flytable", "nucleus", "mesh", "none"),
+  method = c("auto", "flytable", "nucleus", "l2+mesh", "l2", "mesh", "none"),
   mesh = aedes::aedes_neuropil_mesh,
+  chunksize = 20L,
+  cl = NULL,
   OmitFailures = TRUE,
   version = NULL,
   timestamp = NULL,
@@ -23,14 +25,20 @@ read_aedes_neurons(
 
 \item{reroot}{Whether to reroot the returned neurons.}
 
-\item{method}{Reroot strategy. With \code{"auto"} (the default) each neuron is
-handled by the first source that succeeds: FlyTable \code{soma_xyz} →
-FlyWire nucleus → neuropil mesh. Restricting to a single source disables
-the cascade. Use \code{"none"} to read without rerooting (equivalent to
-\code{reroot = FALSE}).}
+\item{method}{Reroot strategy passed through to \code{\link[=aedes_soma_position]{aedes_soma_position()}}.
+With \code{"auto"} (the default) each neuron is handled by the first source
+that succeeds in the cascade: FlyTable \code{soma_xyz} → FlyWire nucleus →
+\code{"l2+mesh"} (a combined L2-attribute + neuropil signed-distance score
+for any neuron that has no FlyTable or nucleus soma; only used if a
+\code{mesh} is available). Restrict to a single value to disable the cascade.
+\code{"none"} skips rerooting (equivalent to \code{reroot = FALSE}).}
 
-\item{mesh}{A \code{mesh3d} for the neuropil. Defaults to the
-packaged \link{aedes_neuropil_mesh}. Pass \code{NULL} to disable the mesh fallback.}
+\item{mesh}{A \code{mesh3d} for the neuropil. Defaults to the packaged
+\link{aedes_neuropil_mesh}. Pass \code{NULL} to disable mesh-based fallback in
+\code{"auto"}; \code{"l2+mesh"} and \code{"mesh"} error without a mesh.}
+
+\item{chunksize, cl}{Forwarded to \code{\link[=aedes_soma_position]{aedes_soma_position()}} -- batch size for
+L2 attribute fetches and optional parallel cluster for chunk processing.}
 
 \item{OmitFailures}{Passed to \code{\link[fafbseg:read_l2skel]{fafbseg::read_l2skel()}}.}
 
@@ -40,12 +48,13 @@ packaged \link{aedes_neuropil_mesh}. Pass \code{NULL} to disable the mesh fallba
 }
 \value{
 A \code{\link[nat:neuronlist]{nat::neuronlist()}} of L2 skeletons. When rerooted, each neuron's
-\code{data} slot gains \code{soma_source} (\code{"flytable"}, \code{"nucleus"}, \code{"mesh"}, or
-\code{NA}), \code{n_nuclei} (count of distinct-position nucleus candidates
-considered, or \code{NA}), and \code{nucleus_id} (the \code{nuclei_v1_aedes} primary key
-of the chosen row, or \code{NA}). \code{n_nuclei > 1} indicates the chosen nucleus
-was one of several at distinct positions for that root id; see
-\code{\link[=aedes_soma_position]{aedes_soma_position()}} for the full candidate list.
+\code{data} slot gains \code{soma_source} (\code{"flytable"}, \code{"nucleus"}, \code{"l2+mesh"},
+\code{"l2"}, \code{"mesh"}, or \code{NA}), \code{n_nuclei} (count of distinct-position
+nucleus candidates considered, or \code{NA}), and \code{nucleus_id} (the
+\code{nuclei_v1_aedes} primary key of the chosen row, or \code{NA}). \code{n_nuclei > 1}
+indicates the chosen nucleus was one of several at distinct positions
+for that root id; see \code{\link[=aedes_soma_position]{aedes_soma_position()}} for the full candidate
+list.
 }
 \description{
 Thin Aedes-aware wrapper around \code{\link[fafbseg:read_l2skel]{fafbseg::read_l2skel()}}. Optionally reroots

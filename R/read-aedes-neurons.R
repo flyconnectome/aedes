@@ -9,10 +9,18 @@
 #' FlyTable annotations and/or the FlyWire nucleus segmentation.
 #'
 #' @param ids Root IDs or a FlyTable query string accepted by [aedes_ids()].
-#' @param method One of `"auto"`, `"flytable"`, `"nucleus"`. With `"auto"`
-#'   (the default) the function first tries FlyTable's `soma_xyz` and then
-#'   falls back to [fafbseg::flywire_nuclei()] for any neuron that lacked a
-#'   recorded soma. Naming a single method restricts the lookup to that source.
+#' @param method One of `"auto"`, `"flytable"`, `"nucleus"`, `"l2+mesh"`,
+#'   `"l2"`, or `"mesh"`. With `"auto"` (the default) the function tries
+#'   FlyTable's `soma_xyz` first, falls back to [fafbseg::flywire_nuclei()]
+#'   for any neuron without a recorded soma, and -- when a `mesh` is
+#'   available -- finally falls back to a combined L2-attribute + neuropil
+#'   signed-distance score (`"l2+mesh"`). Restricting `method` skips the
+#'   cascade. `"l2"` uses only the L2 shape features (area, distance
+#'   transform, roundness, size); `"mesh"` uses only the signed distance and
+#'   errors if `mesh = NULL`.
+#' @param mesh A `mesh3d` of the neuropil for the mesh-based scoring methods.
+#'   Defaults to [aedes_neuropil_mesh]. Pass `NULL` to disable mesh-based
+#'   fallback in `"auto"`.
 #' @param units Units of the returned coordinates: `"nm"` (default) or `"raw"`
 #'   voxel coordinates. FlyTable's `soma_xyz` is always stored as raw voxel
 #'   coordinates and is converted to nm via [aedes_raw2nm()] before being
@@ -25,18 +33,33 @@
 #'   row. Either way, bookkeeping duplicates (rows with identical position
 #'   for the same root id) are silently collapsed, and `n_nuclei` records how
 #'   many distinct-position candidates were considered.
+#' @param chunksize Number of neurons per batched L2-attribute fetch when the
+#'   cascade reaches `"l2+mesh"` / `"l2"` / `"mesh"`. Larger values reduce CAVE
+#'   round-trip overhead at the cost of larger responses. Default 20 trades
+#'   off well in practice; pass `1L` to revert to per-neuron fetches.
+#' @param cl Optional parallel cluster (or integer worker count) passed to
+#'   [pbapply::pblapply()] for chunk processing. `NULL` (default) runs
+#'   sequentially with a progress bar. Useful when scoring hundreds to
+#'   thousands of neurons via L2.
 #' @param version,timestamp Optional CAVE materialisation selectors passed
 #'   through to [aedes_meta()] and [fafbseg::flywire_nuclei()].
 #'
 #' @return A data.frame with columns `root_id`; `position` (a `"x,y,z"` string
 #'   in the requested `units`; convert back with [nat::xyzmatrix()]); `source`
-#'   (`"flytable"`, `"nucleus"`, or `NA`); `n_nuclei` (the number of
-#'   distinct-position nucleus candidates for that root id, or `NA` when the
-#'   soma came from FlyTable / was not found); and `nucleus_id` (the
-#'   `nuclei_v1_aedes` primary key of the chosen row, or `NA` for FlyTable /
-#'   not-found sources). With `nuclei = "largest"` there is one row per input
-#'   id in input order; with `nuclei = "all"` rows are ordered by input id
-#'   but ambiguous ids contribute multiple rows (sorted by descending volume).
+#'   (`"flytable"`, `"nucleus"`, `"l2+mesh"`, `"l2"`, `"mesh"`, or `NA`);
+#'   `n_nuclei` (the number of distinct-position nucleus candidates for that
+#'   root id, or `NA` when the soma came from elsewhere / was not found); and
+#'   `nucleus_id` (the `nuclei_v1_aedes` primary key, from FlyTable when
+#'   `source = "flytable"` or from the chosen nucleus row when
+#'   `source = "nucleus"`). L2-derived rows also include
+#'   `soma_score` (combined within-neuron z-score; higher = more soma-like),
+#'   `dist_npil_nm` (signed distance to the neuropil mesh, in nm; positive
+#'   inside, negative outside -- soma rows are in cortex so this is usually
+#'   negative), and `l2_id` (the selected L2 chunk).
+#'   These columns are `NA` for non-L2 sources. With `nuclei = "largest"`
+#'   there is one row per input id in input order; with `nuclei = "all"` rows
+#'   are ordered by input id but ambiguous ids contribute multiple rows
+#'   (sorted by descending volume).
 #' @seealso [read_aedes_neurons()]
 #' @export
 #' @examples
@@ -48,14 +71,20 @@
 #'                     method = "flytable")
 #' }
 aedes_soma_position <- function(ids,
-                                method = c("auto", "flytable", "nucleus"),
+                                method = c("auto", "flytable", "nucleus",
+                                           "l2+mesh", "l2", "mesh"),
                                 units = c("nm", "raw"),
                                 nuclei = c("largest", "all"),
+                                mesh = aedes::aedes_neuropil_mesh,
+                                chunksize = 20L,
+                                cl = NULL,
                                 version = NULL,
                                 timestamp = NULL) {
   method <- match.arg(method)
   units  <- match.arg(units)
   nuclei <- match.arg(nuclei)
+  if (method %in% c("l2+mesh", "mesh") && is.null(mesh))
+    stop("method = \"", method, "\" requires a non-NULL `mesh`.", call. = FALSE)
   vi <- aedes_get_version(version = version, timestamp = timestamp)
   root_ids <- as.character(aedes_ids(ids, version = vi$version,
                                      timestamp = vi$timestamp))
@@ -67,6 +96,9 @@ aedes_soma_position <- function(ids,
       source     = NA_character_,
       n_nuclei   = NA_integer_,
       nucleus_id = NA_integer_,
+      soma_score = NA_real_,
+      dist_npil_nm = NA_real_,
+      l2_id = NA_character_,
       stringsAsFactors = FALSE
     )
   }
@@ -84,12 +116,19 @@ aedes_soma_position <- function(ids,
         xyz <- aedes_raw2nm(nat::xyzmatrix(raw[ok]))
         good <- stats::complete.cases(xyz)
         rows <- which(ok)[good]
+        nucleus_id <- if ("nucleus_id" %in% colnames(meta))
+          as.integer(meta$nucleus_id[idx][rows])
+        else
+          rep(NA_integer_, length(rows))
         flytable_rows <- data.frame(
           root_id    = root_ids[rows],
           position   = nat::xyzmatrix2str(xyz[good, , drop = FALSE]),
           source     = "flytable",
           n_nuclei   = NA_integer_,
-          nucleus_id = NA_integer_,
+          nucleus_id = nucleus_id,
+          soma_score = NA_real_,
+          dist_npil_nm = NA_real_,
+          l2_id = NA_character_,
           stringsAsFactors = FALSE
         )
       }
@@ -117,17 +156,36 @@ aedes_soma_position <- function(ids,
       if (!is.null(nucleus_rows))
         nucleus_rows <- nucleus_rows[nucleus_rows$root_id %in% need_ids, ,
                                      drop = FALSE]
+      if (!is.null(nucleus_rows)) {
+        nucleus_rows$soma_score <- NA_real_
+        nucleus_rows$dist_npil_nm <- NA_real_
+        nucleus_rows$l2_id <- NA_character_
+      }
     }
   }
 
-  found_ids <- c(flytable_ids,
-                 if (!is.null(nucleus_rows)) unique(nucleus_rows$root_id)
-                 else character(0))
+  nucleus_ids <- if (!is.null(nucleus_rows)) unique(nucleus_rows$root_id)
+                 else character(0)
+
+  # L2-attribute scoring (chunked, one batched CAVE call per chunk) --------
+  need_ids <- setdiff(root_ids, c(flytable_ids, nucleus_ids))
+  l2_rows <- NULL
+  l2_method <- if (method == "auto" && !is.null(mesh)) "l2+mesh"
+               else if (method %in% c("l2+mesh", "l2", "mesh")) method
+               else NULL
+  if (!is.null(l2_method) && length(need_ids)) {
+    l2_rows <- .aedes_score_l2_many(need_ids, mesh = mesh, method = l2_method,
+                                    chunksize = chunksize, cl = cl)
+  }
+
+  found_ids   <- c(flytable_ids, nucleus_ids,
+                   if (!is.null(l2_rows)) l2_rows$root_id else character(0))
   missing_ids <- setdiff(root_ids, found_ids)
   missing_rows <- if (length(missing_ids)) empty_row(missing_ids) else NULL
 
   out <- do.call(rbind, Filter(Negate(is.null),
-                               list(flytable_rows, nucleus_rows, missing_rows)))
+                               list(flytable_rows, nucleus_rows,
+                                    l2_rows, missing_rows)))
 
   # Order to match input. nuclei = "largest" gives one row per input id;
   # nuclei = "all" may give several -- sort by input order, candidate order
@@ -218,24 +276,30 @@ aedes_root_point <- function(x, point = NULL,
 #' @param ids Root IDs or a FlyTable query string compatible with [aedes_ids()].
 #' @param units Units of the returned skeletons (default `"nm"`).
 #' @param reroot Whether to reroot the returned neurons.
-#' @param method Reroot strategy. With `"auto"` (the default) each neuron is
-#'   handled by the first source that succeeds: FlyTable `soma_xyz` →
-#'   FlyWire nucleus → neuropil mesh. Restricting to a single source disables
-#'   the cascade. Use `"none"` to read without rerooting (equivalent to
-#'   `reroot = FALSE`).
-#' @param mesh A `mesh3d` for the neuropil. Defaults to the
-#'   packaged [aedes_neuropil_mesh]. Pass `NULL` to disable the mesh fallback.
+#' @param method Reroot strategy passed through to [aedes_soma_position()].
+#'   With `"auto"` (the default) each neuron is handled by the first source
+#'   that succeeds in the cascade: FlyTable `soma_xyz` → FlyWire nucleus →
+#'   `"l2+mesh"` (a combined L2-attribute + neuropil signed-distance score
+#'   for any neuron that has no FlyTable or nucleus soma; only used if a
+#'   `mesh` is available). Restrict to a single value to disable the cascade.
+#'   `"none"` skips rerooting (equivalent to `reroot = FALSE`).
+#' @param mesh A `mesh3d` for the neuropil. Defaults to the packaged
+#'   [aedes_neuropil_mesh]. Pass `NULL` to disable mesh-based fallback in
+#'   `"auto"`; `"l2+mesh"` and `"mesh"` error without a mesh.
+#' @param chunksize,cl Forwarded to [aedes_soma_position()] -- batch size for
+#'   L2 attribute fetches and optional parallel cluster for chunk processing.
 #' @param OmitFailures Passed to [fafbseg::read_l2skel()].
 #' @param version,timestamp Optional CAVE materialisation selectors.
 #' @param ... Additional arguments passed to [fafbseg::read_l2skel()].
 #'
 #' @return A [nat::neuronlist()] of L2 skeletons. When rerooted, each neuron's
-#'   `data` slot gains `soma_source` (`"flytable"`, `"nucleus"`, `"mesh"`, or
-#'   `NA`), `n_nuclei` (count of distinct-position nucleus candidates
-#'   considered, or `NA`), and `nucleus_id` (the `nuclei_v1_aedes` primary key
-#'   of the chosen row, or `NA`). `n_nuclei > 1` indicates the chosen nucleus
-#'   was one of several at distinct positions for that root id; see
-#'   [aedes_soma_position()] for the full candidate list.
+#'   `data` slot gains `soma_source` (`"flytable"`, `"nucleus"`, `"l2+mesh"`,
+#'   `"l2"`, `"mesh"`, or `NA`), `n_nuclei` (count of distinct-position
+#'   nucleus candidates considered, or `NA`), and `nucleus_id` (the
+#'   `nuclei_v1_aedes` primary key of the chosen row, or `NA`). `n_nuclei > 1`
+#'   indicates the chosen nucleus was one of several at distinct positions
+#'   for that root id; see [aedes_soma_position()] for the full candidate
+#'   list.
 #' @seealso [aedes_soma_position()], [aedes_neuropil_mesh]
 #' @export
 #' @examples
@@ -248,8 +312,10 @@ read_aedes_neurons <- function(ids,
                                units = c("nm", "raw", "microns"),
                                reroot = TRUE,
                                method = c("auto", "flytable", "nucleus",
-                                          "mesh", "none"),
+                                          "l2+mesh", "l2", "mesh", "none"),
                                mesh = aedes::aedes_neuropil_mesh,
+                               chunksize = 20L,
+                               cl = NULL,
                                OmitFailures = TRUE,
                                version = NULL,
                                timestamp = NULL,
@@ -267,60 +333,33 @@ read_aedes_neurons <- function(ids,
   ))
 
   if (isTRUE(reroot) && length(res)) {
-    # 1. resolve point-based sources (flytable / nucleus) up front
-    point_method <- switch(method,
-                           flytable = "flytable",
-                           nucleus  = "nucleus",
-                           mesh     = NULL,
-                           "auto")
-    if (!is.null(point_method)) {
-      soma <- aedes_soma_position(
-        names(res), method = point_method,
-        version = vi$version, timestamp = vi$timestamp
-      )
-    } else {
-      soma <- data.frame(root_id = names(res),
-                         x = NA_real_, y = NA_real_, z = NA_real_,
-                         source = NA_character_, stringsAsFactors = FALSE)
-    }
-
-    # 2. decide whether mesh fallback is in play
-    mesh_active <- !is.null(mesh) && method %in% c("auto", "mesh")
-
-    sources    <- rep(NA_character_, length(res))
-    n_nuclei   <- rep(NA_integer_,   length(res))
-    nucleus_id <- rep(NA_integer_,   length(res))
+    soma <- aedes_soma_position(
+      names(res), method = method, mesh = mesh,
+      chunksize = chunksize, cl = cl,
+      version = vi$version, timestamp = vi$timestamp
+    )
+    # one row per id in input order; reroot each neuron to its soma point
     for (i in seq_along(res)) {
       j <- match(names(res)[i], soma$root_id)
-      pt <- if (!is.na(j) && !is.na(soma$position[j]))
-              as.numeric(nat::xyzmatrix(soma$position[j])[1, ])
-            else c(NA, NA, NA)
-      src <- if (!is.na(j)) soma$source[j] else NA_character_
-      have_point <- all(is.finite(pt))
-
-      if (have_point) {
-        res[[i]] <- aedes_root_point(res[[i]], point = pt,
-                                     method = "point", rval = "neuron")
-        sources[i]    <- src
-        n_nuclei[i]   <- if (!is.na(j)) soma$n_nuclei[j]   else NA_integer_
-        nucleus_id[i] <- if (!is.na(j)) soma$nucleus_id[j] else NA_integer_
-      } else if (mesh_active) {
-        res[[i]] <- aedes_root_point(res[[i]], mesh = mesh,
-                                     method = "mesh", rval = "neuron")
-        sources[i] <- "mesh"
-      } # else: leave the neuron untouched
+      if (is.na(j) || is.na(soma$position[j])) next
+      pt <- as.numeric(nat::xyzmatrix(soma$position[j])[1, ])
+      res[[i]] <- aedes_root_point(res[[i]], point = pt,
+                                   method = "point", rval = "neuron")
     }
 
-    # 3. attach per-neuron provenance so it survives subsetting
+    # attach per-neuron provenance to the neuronlist data slot
     md <- res[, , drop = FALSE]
-    ord <- match(rownames(md), names(res))
-    md$soma_source <- sources[ord]
-    md$n_nuclei    <- n_nuclei[ord]
-    md$nucleus_id  <- nucleus_id[ord]
+    ord <- match(rownames(md), soma$root_id)
+    md$soma_source <- soma$source[ord]
+    md$n_nuclei    <- soma$n_nuclei[ord]
+    md$nucleus_id  <- soma$nucleus_id[ord]
+    md$soma_score  <- soma$soma_score[ord]
+    md$dist_npil_nm <- soma$dist_npil_nm[ord]
+    md$l2_id <- soma$l2_id[ord]
     res[, ] <- md
 
-    if (anyNA(sources))
-      warning(sum(is.na(sources)), " of ", length(sources),
+    if (anyNA(md$soma_source))
+      warning(sum(is.na(md$soma_source)), " of ", nrow(md),
               " neurons could not be rerooted; soma_source is NA for those.",
               call. = FALSE)
   }
@@ -354,7 +393,8 @@ read_aedes_neurons <- function(ids,
       nucleus_id = as.integer(.data$id),
       source     = "nucleus"
     ) %>%
-    filter(!is.na(.data$position) & !is.na(.data$root_id)) %>%
+    filter(stats::complete.cases(nat::xyzmatrix(.data$position)) &
+             !is.na(.data$root_id)) %>%
     arrange(.data$root_id, desc(.data$volume)) %>%
     distinct(.data$root_id, .data$position, .keep_all = TRUE) %>%
     add_count(.data$root_id, name = "n_nuclei") %>%
@@ -364,4 +404,201 @@ read_aedes_neurons <- function(ids,
   if (nuclei == "largest")
     picked <- distinct(picked, .data$root_id, .keep_all = TRUE)
   as.data.frame(picked)
+}
+
+
+# Score a single neuron's L2 chunks (already fetched as a `flywire_l2attributes`
+# data.frame) and return them ordered by descending soma-likeness.
+#
+# `features` is the bag-of-terms summed (each z-scored within this neuron):
+#   "area"     |   area_nm2          larger = more soma-like
+#   "size"     |   size_nm3                 ,,
+#   "max_dt"   |   max_dt_nm                ,,
+#   "mean_dt"  |   mean_dt_nm               ,,
+#   "roundness"|   pca_val_2 / pca_val_0    higher (sphere)  = more soma-like
+#   "mesh"     |   -pointsinside(rep_coord_nm, mesh, "dist")
+#                                           more negative dist (further outside
+#                                           neuropil) = more soma-like
+#
+# Degenerate L2 chunks (pca_val_0 == 0, ~30% of a typical neuron's L2 nodes,
+# usually single-voxel artefacts) are filtered out before scoring.
+#' @noRd
+.aedes_score_l2_df <- function(df, mesh = NULL,
+                               features = c("area", "size", "max_dt", "mean_dt",
+                                            "roundness", "mesh")) {
+  features <- match.arg(features, several.ok = TRUE)
+  if ("mesh" %in% features && is.null(mesh))
+    stop("`mesh` feature requested but no mesh supplied", call. = FALSE)
+  if (is.null(df) || !nrow(df)) return(NULL)
+  df <- df[!is.na(df$pca_val_0) & df$pca_val_0 > 0, , drop = FALSE]
+  if (!nrow(df)) return(NULL)
+
+  zs <- function(x) {
+    s <- stats::sd(x, na.rm = TRUE)
+    if (!is.finite(s) || s == 0) rep(0, length(x))
+    else (x - mean(x, na.rm = TRUE)) / s
+  }
+  feat_vec <- list(
+    area      = function() zs(df$area_nm2),
+    size      = function() zs(df$size_nm3),
+    max_dt    = function() zs(df$max_dt_nm),
+    mean_dt   = function() zs(df$mean_dt_nm),
+    roundness = function() zs(df$pca_val_2 / df$pca_val_0),
+    mesh      = function() {
+      xyz <- as.matrix(df[, c("rep_coord_nm_x", "rep_coord_nm_y",
+                              "rep_coord_nm_z")])
+      df$dist_npil <<- nat::pointsinside(xyz, surf = mesh, rval = "dist")
+      zs(-df$dist_npil)
+    }
+  )
+  score <- Reduce(`+`, lapply(features, function(f) feat_vec[[f]]()))
+  df$score <- score
+  if (!"dist_npil" %in% colnames(df)) {
+    df$dist_npil <- NA_real_
+  }
+  df[order(-df$score), , drop = FALSE]
+}
+
+
+# Single-neuron convenience: fetch + score in one go. Not used by the cascade
+# (which batches via `.aedes_score_l2_many()`); handy for ad-hoc debugging.
+#' @noRd
+.aedes_score_l2 <- function(root_id, mesh = NULL,
+                            features = c("area", "size", "max_dt", "mean_dt",
+                                         "roundness", "mesh")) {
+  features <- match.arg(features, several.ok = TRUE)
+  df <- with_aedes(fafbseg::flywire_l2attributes(rootid = root_id))
+  .aedes_score_l2_df(df, mesh = mesh, features = features)
+}
+
+
+# Score L2 chunks for many root ids and return one row per id (the top-scoring
+# chunk's rep_coord_nm) in the shape `aedes_soma_position()` expects.
+#
+# Batches the L2 attribute fetch into `chunksize` neurons per CAVE call (one
+# call instead of N) and runs chunks under `pbapply::pblapply` with optional
+# parallelism via `cl` -- worthwhile for hundreds to thousands of neurons.
+#' @noRd
+.aedes_score_l2_many <- function(root_ids, mesh = NULL,
+                                 method = c("l2+mesh", "l2", "mesh"),
+                                 chunksize = 20L,
+                                 cl = NULL) {
+  method <- match.arg(method)
+  if (!length(root_ids)) return(NULL)
+  features <- switch(
+    method,
+    `l2+mesh` = c("area", "size", "max_dt", "mean_dt", "roundness", "mesh"),
+    `l2`      = c("area", "size", "max_dt", "mean_dt", "roundness"),
+    `mesh`    = "mesh"
+  )
+
+  chunksize <- max(1L, as.integer(chunksize))
+  chunks <- nat.utils::make_chunks(root_ids, chunksize = chunksize)
+
+  # progress + optional parallelism over chunks; skip pblapply for a single
+  # chunk to avoid spurious progress bars for tiny jobs
+  per_chunk <- if (length(chunks) > 1L)
+                 pbapply::pblapply(
+                   chunks, .aedes_score_l2_chunk,
+                   mesh = mesh, features = features, method = method,
+                   cl = cl
+                 )
+               else list(.aedes_score_l2_chunk(
+                 chunks[[1]], mesh = mesh, features = features,
+                 method = method
+               ))
+  do.call(rbind, Filter(Negate(is.null), per_chunk))
+}
+
+
+# Score one chunk of root ids using a single batched L2 attribute fetch.
+#' @noRd
+.aedes_score_l2_chunk <- function(root_ids, mesh = NULL, features, method) {
+  l2ids_per_root <- lapply(root_ids, .aedes_l2ids_for_root)
+  names(l2ids_per_root) <- root_ids
+
+  good <- lengths(l2ids_per_root) > 0L
+  if (!any(good)) return(NULL)
+
+  all_l2 <- unique(unlist(lapply(l2ids_per_root[good], as.character),
+                          use.names = FALSE))
+  if (!length(all_l2)) return(NULL)
+
+  attr_df <- tryCatch(
+    with_aedes(fafbseg::flywire_l2attributes(
+      l2ids = bit64::as.integer64(all_l2)
+    )),
+    error = function(e) {
+      warning("flywire_l2attributes() failed for chunk: ",
+              conditionMessage(e), call. = FALSE)
+      NULL
+    }
+  )
+  if (is.null(attr_df) || !nrow(attr_df)) return(NULL)
+
+  attr_l2 <- as.character(attr_df$l2_id)
+  rows <- lapply(root_ids, .aedes_score_l2_root_from_attr,
+                 l2ids_per_root = l2ids_per_root,
+                 attr_df = attr_df, attr_l2 = attr_l2,
+                 mesh = mesh, features = features, method = method)
+  do.call(rbind, Filter(Negate(is.null), rows))
+}
+
+
+# Fetch L2 ids for one root id. Kept separate for easier ad-hoc debugging.
+#' @noRd
+.aedes_l2ids_for_root <- function(root_id) {
+  tryCatch(
+    with_aedes(fafbseg::flywire_l2ids(root_id, integer64 = TRUE)),
+    error = function(e) {
+      warning("flywire_l2ids() failed for ", root_id, ": ",
+              conditionMessage(e), call. = FALSE)
+      NULL
+    }
+  )
+}
+
+
+# Score the rows belonging to one root id out of a chunk-wide L2 attribute table.
+#' @noRd
+.aedes_score_l2_root_from_attr <- function(root_id, l2ids_per_root,
+                                           attr_df, attr_l2,
+                                           mesh = NULL, features, method) {
+  l2ids <- l2ids_per_root[[root_id]]
+  if (is.null(l2ids) || !length(l2ids)) return(NULL)
+
+  sub <- attr_df[attr_l2 %in% as.character(l2ids), , drop = FALSE]
+  scored <- tryCatch(
+    .aedes_score_l2_df(sub, mesh = mesh, features = features),
+    error = function(e) {
+      warning("L2 scoring failed for ", root_id, ": ",
+              conditionMessage(e), call. = FALSE)
+      NULL
+    }
+  )
+  if (is.null(scored) || !nrow(scored)) return(NULL)
+
+  .aedes_l2_soma_row(scored[1, ], root_id = root_id, source = method)
+}
+
+
+# Convert a top-scoring L2 attribute row into a soma-position row. Diagnostic
+# columns (soma_score, dist_npil_nm, l2_id) are always populated; non-L2 rows
+# get them set to NA by the caller (`aedes_soma_position()`).
+#' @noRd
+.aedes_l2_soma_row <- function(x, root_id, source) {
+  pos <- nat::xyzmatrix2str(matrix(c(x$rep_coord_nm_x,
+                                     x$rep_coord_nm_y,
+                                     x$rep_coord_nm_z), ncol = 3))
+  data.frame(
+    root_id      = root_id,
+    position     = pos,
+    source       = source,
+    n_nuclei     = NA_integer_,
+    nucleus_id   = NA_integer_,
+    soma_score   = x$score,
+    dist_npil_nm = x$dist_npil,
+    l2_id        = if ("l2_id" %in% names(x)) as.character(x$l2_id) else NA_character_,
+    stringsAsFactors = FALSE
+  )
 }

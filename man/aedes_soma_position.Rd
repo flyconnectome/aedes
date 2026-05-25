@@ -6,9 +6,12 @@
 \usage{
 aedes_soma_position(
   ids,
-  method = c("auto", "flytable", "nucleus"),
+  method = c("auto", "flytable", "nucleus", "l2+mesh", "l2", "mesh"),
   units = c("nm", "raw"),
   nuclei = c("largest", "all"),
+  mesh = aedes::aedes_neuropil_mesh,
+  chunksize = 20L,
+  cl = NULL,
   version = NULL,
   timestamp = NULL
 )
@@ -16,10 +19,15 @@ aedes_soma_position(
 \arguments{
 \item{ids}{Root IDs or a FlyTable query string accepted by \code{\link[=aedes_ids]{aedes_ids()}}.}
 
-\item{method}{One of \code{"auto"}, \code{"flytable"}, \code{"nucleus"}. With \code{"auto"}
-(the default) the function first tries FlyTable's \code{soma_xyz} and then
-falls back to \code{\link[fafbseg:flywire_nuclei]{fafbseg::flywire_nuclei()}} for any neuron that lacked a
-recorded soma. Naming a single method restricts the lookup to that source.}
+\item{method}{One of \code{"auto"}, \code{"flytable"}, \code{"nucleus"}, \code{"l2+mesh"},
+\code{"l2"}, or \code{"mesh"}. With \code{"auto"} (the default) the function tries
+FlyTable's \code{soma_xyz} first, falls back to \code{\link[fafbseg:flywire_nuclei]{fafbseg::flywire_nuclei()}}
+for any neuron without a recorded soma, and -- when a \code{mesh} is
+available -- finally falls back to a combined L2-attribute + neuropil
+signed-distance score (\code{"l2+mesh"}). Restricting \code{method} skips the
+cascade. \code{"l2"} uses only the L2 shape features (area, distance
+transform, roundness, size); \code{"mesh"} uses only the signed distance and
+errors if \code{mesh = NULL}.}
 
 \item{units}{Units of the returned coordinates: \code{"nm"} (default) or \code{"raw"}
 voxel coordinates. FlyTable's \code{soma_xyz} is always stored as raw voxel
@@ -35,19 +43,40 @@ row. Either way, bookkeeping duplicates (rows with identical position
 for the same root id) are silently collapsed, and \code{n_nuclei} records how
 many distinct-position candidates were considered.}
 
+\item{mesh}{A \code{mesh3d} of the neuropil for the mesh-based scoring methods.
+Defaults to \link{aedes_neuropil_mesh}. Pass \code{NULL} to disable mesh-based
+fallback in \code{"auto"}.}
+
+\item{chunksize}{Number of neurons per batched L2-attribute fetch when the
+cascade reaches \code{"l2+mesh"} / \code{"l2"} / \code{"mesh"}. Larger values reduce CAVE
+round-trip overhead at the cost of larger responses. Default 20 trades
+off well in practice; pass \code{1L} to revert to per-neuron fetches.}
+
+\item{cl}{Optional parallel cluster (or integer worker count) passed to
+\code{\link[pbapply:pbapply]{pbapply::pblapply()}} for chunk processing. \code{NULL} (default) runs
+sequentially with a progress bar. Useful when scoring hundreds to
+thousands of neurons via L2.}
+
 \item{version, timestamp}{Optional CAVE materialisation selectors passed
 through to \code{\link[=aedes_meta]{aedes_meta()}} and \code{\link[fafbseg:flywire_nuclei]{fafbseg::flywire_nuclei()}}.}
 }
 \value{
 A data.frame with columns \code{root_id}; \code{position} (a \code{"x,y,z"} string
 in the requested \code{units}; convert back with \code{\link[nat:xyzmatrix]{nat::xyzmatrix()}}); \code{source}
-(\code{"flytable"}, \code{"nucleus"}, or \code{NA}); \code{n_nuclei} (the number of
-distinct-position nucleus candidates for that root id, or \code{NA} when the
-soma came from FlyTable / was not found); and \code{nucleus_id} (the
-\code{nuclei_v1_aedes} primary key of the chosen row, or \code{NA} for FlyTable /
-not-found sources). With \code{nuclei = "largest"} there is one row per input
-id in input order; with \code{nuclei = "all"} rows are ordered by input id
-but ambiguous ids contribute multiple rows (sorted by descending volume).
+(\code{"flytable"}, \code{"nucleus"}, \code{"l2+mesh"}, \code{"l2"}, \code{"mesh"}, or \code{NA});
+\code{n_nuclei} (the number of distinct-position nucleus candidates for that
+root id, or \code{NA} when the soma came from elsewhere / was not found); and
+\code{nucleus_id} (the \code{nuclei_v1_aedes} primary key, from FlyTable when
+\code{source = "flytable"} or from the chosen nucleus row when
+\code{source = "nucleus"}). L2-derived rows also include
+\code{soma_score} (combined within-neuron z-score; higher = more soma-like),
+\code{dist_npil_nm} (signed distance to the neuropil mesh, in nm; positive
+inside, negative outside -- soma rows are in cortex so this is usually
+negative), and \code{l2_id} (the selected L2 chunk).
+These columns are \code{NA} for non-L2 sources. With \code{nuclei = "largest"}
+there is one row per input id in input order; with \code{nuclei = "all"} rows
+are ordered by input id but ambiguous ids contribute multiple rows
+(sorted by descending volume).
 }
 \description{
 Returns the recorded soma position (in nm) for each input root id, using

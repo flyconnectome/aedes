@@ -177,6 +177,60 @@ test_that(".aedes_dedup_nuclei is a no-op for unique inputs", {
 })
 
 
+test_that(".aedes_dedup_nuclei drops placeholder rows with missing positions", {
+  nuc <- data.frame(
+    id          = c(NA_integer_, 2L),
+    pt_root_id  = c("A", "B"),
+    pt_position = c(NA_character_, "30,30,30"),
+    volume      = c(NA_real_, 2000),
+    stringsAsFactors = FALSE
+  )
+  picked <- aedes:::.aedes_dedup_nuclei(nuc)
+  expect_equal(picked$root_id, "B")
+  expect_equal(picked$position, "30,30,30")
+})
+
+
+test_that("aedes_soma_position method='l2+mesh' lands near the recorded soma", {
+  # Forces the L2+mesh path on a neuron we know has a FlyTable soma so we can
+  # check the result against ground truth. Needs the patched fafbseg
+  # (l2cache-uint-overflow branch) for size_nm3 not to overflow.
+  id <- "648518347399768369"
+  expected_nm <- aedes_raw2nm(matrix(c(16231, 4747, 3051), ncol = 3))[1, ]
+  sp <- try(aedes_soma_position(id, method = "l2+mesh"), silent = TRUE)
+  skip_if(inherits(sp, "try-error") || is.na(sp$source[1]),
+          "Skipping: L2 cache unavailable")
+
+  expect_equal(sp$source, "l2+mesh")
+  expect_true("soma_score" %in% colnames(sp))  # surfaced when asked
+  expect_true(is.finite(sp$soma_score))
+  pt <- as.numeric(nat::xyzmatrix(sp$position)[1, ])
+  d  <- sqrt(sum((pt - expected_nm)^2))
+  # L2 chunks are ~1 micron, so the top chunk's centroid is usually within
+  # a few microns of the recorded point. Allow 10 micron tolerance.
+  expect_lt(d, 10000)
+})
+
+
+test_that("aedes_soma_position auto cascade exposes L2 diagnostics", {
+  id <- "648518347399768369"
+  sp <- try(aedes_soma_position(id, method = "auto"), silent = TRUE)
+  skip_if(inherits(sp, "try-error") || is.na(sp$source[1]),
+          "Skipping: no soma source available for test id")
+
+  expect_true(all(c("soma_score", "dist_npil_nm", "l2_id") %in% colnames(sp)))
+  if (sp$source == "l2+mesh") {
+    expect_true(is.finite(sp$soma_score))
+    expect_true(is.finite(sp$dist_npil_nm))
+    expect_false(is.na(sp$l2_id))
+  } else {
+    expect_true(is.na(sp$soma_score))
+    expect_true(is.na(sp$dist_npil_nm))
+    expect_true(is.na(sp$l2_id))
+  }
+})
+
+
 test_that("aedes_soma_position returns the expected FlyTable soma for a known id", {
   id <- "648518347399768369"
   # Recorded FlyTable soma_xyz for this neuron (raw voxel coords, 16/16/45 nm).
@@ -236,11 +290,14 @@ test_that("read_aedes_neurons reroots 648518347399768369 near its FlyTable soma"
 
   expect_length(ns, 1L)
   md <- ns[, , drop = FALSE]
-  expect_true(all(c("soma_source", "n_nuclei", "nucleus_id") %in% colnames(md)))
+  expect_true(all(c("soma_source", "n_nuclei", "nucleus_id", "soma_score",
+                    "dist_npil_nm", "l2_id") %in% colnames(md)))
   expect_equal(md$soma_source, "flytable")
-  # flytable source -> nucleus columns NA on the neuronlist data slot
+  # flytable source -> n_nuclei is NA, but nucleus_id comes from FlyTable.
+  # 9067 is the nuclei_v1_aedes primary key recorded by the FT annotator;
+  # the PK is stable across proofreading so we can hard-code it here.
   expect_true(is.na(md$n_nuclei))
-  expect_true(is.na(md$nucleus_id))
+  expect_equal(md$nucleus_id, 9067L)
 
   # Rerooted root should land near the recorded soma. l2skel node spacing is
   # ~1 micron; allow a generous 10 micron tolerance.
