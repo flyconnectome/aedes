@@ -58,7 +58,8 @@ sequentially with a progress bar. Useful when scoring hundreds to
 thousands of neurons via L2.}
 
 \item{version, timestamp}{Optional CAVE materialisation selectors passed
-through to \code{\link[=aedes_meta]{aedes_meta()}} and \code{\link[fafbseg:flywire_nuclei]{fafbseg::flywire_nuclei()}}.}
+through to \code{\link[=aedes_meta]{aedes_meta()}} and \code{\link[fafbseg:flywire_nuclei]{fafbseg::flywire_nuclei()}}. Defaults to
+timestamp='now' if no user supplied selector.}
 }
 \value{
 A data.frame with columns \code{root_id}; \code{position} (a \code{"x,y,z"} string
@@ -69,7 +70,10 @@ root id, or \code{NA} when the soma came from elsewhere / was not found); and
 \code{nucleus_id} (the \code{nuclei_v1_aedes} primary key, from FlyTable when
 \code{source = "flytable"} or from the chosen nucleus row when
 \code{source = "nucleus"}). L2-derived rows also include
-\code{soma_score} (combined within-neuron z-score; higher = more soma-like),
+\code{soma_score} (absolute, cross-neuron-comparable; squared Mahalanobis
+distance of the chunk's shape features from the KC positive cloud, plus
+a KDE-based penalty on signed neuropil distance --
+\emph{lower = more soma-like}; see \link{aedes_soma_l2_stats}),
 \code{dist_npil_nm} (signed distance to the neuropil mesh, in nm; positive
 inside, negative outside -- soma rows are in cortex so this is usually
 negative), and \code{l2_id} (the selected L2 chunk).

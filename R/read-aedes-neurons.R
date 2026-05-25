@@ -53,7 +53,10 @@
 #'   `nucleus_id` (the `nuclei_v1_aedes` primary key, from FlyTable when
 #'   `source = "flytable"` or from the chosen nucleus row when
 #'   `source = "nucleus"`). L2-derived rows also include
-#'   `soma_score` (combined within-neuron z-score; higher = more soma-like),
+#'   `soma_score` (absolute, cross-neuron-comparable; squared Mahalanobis
+#'   distance of the chunk's shape features from the KC positive cloud, plus
+#'   a KDE-based penalty on signed neuropil distance --
+#'   *lower = more soma-like*; see [aedes_soma_l2_stats]),
 #'   `dist_npil_nm` (signed distance to the neuropil mesh, in nm; positive
 #'   inside, negative outside -- soma rows are in cortex so this is usually
 #'   negative), and `l2_id` (the selected L2 chunk).
@@ -409,56 +412,89 @@ read_aedes_neurons <- function(ids,
 
 
 # Score a single neuron's L2 chunks (already fetched as a `flywire_l2attributes`
-# data.frame) and return them ordered by descending soma-likeness.
+# data.frame) and return them ordered by ASCENDING soma score
+# (lower = more soma-like).
 #
-# `features` is the bag-of-terms summed (each z-scored within this neuron):
-#   "area"     |   area_nm2          larger = more soma-like
-#   "size"     |   size_nm3                 ,,
-#   "max_dt"   |   max_dt_nm                ,,
-#   "mean_dt"  |   mean_dt_nm               ,,
-#   "roundness"|   pca_val_2 / pca_val_0    higher (sphere)  = more soma-like
-#   "mesh"     |   -pointsinside(rep_coord_nm, mesh, "dist")
-#                                           more negative dist (further outside
-#                                           neuropil) = more soma-like
+# `features` controls the combination of terms:
+#   shape (always used when any of area/size/max_dt/mean_dt/roundness is
+#          requested): squared Mahalanobis distance of (log_area, log_size,
+#          log_max_dt, log_mean_dt, roundness) versus the KC positive
+#          population stats stored in `aedes_soma_l2_stats`. Smaller = closer
+#          to the KC soma cloud.
+#   "mesh": empirical KDE prior on signed neuropil distance (um). Penalty is
+#          `-2 * log(f_hat(d) / max(f_hat))` using the population density of
+#          flywire_nuclei distances + a small uniform background; the floor
+#          keeps real central-brain neurons (sitting 0-3 um inside the
+#          neuropil) from being hard-rejected.
 #
-# Degenerate L2 chunks (pca_val_0 == 0, ~30% of a typical neuron's L2 nodes,
-# usually single-voxel artefacts) are filtered out before scoring.
+# `method = "l2"` skips the mesh term; `method = "mesh"` uses only the mesh
+# penalty. Degenerate L2 chunks (pca_val_0 == 0) are filtered out.
 #' @noRd
 .aedes_score_l2_df <- function(df, mesh = NULL,
                                features = c("area", "size", "max_dt", "mean_dt",
                                             "roundness", "mesh")) {
   features <- match.arg(features, several.ok = TRUE)
-  if ("mesh" %in% features && is.null(mesh))
+  use_mesh  <- "mesh" %in% features
+  use_shape <- any(c("area", "size", "max_dt", "mean_dt", "roundness")
+                   %in% features)
+  if (use_mesh && is.null(mesh))
     stop("`mesh` feature requested but no mesh supplied", call. = FALSE)
   if (is.null(df) || !nrow(df)) return(NULL)
   df <- df[!is.na(df$pca_val_0) & df$pca_val_0 > 0, , drop = FALSE]
   if (!nrow(df)) return(NULL)
 
-  zs <- function(x) {
-    s <- stats::sd(x, na.rm = TRUE)
-    if (!is.finite(s) || s == 0) rep(0, length(x))
-    else (x - mean(x, na.rm = TRUE)) / s
-  }
-  feat_vec <- list(
-    area      = function() zs(df$area_nm2),
-    size      = function() zs(df$size_nm3),
-    max_dt    = function() zs(df$max_dt_nm),
-    mean_dt   = function() zs(df$mean_dt_nm),
-    roundness = function() zs(df$pca_val_2 / df$pca_val_0),
-    mesh      = function() {
-      xyz <- as.matrix(df[, c("rep_coord_nm_x", "rep_coord_nm_y",
-                              "rep_coord_nm_z")])
-      df$dist_npil <<- nat::pointsinside(xyz, surf = mesh, rval = "dist")
-      zs(-df$dist_npil)
-    }
-  )
-  score <- Reduce(`+`, lapply(features, function(f) feat_vec[[f]]()))
-  df$score <- score
-  if (!"dist_npil" %in% colnames(df)) {
+  model <- aedes::aedes_soma_l2_stats
+
+  # mesh distance (always populate `dist_npil` when mesh available so the
+  # diagnostic column flows through to the output regardless of `features`).
+  if (!is.null(mesh)) {
+    xyz <- as.matrix(df[, c("rep_coord_nm_x", "rep_coord_nm_y",
+                            "rep_coord_nm_z")])
+    df$dist_npil <- nat::pointsinside(xyz, surf = mesh, rval = "dist")
+  } else {
     df$dist_npil <- NA_real_
   }
-  df[order(-df$score), , drop = FALSE]
+
+  # shape: Mahalanobis on the 5 trained features
+  mahal_shape <- rep(0, nrow(df))
+  if (use_shape) {
+    feats <- data.frame(
+      log_area_nm2   = log1p(pmax(df$area_nm2, 0)),
+      log_size_nm3   = log1p(pmax(df$size_nm3, 0)),
+      log_max_dt_nm  = log1p(pmax(df$max_dt_nm, 0)),
+      log_mean_dt_nm = log1p(pmax(df$mean_dt_nm, 0)),
+      roundness      = df$pca_val_2 / df$pca_val_0
+    )
+    mahal_shape <- stats::mahalanobis(
+      as.matrix(feats[, model$feature_names, drop = FALSE]),
+      center = model$positive_mean, cov = model$positive_cov
+    )
+    mahal_shape[!is.finite(mahal_shape)] <- NA_real_
+  }
+
+  # mesh: empirical KDE-based penalty (lower = density at this distance is
+  # close to the population peak, i.e. typical soma position)
+  dist_penalty <- rep(0, nrow(df))
+  if (use_mesh) {
+    dpd <- model$dist_npil_density
+    d_um <- df$dist_npil / 1000
+    f_hat <- stats::approx(dpd$x, dpd$y, xout = d_um, rule = 2,
+                           yleft = dpd$uniform_density * dpd$uniform_eps,
+                           yright = dpd$uniform_density * dpd$uniform_eps)$y
+    # outside the tabulated support, fall back to uniform-only floor density
+    out_of_support <- !is.finite(d_um) |
+      d_um < dpd$support[1] | d_um > dpd$support[2]
+    f_hat[out_of_support] <- dpd$uniform_density * dpd$uniform_eps
+    dist_penalty <- -2 * log(pmax(f_hat, .Machine$double.xmin) / dpd$y_max)
+  }
+
+  w <- model$dist_penalty_weight %||% 1
+  score <- mahal_shape + w * dist_penalty
+  df$score <- score
+  df[order(df$score), , drop = FALSE]
 }
+
+`%||%` <- function(a, b) if (is.null(a)) b else a
 
 
 # Single-neuron convenience: fetch + score in one go. Not used by the cascade
