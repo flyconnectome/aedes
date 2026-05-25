@@ -34,13 +34,16 @@ Imports:
 Suggests:
     Morpho,
     gifski,
+    knitr,
     RcppSimdJson,
     rgl,
+    rmarkdown,
     testthat (>= 3.0.0),
     coconat,
     reticulate
 Enhances:
     coconatfly
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Remotes:
     natverse/nat,
