@@ -42,7 +42,8 @@
 #'   sequentially with a progress bar. Useful when scoring hundreds to
 #'   thousands of neurons via L2.
 #' @param version,timestamp Optional CAVE materialisation selectors passed
-#'   through to [aedes_meta()] and [fafbseg::flywire_nuclei()].
+#'   through to [aedes_meta()] and [fafbseg::flywire_nuclei()]. Defaults to
+#'   timestamp='now' if no user supplied selector.
 #'
 #' @return A data.frame with columns `root_id`; `position` (a `"x,y,z"` string
 #'   in the requested `units`; convert back with [nat::xyzmatrix()]); `source`
@@ -85,7 +86,7 @@ aedes_soma_position <- function(ids,
   nuclei <- match.arg(nuclei)
   if (method %in% c("l2+mesh", "mesh") && is.null(mesh))
     stop("method = \"", method, "\" requires a non-NULL `mesh`.", call. = FALSE)
-  vi <- aedes_get_version(version = version, timestamp = timestamp)
+  vi <- aedes_get_version(which = 'now', version = version, timestamp = timestamp)
   root_ids <- as.character(aedes_ids(ids, version = vi$version,
                                      timestamp = vi$timestamp))
 
