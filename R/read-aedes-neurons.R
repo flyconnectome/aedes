@@ -182,6 +182,16 @@ aedes_soma_position <- function(ids,
                                     chunksize = chunksize, cl = cl)
   }
 
+  # Annotate flytable / nucleus rows with dist_npil_nm + soma_score + l2_id
+  # (one batched xyz2id + l2attrs call covers both sources). Cheap and lets
+  # users compare confidence across sources.
+  if (!is.null(mesh)) {
+    if (!is.null(flytable_rows))
+      flytable_rows <- .aedes_annotate_known_soma(flytable_rows, mesh = mesh)
+    if (!is.null(nucleus_rows))
+      nucleus_rows  <- .aedes_annotate_known_soma(nucleus_rows,  mesh = mesh)
+  }
+
   found_ids   <- c(flytable_ids, nucleus_ids,
                    if (!is.null(l2_rows)) l2_rows$root_id else character(0))
   missing_ids <- setdiff(root_ids, found_ids)
@@ -367,7 +377,8 @@ read_aedes_neurons <- function(ids,
               " neurons could not be rerooted; soma_source is NA for those.",
               call. = FALSE)
   }
-
+  # record version info for future reference
+  attr(res, 'vi')=vi
   switch(units,
          nm = res,
          raw = res * c(1 / aedes_voxdims(), 1),
@@ -429,6 +440,62 @@ read_aedes_neurons <- function(ids,
 #
 # `method = "l2"` skips the mesh term; `method = "mesh"` uses only the mesh
 # penalty. Degenerate L2 chunks (pca_val_0 == 0) are filtered out.
+# Pure scoring math: takes a flywire_l2attributes-shaped df, returns it with
+# two new columns (`dist_npil`, `score`) computed positionally. No row
+# filtering, no reordering -- callers that need that wrap this. Rows with
+# `pca_val_0 == 0` or other degeneracies will produce NA scores, not be
+# dropped.
+#' @noRd
+.aedes_compute_l2_score <- function(df, mesh = NULL,
+                                    use_shape = TRUE, use_mesh = TRUE) {
+  if (use_mesh && is.null(mesh))
+    stop("mesh requested but no mesh supplied", call. = FALSE)
+  model <- aedes::aedes_soma_l2_stats
+
+  if (!is.null(mesh)) {
+    xyz <- as.matrix(df[, c("rep_coord_nm_x", "rep_coord_nm_y",
+                            "rep_coord_nm_z")])
+    df$dist_npil <- nat::pointsinside(xyz, surf = mesh, rval = "dist")
+  } else {
+    df$dist_npil <- NA_real_
+  }
+
+  mahal_shape <- rep(0, nrow(df))
+  if (use_shape) {
+    feats <- data.frame(
+      log_area_nm2   = log1p(pmax(df$area_nm2, 0)),
+      log_size_nm3   = log1p(pmax(df$size_nm3, 0)),
+      log_max_dt_nm  = log1p(pmax(df$max_dt_nm, 0)),
+      log_mean_dt_nm = log1p(pmax(df$mean_dt_nm, 0)),
+      roundness      = ifelse(df$pca_val_0 > 0,
+                              df$pca_val_2 / df$pca_val_0, NA_real_)
+    )
+    mahal_shape <- stats::mahalanobis(
+      as.matrix(feats[, model$feature_names, drop = FALSE]),
+      center = model$positive_mean, cov = model$positive_cov
+    )
+    mahal_shape[!is.finite(mahal_shape)] <- NA_real_
+  }
+
+  dist_penalty <- rep(0, nrow(df))
+  if (use_mesh) {
+    dpd <- model$dist_npil_density
+    d_um <- df$dist_npil / 1000
+    f_hat <- stats::approx(dpd$x, dpd$y, xout = d_um, rule = 2,
+                           yleft = dpd$uniform_density * dpd$uniform_eps,
+                           yright = dpd$uniform_density * dpd$uniform_eps)$y
+    out_of_support <- !is.finite(d_um) |
+      d_um < dpd$support[1] | d_um > dpd$support[2]
+    f_hat[out_of_support] <- dpd$uniform_density * dpd$uniform_eps
+    dist_penalty <- -2 * log(pmax(f_hat, .Machine$double.xmin) / dpd$y_max)
+  }
+
+  w <- model$dist_penalty_weight %||% 1
+  df$score <- mahal_shape + w * dist_penalty
+  df
+}
+
+# Cascade-facing wrapper: filter degenerate L2 chunks, score, sort ascending.
 #' @noRd
 .aedes_score_l2_df <- function(df, mesh = NULL,
                                features = c("area", "size", "max_dt", "mean_dt",
@@ -442,55 +509,8 @@ read_aedes_neurons <- function(ids,
   if (is.null(df) || !nrow(df)) return(NULL)
   df <- df[!is.na(df$pca_val_0) & df$pca_val_0 > 0, , drop = FALSE]
   if (!nrow(df)) return(NULL)
-
-  model <- aedes::aedes_soma_l2_stats
-
-  # mesh distance (always populate `dist_npil` when mesh available so the
-  # diagnostic column flows through to the output regardless of `features`).
-  if (!is.null(mesh)) {
-    xyz <- as.matrix(df[, c("rep_coord_nm_x", "rep_coord_nm_y",
-                            "rep_coord_nm_z")])
-    df$dist_npil <- nat::pointsinside(xyz, surf = mesh, rval = "dist")
-  } else {
-    df$dist_npil <- NA_real_
-  }
-
-  # shape: Mahalanobis on the 5 trained features
-  mahal_shape <- rep(0, nrow(df))
-  if (use_shape) {
-    feats <- data.frame(
-      log_area_nm2   = log1p(pmax(df$area_nm2, 0)),
-      log_size_nm3   = log1p(pmax(df$size_nm3, 0)),
-      log_max_dt_nm  = log1p(pmax(df$max_dt_nm, 0)),
-      log_mean_dt_nm = log1p(pmax(df$mean_dt_nm, 0)),
-      roundness      = df$pca_val_2 / df$pca_val_0
-    )
-    mahal_shape <- stats::mahalanobis(
-      as.matrix(feats[, model$feature_names, drop = FALSE]),
-      center = model$positive_mean, cov = model$positive_cov
-    )
-    mahal_shape[!is.finite(mahal_shape)] <- NA_real_
-  }
-
-  # mesh: empirical KDE-based penalty (lower = density at this distance is
-  # close to the population peak, i.e. typical soma position)
-  dist_penalty <- rep(0, nrow(df))
-  if (use_mesh) {
-    dpd <- model$dist_npil_density
-    d_um <- df$dist_npil / 1000
-    f_hat <- stats::approx(dpd$x, dpd$y, xout = d_um, rule = 2,
-                           yleft = dpd$uniform_density * dpd$uniform_eps,
-                           yright = dpd$uniform_density * dpd$uniform_eps)$y
-    # outside the tabulated support, fall back to uniform-only floor density
-    out_of_support <- !is.finite(d_um) |
-      d_um < dpd$support[1] | d_um > dpd$support[2]
-    f_hat[out_of_support] <- dpd$uniform_density * dpd$uniform_eps
-    dist_penalty <- -2 * log(pmax(f_hat, .Machine$double.xmin) / dpd$y_max)
-  }
-
-  w <- model$dist_penalty_weight %||% 1
-  score <- mahal_shape + w * dist_penalty
-  df$score <- score
+  df <- .aedes_compute_l2_score(df, mesh = mesh,
+                                use_shape = use_shape, use_mesh = use_mesh)
   df[order(df$score), , drop = FALSE]
 }
 
@@ -638,4 +658,66 @@ read_aedes_neurons <- function(ids,
     l2_id        = if ("l2_id" %in% names(x)) as.character(x$l2_id) else NA_character_,
     stringsAsFactors = FALSE
   )
+}
+
+
+# Annotate rows whose soma position is already known (from FlyTable or the
+# nucleus table) with `dist_npil_nm`, `soma_score`, and `l2_id`.
+#
+# Two-pass design so the cheap part is always-on:
+#   (1) dist_npil_nm: direct `nat::pointsinside()` on the recorded soma point
+#       (the authoritative location, not an L2 rep_coord). Free, no network.
+#   (2) soma_score + l2_id: one batched `aedes_xyz2id(stop_layer = 2L)` call
+#       resolves all points to L2 ids; one (or few) batched
+#       `flywire_l2attributes(l2ids = ...)` calls fetch attrs; then the pure
+#       scoring helper produces a cross-source comparable score. Wrapped in
+#       `tryCatch` so service failures or degenerate chunks leave score/l2_id
+#       as NA without disturbing the dist_npil_nm column.
+#
+# `rows` is a data.frame with `position` (nm string), `soma_score`,
+# `dist_npil_nm`, `l2_id` columns. Returns the same shape, columns updated.
+#' @noRd
+.aedes_annotate_known_soma <- function(rows, mesh,
+                                       l2_chunksize = 5000L) {
+  if (is.null(rows) || !nrow(rows) || is.null(mesh)) return(rows)
+  xyz <- nat::xyzmatrix(rows$position)
+  has_xyz <- stats::complete.cases(xyz)
+  if (!any(has_xyz)) return(rows)
+
+  # (1) dist_npil_nm -- direct, unconditional
+  rows$dist_npil_nm[has_xyz] <- nat::pointsinside(
+    xyz[has_xyz, , drop = FALSE], surf = mesh, rval = "dist"
+  )
+
+  # (2) l2_id + soma_score -- batched lookup, can fail gracefully
+  tryCatch({
+    l2ids <- aedes_xyz2id(xyz[has_xyz, , drop = FALSE],
+                          rawcoords = FALSE, stop_layer = 2L,
+                          integer64 = TRUE)
+    l2_chr <- as.character(l2ids)
+    ok <- !is.na(l2_chr) & l2_chr != "0"
+    rows$l2_id[has_xyz][ok] <- l2_chr[ok]
+
+    unique_l2 <- unique(l2_chr[ok])
+    if (!length(unique_l2)) return(invisible(NULL))
+
+    chunks <- nat.utils::make_chunks(unique_l2,
+                                     chunksize = max(1L, as.integer(l2_chunksize)))
+    attr_df <- do.call(rbind, lapply(chunks, function(ids) {
+      with_aedes(fafbseg::flywire_l2attributes(
+        l2ids = bit64::as.integer64(ids)
+      ))
+    }))
+    if (is.null(attr_df) || !nrow(attr_df)) return(invisible(NULL))
+
+    scored <- .aedes_compute_l2_score(attr_df, mesh = mesh,
+                                      use_shape = TRUE, use_mesh = TRUE)
+    score_lookup <- setNames(scored$score, as.character(scored$l2_id))
+    rows$soma_score[has_xyz][ok] <- unname(score_lookup[l2_chr[ok]])
+  }, error = function(e) {
+    warning("L2 annotation of known soma points failed: ",
+            conditionMessage(e), call. = FALSE)
+  })
+
+  rows
 }
