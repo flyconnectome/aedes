@@ -303,6 +303,9 @@ aedes_root_point <- function(x, point = NULL,
 #' @param chunksize,cl Forwarded to [aedes_soma_position()] -- batch size for
 #'   L2 attribute fetches and optional parallel cluster for chunk processing.
 #' @param OmitFailures Passed to [fafbseg::read_l2skel()].
+#' @param previous Optional [nat::neuronlist()] from an earlier call. Neurons
+#'   whose names match requested root ids are reused so only missing skeletons
+#'   are read. `previous` is expected to be in nm coordinates.
 #' @param version,timestamp Optional CAVE materialisation selectors.
 #' @param ... Additional arguments passed to [fafbseg::read_l2skel()].
 #'
@@ -331,6 +334,7 @@ read_aedes_neurons <- function(ids,
                                chunksize = 20L,
                                cl = NULL,
                                OmitFailures = TRUE,
+                               previous = NULL,
                                version = NULL,
                                timestamp = NULL,
                                ...) {
@@ -342,9 +346,17 @@ read_aedes_neurons <- function(ids,
   root_ids <- as.character(aedes_ids(ids, version = vi$version,
                                      timestamp = vi$timestamp))
 
-  res <- with_aedes(fafbseg::read_l2skel(
-    root_ids, OmitFailures = OmitFailures, ...
-  ))
+  if (!is.null(previous) && !nat::is.neuronlist(previous))
+    stop("`previous` must be a nat::neuronlist().", call. = FALSE)
+  have_ids <- intersect(root_ids, names(previous))
+  need_ids <- setdiff(root_ids, have_ids)
+
+  fetched <- if (length(need_ids))
+    with_aedes(fafbseg::read_l2skel(need_ids, OmitFailures = OmitFailures, ...))
+    else nat::neuronlist()
+  reused <- if (length(have_ids)) previous[have_ids] else nat::neuronlist()
+  res <- c(reused, fetched)
+  res <- res[intersect(root_ids, names(res))]
 
   if (isTRUE(reroot) && length(res)) {
     soma <- aedes_soma_position(
@@ -353,12 +365,12 @@ read_aedes_neurons <- function(ids,
       version = vi$version, timestamp = vi$timestamp
     )
     # one row per id in input order; reroot each neuron to its soma point
-    for (i in seq_along(res)) {
-      j <- match(names(res)[i], soma$root_id)
-      if (is.na(j) || is.na(soma$position[j])) next
-      pt <- as.numeric(nat::xyzmatrix(soma$position[j])[1, ])
-      res[[i]] <- aedes_root_point(res[[i]], point = pt,
-                                   method = "point", rval = "neuron")
+    reroot_ids <- intersect(names(res), soma$root_id[!is.na(soma$position)])
+    soma_points <- stats::setNames(soma$position, soma$root_id)
+    for (id in reroot_ids) {
+      pt <- as.numeric(nat::xyzmatrix(soma_points[[id]])[1, ])
+      res[[id]] <- aedes_root_point(res[[id]], point = pt,
+                                    method = "point", rval = "neuron")
     }
 
     # attach per-neuron provenance to the neuronlist data slot

@@ -13,6 +13,7 @@ read_aedes_neurons(
   chunksize = 20L,
   cl = NULL,
   OmitFailures = TRUE,
+  previous = NULL,
   version = NULL,
   timestamp = NULL,
   ...
@@ -41,6 +42,10 @@ for any neuron that has no FlyTable or nucleus soma; only used if a
 L2 attribute fetches and optional parallel cluster for chunk processing.}
 
 \item{OmitFailures}{Passed to \code{\link[fafbseg:read_l2skel]{fafbseg::read_l2skel()}}.}
+
+\item{previous}{Optional \code{\link[nat:neuronlist]{nat::neuronlist()}} from an earlier call. Neurons
+whose names match requested root ids are reused so only missing skeletons
+are read. \code{previous} is expected to be in nm coordinates.}
 
 \item{version, timestamp}{Optional CAVE materialisation selectors.}
 
