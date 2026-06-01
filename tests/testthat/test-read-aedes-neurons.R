@@ -224,9 +224,11 @@ test_that("aedes_soma_position auto cascade exposes L2 diagnostics", {
     expect_true(is.finite(sp$dist_npil_nm))
     expect_false(is.na(sp$l2_id))
   } else {
-    expect_true(is.na(sp$soma_score))
-    expect_true(is.na(sp$dist_npil_nm))
-    expect_true(is.na(sp$l2_id))
+    # flytable / nucleus sources are now annotated with L2 diagnostics when
+    # the mesh is available, so these columns may or may not be populated.
+    expect_true("soma_score" %in% colnames(sp))
+    expect_true("dist_npil_nm" %in% colnames(sp))
+    expect_true("l2_id" %in% colnames(sp))
   }
 })
 
