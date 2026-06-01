@@ -1,5 +1,7 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>/404.html</loc></url>
+<url><loc>/articles/index.html</loc></url>
+<url><loc>/articles/kc-soma-annotations.html</loc></url>
 <url><loc>/authors.html</loc></url>
 <url><loc>/index.html</loc></url>
 <url><loc>/news/index.html</loc></url>
@@ -11,8 +13,11 @@
 <url><loc>/reference/aedes_get_version.html</loc></url>
 <url><loc>/reference/aedes_meta.html</loc></url>
 <url><loc>/reference/aedes_mirror.html</loc></url>
+<url><loc>/reference/aedes_neuropil_mesh.html</loc></url>
 <url><loc>/reference/aedes_sequential_update.html</loc></url>
 <url><loc>/reference/aedes_set_version.html</loc></url>
+<url><loc>/reference/aedes_soma_l2_stats.html</loc></url>
+<url><loc>/reference/aedes_soma_position.html</loc></url>
 <url><loc>/reference/aedes_voxdims.html</loc></url>
 <url><loc>/reference/aedes_xyz2id.html</loc></url>
 <url><loc>/reference/all_chunkedgraph_operations.html</loc></url>
@@ -21,6 +26,7 @@
 <url><loc>/reference/index.html</loc></url>
 <url><loc>/reference/last_chunkedgraph_edit.html</loc></url>
 <url><loc>/reference/populate_chunkedgraph_ops_cache.html</loc></url>
+<url><loc>/reference/read_aedes_neurons.html</loc></url>
 <url><loc>/reference/register_aedes_coconat.html</loc></url>
 </urlset>
 
