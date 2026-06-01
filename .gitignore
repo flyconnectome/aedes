@@ -9,3 +9,5 @@ inst/doc
 .quarto
 check
 .claude
+data-raw/.soma_l2_cache
+data-raw/.soma_l2_cache_smoke

@@ -7,12 +7,13 @@
 #'   Defaults to the active Aedes sample URL.
 #' @return For `aedes_voxdims()`, a numeric 3-vector.
 #' @export
+#' @importFrom memoise memoise
 #'
 #' @examples
 #' \dontrun{
 #' aedes_voxdims()
 #' }
-aedes_voxdims <- memoise::memoise(function(url = choose_aedes(set = FALSE)[["fafbseg.sampleurl"]]) {
+aedes_voxdims <- memoise(function(url = choose_aedes(set = FALSE)[["fafbseg.sampleurl"]]) {
   fafbseg::flywire_voxdims(url)
 })
 
