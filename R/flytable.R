@@ -4,20 +4,33 @@
 #'   information is missing. Therefore it is essential to delete supervoxel_id
 #'   for any rows in which the point_xyz is changed.
 #'
-#' @param df A dataframe containing columns root_id, supervoxel_id, point_xyz
-#' @return A new dataframe with updated ids
+#'   By default `root_id`s are brought forward to the current segmentation state
+#'   (`timestamp = 'now'`). Callers may instead pin to a specific
+#'   materialisation `version` or `timestamp`.
+#'
+#' @param df A dataframe containing columns root_id, supervoxel_id, point_xyz.
+#' @param version Optional materialisation version.
+#' @param timestamp Optional CAVE timestamp. Defaults to `'now'` when both
+#'   timestamp and version missing.
+#' @return A new dataframe with updated ids.
 #' @keywords internal
-aedes_sequential_update <- function(df) {
+aedes_sequential_update <- function(df, version = NULL, timestamp = NULL) {
   op <- choose_aedes(set = TRUE)
   on.exit(options(op))
+
+  if (is.null(version) && is.null(timestamp)) timestamp <- "now"
+  vi <- aedes_get_version(version = version, timestamp = timestamp)
 
   pts_toupdate = with(df, (is.na(supervoxel_id) | supervoxel_id == 0) & !is.na(point_xyz))
   if (any(pts_toupdate)) {
     df[pts_toupdate, "supervoxel_id"] <-
-      aedes_xyz2id(df$point_xyz[pts_toupdate], rawcoords = TRUE, root = FALSE)
+      aedes_xyz2id(df$point_xyz[pts_toupdate], rawcoords = TRUE, root = FALSE,
+                   version = vi$version, timestamp = vi$timestamp)
   }
   df <- df %>% dplyr::mutate(
-    root_id = fafbseg::flywire_updateids(.data$root_id, svids = .data$supervoxel_id)
+    root_id = fafbseg::flywire_updateids(.data$root_id, svids = .data$supervoxel_id,
+                                         version = vi$version,
+                                         timestamp = vi$timestamp)
   )
   df
 }
