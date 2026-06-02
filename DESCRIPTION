@@ -23,6 +23,7 @@ Imports:
     dplyr,
     glue,
     httr,
+    igraph,
     nat,
     nat.utils,
     magrittr,
