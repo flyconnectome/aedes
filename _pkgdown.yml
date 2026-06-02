@@ -7,7 +7,6 @@ reference:
   desc: Point fafbseg / cave at the Aedes segmentation.
   contents:
   - choose_aedes
-  - with_aedes
   - register_aedes_coconat
 
 - title: Metadata and id resolution
@@ -40,6 +39,11 @@ reference:
   contents:
   - aedes_cave_client
   - aedes_cave_query
+
+- title: Datasets
+  contents:
+  - aedes_neuropil_mesh
+  - aedes_soma_l2_stats
 
 navbar:
   structure:
