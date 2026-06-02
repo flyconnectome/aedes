@@ -2,6 +2,45 @@ url: ~
 template:
   bootstrap: 5
 
+reference:
+- title: Dataset setup
+  desc: Point fafbseg / cave at the Aedes segmentation.
+  contents:
+  - choose_aedes
+  - with_aedes
+  - register_aedes_coconat
+
+- title: Metadata and id resolution
+  desc: Query the FlyTable annotations and pick a materialisation.
+  contents:
+  - aedes_meta
+  - aedes_get_version
+  - aedes_set_version
+
+- title: Coordinates
+  desc: Convert between raw and nm, query supervoxels, mirror through the brain.
+  contents:
+  - aedes_voxdims
+  - aedes_xyz2id
+  - aedes_mirror
+
+- title: Reading neurons
+  desc: Pull skeletons and pick annotation points.
+  contents:
+  - read_aedes_neurons
+  - aedes_soma_position
+  - aedes_key_point
+
+- title: Editing the aedes_main table
+  desc: Bulk add or update FlyTable rows.
+  contents:
+  - aedes_add_neurons
+
+- title: Low level CAVE access
+  contents:
+  - aedes_cave_client
+  - aedes_cave_query
+
 navbar:
   structure:
     left:
