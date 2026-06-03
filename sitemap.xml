@@ -6,11 +6,13 @@
 <url><loc>/index.html</loc></url>
 <url><loc>/news/index.html</loc></url>
 <url><loc>/reference/aedes-package.html</loc></url>
+<url><loc>/reference/aedes_add_neurons.html</loc></url>
 <url><loc>/reference/aedes_cave_client.html</loc></url>
 <url><loc>/reference/aedes_cave_query.html</loc></url>
 <url><loc>/reference/aedes_edit_movie.html</loc></url>
 <url><loc>/reference/aedes_flytable_update.html</loc></url>
 <url><loc>/reference/aedes_get_version.html</loc></url>
+<url><loc>/reference/aedes_key_point.html</loc></url>
 <url><loc>/reference/aedes_meta.html</loc></url>
 <url><loc>/reference/aedes_mirror.html</loc></url>
 <url><loc>/reference/aedes_neuropil_mesh.html</loc></url>

@@ -39,7 +39,7 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">aedes_sequential_update</span><span class="op">(</span><span class="va">df</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">aedes_sequential_update</span><span class="op">(</span><span class="va">df</span>, version <span class="op">=</span> <span class="cn">NULL</span>, timestamp <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -47,18 +47,30 @@
 
 
 <dl><dt id="arg-df">df<a class="anchor" aria-label="anchor" href="#arg-df"></a></dt>
-<dd><p>A dataframe containing columns root_id, supervoxel_id, point_xyz</p></dd>
+<dd><p>A dataframe containing columns root_id, supervoxel_id, point_xyz.</p></dd>
+
+
+<dt id="arg-version">version<a class="anchor" aria-label="anchor" href="#arg-version"></a></dt>
+<dd><p>Optional materialisation version.</p></dd>
+
+
+<dt id="arg-timestamp">timestamp<a class="anchor" aria-label="anchor" href="#arg-timestamp"></a></dt>
+<dd><p>Optional CAVE timestamp. Defaults to <code>'now'</code> when both
+timestamp and version missing.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A new dataframe with updated ids</p>
+    <p>A new dataframe with updated ids.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Note that point information will only be used if supervoxel
 information is missing. Therefore it is essential to delete supervoxel_id
 for any rows in which the point_xyz is changed.</p>
+<p>By default <code>root_id</code>s are brought forward to the current segmentation state
+(<code>timestamp = 'now'</code>). Callers may instead pin to a specific
+materialisation <code>version</code> or <code>timestamp</code>.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

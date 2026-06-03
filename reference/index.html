@@ -32,7 +32,136 @@
     </div>
 
     <div class="section level2">
-      <h2 id="all-functions">All functions<a class="anchor" aria-label="anchor" href="#all-functions"></a></h2>
+      <h2 id="dataset-setup">Dataset setup<a class="anchor" aria-label="anchor" href="#dataset-setup"></a></h2>
+
+      <div class="section-desc"><p>Point fafbseg / cave at the Aedes segmentation.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="choose_aedes.html">choose_aedes()</a></code> <code><a href="choose_aedes.html">with_aedes()</a></code>
+
+        </dt>
+        <dd>Choose or temporarily use the Aedes autosegmentation</dd>
+
+        <dt>
+
+          <code><a href="register_aedes_coconat.html">register_aedes_coconat()</a></code>
+
+        </dt>
+        <dd>Register Aedes dataset for coconatfly</dd>
+      </dl></div><div class="section level2">
+      <h2 id="metadata-and-id-resolution">Metadata and id resolution<a class="anchor" aria-label="anchor" href="#metadata-and-id-resolution"></a></h2>
+
+      <div class="section-desc"><p>Query the FlyTable annotations and pick a materialisation.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="aedes_meta.html">aedes_meta()</a></code> <code><a href="aedes_meta.html">aedes_ids()</a></code>
+
+        </dt>
+        <dd>Return metadata about Aedes neurons from FlyTable</dd>
+
+        <dt>
+
+          <code><a href="aedes_get_version.html">aedes_get_version()</a></code>
+
+        </dt>
+        <dd>Resolve Aedes materialisation version and timestamp</dd>
+
+        <dt>
+
+          <code><a href="aedes_set_version.html">aedes_set_version()</a></code>
+
+        </dt>
+        <dd>Set default version selection for Aedes helpers</dd>
+      </dl></div><div class="section level2">
+      <h2 id="coordinates">Coordinates<a class="anchor" aria-label="anchor" href="#coordinates"></a></h2>
+
+      <div class="section-desc"><p>Convert between raw and nm, query supervoxels, mirror through the brain.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="aedes_voxdims.html">aedes_voxdims()</a></code> <code><a href="aedes_voxdims.html">aedes_nm2raw()</a></code> <code><a href="aedes_voxdims.html">aedes_raw2nm()</a></code>
+
+        </dt>
+        <dd>Handle raw and nm calibrated Aedes coordinates</dd>
+
+        <dt>
+
+          <code><a href="aedes_xyz2id.html">aedes_xyz2id()</a></code>
+
+        </dt>
+        <dd>Find Aedes root or supervoxel (leaf) IDs for XYZ locations</dd>
+
+        <dt>
+
+          <code><a href="aedes_mirror.html">aedes_mirror()</a></code>
+
+        </dt>
+        <dd>Mirror Aedes neurons or points to the opposite side of the brain</dd>
+      </dl></div><div class="section level2">
+      <h2 id="reading-neurons">Reading neurons<a class="anchor" aria-label="anchor" href="#reading-neurons"></a></h2>
+
+      <div class="section-desc"><p>Pull skeletons and pick annotation points.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="read_aedes_neurons.html">read_aedes_neurons()</a></code>
+
+        </dt>
+        <dd>Read Aedes L2 skeletons</dd>
+
+        <dt>
+
+          <code><a href="aedes_soma_position.html">aedes_soma_position()</a></code>
+
+        </dt>
+        <dd>Look up the soma position for one or more Aedes neurons</dd>
+
+        <dt>
+
+          <code><a href="aedes_key_point.html">aedes_key_point()</a></code>
+
+        </dt>
+        <dd>Find a good "key" point on a neuron to associate with annotations</dd>
+      </dl></div><div class="section level2">
+      <h2 id="editing-the-aedes-main-table">Editing the aedes_main table<a class="anchor" aria-label="anchor" href="#editing-the-aedes-main-table"></a></h2>
+
+      <div class="section-desc"><p>Bulk add or update FlyTable rows.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="aedes_add_neurons.html">aedes_add_neurons()</a></code>
+
+        </dt>
+        <dd>Add new neurons (and update existing ones) in the aedes_main flytable</dd>
+      </dl></div><div class="section level2">
+      <h2 id="low-level-cave-access">Low level CAVE access<a class="anchor" aria-label="anchor" href="#low-level-cave-access"></a></h2>
 
 
 
@@ -54,29 +183,17 @@
 
         </dt>
         <dd>Query Aedes tables in the CAVE annotation system</dd>
+      </dl></div><div class="section level2">
+      <h2 id="datasets">Datasets<a class="anchor" aria-label="anchor" href="#datasets"></a></h2>
 
-        <dt>
 
-          <code><a href="aedes_get_version.html">aedes_get_version()</a></code>
 
-        </dt>
-        <dd>Resolve Aedes materialisation version and timestamp</dd>
+      <dl></dl></div><div class="section level2">
 
-        <dt>
 
-          <code><a href="aedes_meta.html">aedes_meta()</a></code> <code><a href="aedes_meta.html">aedes_ids()</a></code>
 
-        </dt>
-        <dd>Return metadata about Aedes neurons from FlyTable</dd>
 
-        <dt>
-
-          <code><a href="aedes_mirror.html">aedes_mirror()</a></code>
-
-        </dt>
-        <dd>Mirror Aedes neurons or points to the opposite side of the brain</dd>
-
-        <dt>
+      <dl><dt>
 
           <code><a href="aedes_neuropil_mesh.html">aedes_neuropil_mesh</a></code>
 
@@ -85,61 +202,13 @@
 
         <dt>
 
-          <code><a href="aedes_set_version.html">aedes_set_version()</a></code>
-
-        </dt>
-        <dd>Set default version selection for Aedes helpers</dd>
-
-        <dt>
-
           <code><a href="aedes_soma_l2_stats.html">aedes_soma_l2_stats</a></code>
 
         </dt>
         <dd>Population L2-attribute model for soma identification</dd>
-
-        <dt>
-
-          <code><a href="aedes_soma_position.html">aedes_soma_position()</a></code>
-
-        </dt>
-        <dd>Look up the soma position for one or more Aedes neurons</dd>
-
-        <dt>
-
-          <code><a href="aedes_voxdims.html">aedes_voxdims()</a></code> <code><a href="aedes_voxdims.html">aedes_nm2raw()</a></code> <code><a href="aedes_voxdims.html">aedes_raw2nm()</a></code>
-
-        </dt>
-        <dd>Handle raw and nm calibrated Aedes coordinates</dd>
-
-        <dt>
-
-          <code><a href="aedes_xyz2id.html">aedes_xyz2id()</a></code>
-
-        </dt>
-        <dd>Find Aedes root or supervoxel (leaf) IDs for XYZ locations</dd>
-
-        <dt>
-
-          <code><a href="choose_aedes.html">choose_aedes()</a></code> <code><a href="choose_aedes.html">with_aedes()</a></code>
-
-        </dt>
-        <dd>Choose or temporarily use the Aedes autosegmentation</dd>
-
-        <dt>
-
-          <code><a href="read_aedes_neurons.html">read_aedes_neurons()</a></code>
-
-        </dt>
-        <dd>Read Aedes L2 skeletons</dd>
-
-        <dt>
-
-          <code><a href="register_aedes_coconat.html">register_aedes_coconat()</a></code>
-
-        </dt>
-        <dd>Register Aedes dataset for coconatfly</dd>
       </dl></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
