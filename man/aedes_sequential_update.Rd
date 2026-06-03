@@ -4,13 +4,18 @@
 \alias{aedes_sequential_update}
 \title{Update root_ids and supervoxel_ids from point information as necessary}
 \usage{
-aedes_sequential_update(df)
+aedes_sequential_update(df, version = NULL, timestamp = NULL)
 }
 \arguments{
-\item{df}{A dataframe containing columns root_id, supervoxel_id, point_xyz}
+\item{df}{A dataframe containing columns root_id, supervoxel_id, point_xyz.}
+
+\item{version}{Optional materialisation version.}
+
+\item{timestamp}{Optional CAVE timestamp. Defaults to \code{'now'} when both
+timestamp and version missing.}
 }
 \value{
-A new dataframe with updated ids
+A new dataframe with updated ids.
 }
 \description{
 Update root_ids and supervoxel_ids from point information as necessary
@@ -19,5 +24,9 @@ Update root_ids and supervoxel_ids from point information as necessary
 Note that point information will only be used if supervoxel
 information is missing. Therefore it is essential to delete supervoxel_id
 for any rows in which the point_xyz is changed.
+
+By default \code{root_id}s are brought forward to the current segmentation state
+(\code{timestamp = 'now'}). Callers may instead pin to a specific
+materialisation \code{version} or \code{timestamp}.
 }
 \keyword{internal}
