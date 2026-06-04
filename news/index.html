@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">aedes</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,22 @@
       <small>Source: <a href="https://github.com/flyconnectome/aedes/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.3" id="aedes-v03">aedes v0.3<a class="anchor" aria-label="anchor" href="#aedes-v03"></a></h2>
+<ul><li>New <code><a href="../reference/aedes_add_neurons.html">aedes_add_neurons()</a></code> for upserting rows in the FlyTable <code>aedes_main</code> table. Pins a single materialisation timestamp on both the supplied ids and a fresh <code>aedes_meta(expiry=0)</code> read so the join-by-<code>root_id</code> is reliable, and computes <code>point_xyz</code> for new rows via <code><a href="../reference/aedes_key_point.html">aedes_key_point()</a></code>. Avoids the heavy <code><a href="../reference/aedes_flytable_update.html">aedes_flytable_update()</a></code> pass. (<a href="https://github.com/flyconnectome/aedes/issues/8" class="external-link">#8</a>)</li>
+<li>New <code><a href="../reference/aedes_key_point.html">aedes_key_point()</a></code> returns a “good” annotation point on a neuron: the principal branch point of its L2 skeleton, with the neuron optionally rerooted onto its furthest endpoint first. (<a href="https://github.com/flyconnectome/aedes/issues/8" class="external-link">#8</a>)</li>
+<li>
+<code><a href="../reference/aedes_sequential_update.html">aedes_sequential_update()</a></code> gains <code>version</code> and <code>timestamp</code> arguments so callers can pin all downstream service calls (<code><a href="../reference/aedes_xyz2id.html">aedes_xyz2id()</a></code>, <code><a href="https://rdrr.io/pkg/fafbseg/man/flywire_updateids.html" class="external-link">fafbseg::flywire_updateids()</a></code>) to the same materialisation. Defaults to <code>timestamp = 'now'</code> when neither is supplied. (<a href="https://github.com/flyconnectome/aedes/issues/8" class="external-link">#8</a>)</li>
+<li>
+<code><a href="../reference/read_aedes_neurons.html">read_aedes_neurons()</a></code> wraps <code><a href="https://rdrr.io/pkg/fafbseg/man/read_l2skel.html" class="external-link">fafbseg::read_l2skel()</a></code> and reroots each neuron via a per-neuron cascade: FlyTable <code>soma_xyz</code> → <code><a href="https://rdrr.io/pkg/fafbseg/man/flywire_nuclei.html" class="external-link">flywire_nuclei()</a></code> → the packaged neuropil mesh (signed-distance fallback). Provenance recorded in a <code>soma_source</code> column. (<a href="https://github.com/flyconnectome/aedes/issues/6" class="external-link">#6</a>)</li>
+<li>New <code><a href="../reference/aedes_soma_position.html">aedes_soma_position()</a></code> returns one-row-per-id soma positions, matching strictly by <code>root_id</code>; private helper silently collapses bookkeeping duplicates in the nucleus table and warns only when a <code>root_id</code> has genuinely distinct nuclei. (<a href="https://github.com/flyconnectome/aedes/issues/6" class="external-link">#6</a>)</li>
+<li>New <code>aedes_neuropil_mesh</code> dataset: <code>mesh3d</code> of the Aedes brain neuropil (nm coordinates), shipped via <code>LazyData</code>. (<a href="https://github.com/flyconnectome/aedes/issues/6" class="external-link">#6</a>)</li>
+<li>New <code><a href="../reference/aedes_mirror.html">aedes_mirror()</a></code> and related transforms for mirroring points and objects through the Aedes brain. (<a href="https://github.com/flyconnectome/aedes/issues/5" class="external-link">#5</a>)</li>
+<li>
+<code>aedes_chunkedgraph_edits()</code> fixes data-frame assembly for chunked responses that include empty batches or missing names, and adds incremental on-disk caching for operation fetches (Arrow plus a missing-op sidecar). (<a href="https://github.com/flyconnectome/aedes/issues/4" class="external-link">#4</a>)</li>
+<li>
+<code><a href="../reference/aedes_sequential_update.html">aedes_sequential_update()</a></code> no longer loses work when individual supervoxel lookups fail. (<a href="https://github.com/flyconnectome/aedes/issues/3" class="external-link">#3</a>)</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2" id="aedes-v02">aedes v0.2<a class="anchor" aria-label="anchor" href="#aedes-v02"></a></h2>
 <ul><li>Fast supervoxel lookups via the MRC LMB transform service (<code><a href="../reference/aedes_xyz2id.html">aedes_xyz2id()</a></code> with <code>method="auto"</code>), &gt; 100x faster than cloudvolume for bulk queries.</li>
