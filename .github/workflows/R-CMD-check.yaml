@@ -40,6 +40,7 @@ jobs:
           pak::local_install()
           library(fafbseg)
           simple_python()
+          simple_python(pkgs = 'fafbseg')
           dr_fafbseg()
           py <- reticulate::py_config()$python
           if (!file.exists(py)) stop("Cannot find configured python interpreter: ", py)
