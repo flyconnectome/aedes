@@ -13,3 +13,5 @@
 ^README\.Rmd$
 ^check$
 ^\.claude$
+^CITATION\.cff$
+^\.zenodo\.json$

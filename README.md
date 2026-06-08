@@ -14,6 +14,7 @@
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![R-CMD-check](https://github.com/flyconnectome/aedes/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/flyconnectome/aedes/actions/workflows/R-CMD-check.yaml)
+[![DOI](https://zenodo.org/badge/1158445072.svg)](https://zenodo.org/badge/latestdoi/1158445072)
 <!-- badges: end -->
 
 The **aedes** package provides programmatic access to the in progress

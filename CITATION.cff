@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "aedes: Support Access to the Aedes Connectome Dataset"
+abstract: >
+  Access to the in-progress Aedes aegypti connectome dataset. Organised as
+  a thin wrapper around the fafbseg package, with support for adding aedes
+  as a dataset supported by coconatfly.
+authors:
+  - family-names: Jefferis
+    given-names: Gregory
+    email: jefferis@gmail.com
+    orcid: "https://orcid.org/0000-0002-0587-9355"
+version: "0.3"
+license: GPL-3.0
+repository-code: "https://github.com/flyconnectome/aedes"
+url: "https://flyconnectome.github.io/aedes/"
+keywords:
+  - connectomics
+  - aedes-aegypti
+  - mosquito
+  - natverse
+  - flywire

@@ -24,6 +24,7 @@ knitr::opts_chunk$set(
 [![natverse](https://img.shields.io/badge/natverse-Part%20of%20the%20natverse-a241b6)](https://natverse.github.io)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![R-CMD-check](https://github.com/flyconnectome/aedes/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/flyconnectome/aedes/actions/workflows/R-CMD-check.yaml)
+[![DOI](https://zenodo.org/badge/1158445072.svg)](https://zenodo.org/badge/latestdoi/1158445072)
 <!-- badges: end -->
 
 The **aedes** package provides programmatic access to the in progress *Aedes aegypti* connectome dataset. It integrates with [coconatfly](https://natverse.org/coconatfly) and the wider [natverse](https://natverse.org/) ecosystem.
