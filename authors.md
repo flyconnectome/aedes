@@ -8,7 +8,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/flyconnectome/aedes/blob/v0.3/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/flyconnectome/aedes/blob/main/DESCRIPTION)
 
 Jefferis G (2026). *aedes: Support Access to the Aedes Connectome
 Dataset*. R package version 0.3,
