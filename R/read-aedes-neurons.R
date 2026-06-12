@@ -90,8 +90,20 @@ aedes_soma_position <- function(ids,
   if (method %in% c("l2+mesh", "mesh") && is.null(mesh))
     stop("method = \"", method, "\" requires a non-NULL `mesh`.", call. = FALSE)
   vi <- aedes_get_version(which = 'now', version = version, timestamp = timestamp)
-  root_ids <- as.character(aedes_ids(ids, version = vi$version,
-                                     timestamp = vi$timestamp))
+
+  # Accept a pre-fetched metadata data.frame (with root_id, ideally soma_xyz
+  # too). Saves the flytable branch a redundant aedes_meta() call when the
+  # caller -- typically aedes_soma_side() -- already has the frame in hand.
+  if (is.data.frame(ids)) {
+    if (!"root_id" %in% colnames(ids))
+      stop("data.frame input must contain a `root_id` column.", call. = FALSE)
+    root_ids <- as.character(ids$root_id)
+    meta_in  <- ids
+  } else {
+    root_ids <- as.character(aedes_ids(ids, version = vi$version,
+                                       timestamp = vi$timestamp))
+    meta_in  <- NULL
+  }
 
   empty_row <- function(ids) {
     data.frame(
@@ -110,8 +122,9 @@ aedes_soma_position <- function(ids,
   # FlyTable soma_xyz (raw voxel coords) -> nm position string -------------
   flytable_rows <- NULL
   if (method %in% c("auto", "flytable")) {
-    meta <- aedes_meta(root_ids, version = vi$version,
-                       timestamp = vi$timestamp, unique = TRUE)
+    meta <- if (!is.null(meta_in)) meta_in
+            else aedes_meta(root_ids, version = vi$version,
+                            timestamp = vi$timestamp, unique = TRUE)
     if (!is.null(meta) && "soma_xyz" %in% colnames(meta)) {
       idx <- match(root_ids, as.character(meta$root_id))
       raw <- meta$soma_xyz[idx]
@@ -219,6 +232,130 @@ aedes_soma_position <- function(ids,
   }
 
   out
+}
+
+
+#' Predict the L/R side of Aedes neurons
+#'
+#' @description Returns the logical side of each requested neuron. The side
+#'   can come from the manual \code{side} annotation in the FlyTable
+#'   metadata (when present) or be derived from the soma's position relative
+#'   to the Aedes midline via \code{\link{aedes_point_side}}.
+#'
+#' @details Methods:
+#'   \describe{
+#'     \item{\code{auto}}{Try \code{manual} first, then fill any remaining
+#'       \code{NA}s using \code{position}.}
+#'     \item{\code{manual}}{Read the \code{side} column of
+#'       \code{\link{aedes_meta}}. Values are uppercased; entries outside
+#'       \code{"L"}, \code{"R"}, \code{"M"}, \code{"U"} become \code{NA}.}
+#'     \item{\code{position}}{Classify each soma by its signed displacement
+#'       from the Aedes midline via \code{\link{aedes_point_side}}.
+#'       \code{threshold} is forwarded as-is; the default \code{0} means
+#'       \code{position} never returns \code{"M"}. \code{"M"} is reserved
+#'       for bilaterally symmetric / unpaired neurons annotated as such.}
+#'   }
+#'
+#' @param ids Root IDs, a query string (see \code{\link{aedes_ids}}), or a
+#'   pre-fetched metadata data.frame from \code{\link{aedes_meta}} (must
+#'   contain a \code{root_id} column).
+#' @param method One of \code{"auto"} (default), \code{"manual"},
+#'   \code{"position"}. See Details.
+#' @param threshold Absolute X displacement (nm) below which \code{position}
+#'   reports a soma as midline (\code{"M"}). Default \code{0}. Ignored by
+#'   \code{manual}.
+#' @param mesh,chunksize,cl Forwarded to \code{\link{aedes_soma_position}}.
+#' @param version,timestamp Optional CAVE materialisation selectors,
+#'   forwarded to \code{\link{aedes_meta}} and
+#'   \code{\link{aedes_soma_position}}.
+#'
+#' @return A character vector of \code{"L"}, \code{"R"}, \code{"M"},
+#'   \code{"U"} or \code{NA}, one entry per input root id.
+#' @seealso \code{\link{aedes_point_side}}, \code{\link{aedes_soma_position}},
+#'   \code{\link{aedes_meta}}
+#' @export
+#' @examples
+#' \dontrun{
+#' aedes_soma_side("class:DNa")
+#' aedes_soma_side("648518347465408914") # known L
+#' aedes_soma_side("class:DNa", method = "position")
+#' }
+aedes_soma_side <- function(ids,
+                            method = c("auto", "manual", "position"),
+                            threshold = 0,
+                            mesh = aedes::aedes_neuropil_mesh,
+                            chunksize = 20L,
+                            cl = NULL,
+                            version = NULL,
+                            timestamp = NULL) {
+  method <- match.arg(method)
+  vi <- aedes_get_version(which = 'now', version = version,
+                          timestamp = timestamp)
+
+  # Resolve a stable, input-ordered root_id vector. If the caller already
+  # has a metadata data.frame, trust its order and root_id column;
+  # otherwise fetch metadata once and reuse it for both `manual` (side
+  # column) and the `position` fallback (passed through to
+  # aedes_soma_position so it can skip its own aedes_meta call).
+  if (is.data.frame(ids)) {
+    if (!"root_id" %in% colnames(ids))
+      stop("data.frame input must contain a `root_id` column.", call. = FALSE)
+    root_ids <- as.character(ids$root_id)
+    meta <- ids
+  } else {
+    meta <- aedes_meta(ids, version = vi$version, timestamp = vi$timestamp,
+                       unique = TRUE)
+    root_ids <- as.character(meta$root_id)
+  }
+  n <- length(root_ids)
+  if (n == 0L) return(character(0))
+
+  if (method == "manual") {
+    if (!"side" %in% colnames(meta))
+      stop("metadata lacks a `side` column for method=\"manual\".",
+           call. = FALSE)
+    idx <- match(root_ids, as.character(meta$root_id))
+    s <- toupper(as.character(meta$side[idx]))
+    s[!s %in% c("L", "R", "M", "U")] <- NA_character_
+    return(s)
+  }
+
+  if (method == "position") {
+    # Pass meta straight through so aedes_soma_position skips its own
+    # aedes_ids + aedes_meta round-trips.
+    sp <- aedes_soma_position(meta, units = "nm", nuclei = "largest",
+                              mesh = mesh, chunksize = chunksize, cl = cl,
+                              version = vi$version, timestamp = vi$timestamp)
+    out <- rep(NA_character_, n)
+    ok <- !is.na(sp$position) & nzchar(sp$position)
+    if (any(ok)) {
+      xyz <- nat::xyzmatrix(sp$position[ok])
+      out[ok] <- aedes_point_side(xyz, units = "nm", threshold = threshold)
+    }
+    return(out)
+  }
+
+  # auto: manual -> position. Inline the `side` column read (rather than
+  # recursing through method="manual") so a missing column simply yields
+  # NAs to fall through to the position branch instead of erroring.
+  res <- if ("side" %in% colnames(meta)) {
+    idx <- match(root_ids, as.character(meta$root_id))
+    s <- toupper(as.character(meta$side[idx]))
+    s[!s %in% c("L", "R", "M", "U")] <- NA_character_
+    s
+  } else {
+    rep(NA_character_, n)
+  }
+  miss <- is.na(res)
+  if (any(miss)) {
+    res[miss] <- aedes_soma_side(meta[miss, , drop = FALSE],
+                                 method = "position",
+                                 threshold = threshold,
+                                 mesh = mesh, chunksize = chunksize, cl = cl,
+                                 version = vi$version,
+                                 timestamp = vi$timestamp)
+  }
+  res
 }
 
 
