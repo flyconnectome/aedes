@@ -229,6 +229,8 @@ Convert between raw and nm, query supervoxels, mirror through the brain.
   (leaf) IDs for XYZ locations
 - [`aedes_mirror()`](aedes_mirror.md) : Mirror Aedes neurons or points
   to the opposite side of the brain
+- [`aedes_point_side()`](aedes_point_side.md) : Predict the L/R side of
+  points in Aedes space
 
 ## Reading neurons
 
@@ -238,6 +240,8 @@ Pull skeletons and pick annotation points.
   skeletons
 - [`aedes_soma_position()`](aedes_soma_position.md) : Look up the soma
   position for one or more Aedes neurons
+- [`aedes_soma_side()`](aedes_soma_side.md) : Predict the L/R side of
+  Aedes neurons
 - [`aedes_key_point()`](aedes_key_point.md) : Find a good "key" point on
   a neuron to associate with annotations
 

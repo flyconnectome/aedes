@@ -16,10 +16,12 @@
 <url><loc>/reference/aedes_meta.html</loc></url>
 <url><loc>/reference/aedes_mirror.html</loc></url>
 <url><loc>/reference/aedes_neuropil_mesh.html</loc></url>
+<url><loc>/reference/aedes_point_side.html</loc></url>
 <url><loc>/reference/aedes_sequential_update.html</loc></url>
 <url><loc>/reference/aedes_set_version.html</loc></url>
 <url><loc>/reference/aedes_soma_l2_stats.html</loc></url>
 <url><loc>/reference/aedes_soma_position.html</loc></url>
+<url><loc>/reference/aedes_soma_side.html</loc></url>
 <url><loc>/reference/aedes_voxdims.html</loc></url>
 <url><loc>/reference/aedes_xyz2id.html</loc></url>
 <url><loc>/reference/all_chunkedgraph_operations.html</loc></url>
