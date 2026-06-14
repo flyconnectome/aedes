@@ -145,6 +145,104 @@ aedes_mirror <- function(x,
   )
 }
 
+#' Predict the L/R side of points in Aedes space
+#'
+#' @description Applies the Aedes mirror transform to each input point and
+#'   measures the signed displacement along the mirror (X) axis before and
+#'   after transform. The sign indicates which side of the midline the point
+#'   lies on.
+#'
+#' @details Points on the left have \code{dist = (mirror_x - x)/2 < 0}; points
+#'   on the right have \code{dist > 0}. The sign convention was calibrated
+#'   against root id \code{648518347465408914} (\code{soma_xyz = "33038,5956,3550"}
+#'   in raw voxels, side = \code{"L"}). Points with \code{|dist| <= threshold}
+#'   are reported as midline (\code{"M"}). With \code{threshold = 0} a point
+#'   exactly on the midline is reported as \code{"R"}.
+#'
+#' @param xyz Point coordinates. Anything accepted by
+#'   \code{\link[nat]{xyzmatrix}} (matrix, data.frame, neuron, neuronlist), a
+#'   length-3 numeric vector for a single point, or a character vector of
+#'   comma-separated \code{"x,y,z"} strings (the convention used by
+#'   \code{\link{aedes_soma_position}}).
+#' @param units Units of the input coordinates. One of \code{"nm"} (the
+#'   default), \code{"raw"} (image voxels, scaled via \code{\link{aedes_raw2nm}})
+#'   or \code{"microns"}.
+#' @param threshold Distance from the midline (in nm) below which points are
+#'   reported as \code{"M"}. Default 5000 nm (~5 \eqn{\mu}m, ~0.7% of the
+#'   x (medio-lateral) extent of the Aedes symmetric brain). Set to 0 to
+#'   force all values to \code{"L"} or \code{"R"}.
+#' @param rval What to return. \code{"side"} (the default) gives a character
+#'   vector of side labels (\code{"L"}, \code{"R"} or \code{"M"}).
+#'   \code{"distance"} gives a signed distance from the midline in nm
+#'   (always nm, regardless of \code{units}), negative on the left,
+#'   positive on the right.
+#' @param method Mirror method passed to \code{\link{aedes_mirror}}. Default
+#'   \code{"tps"} uses the bundled symmetric registration and needs no
+#'   network access.
+#'
+#' @return When \code{rval = "side"}, a character vector of \code{"L"},
+#'   \code{"R"} or \code{"M"}, one per input point, or \code{NA} for points
+#'   whose mirror image could not be computed. When \code{rval = "distance"},
+#'   a numeric vector of signed distances from the midline in nm.
+#' @seealso \code{\link{aedes_mirror}}, \code{\link{aedes_soma_side}}
+#' @export
+#' @examples
+#' \dontrun{
+#' # known left-side point (raw voxel coords)
+#' aedes_point_side(c(33038, 5956, 3550), units = "raw")
+#'
+#' # signed distance from the midline (always in nm)
+#' aedes_point_side(c(33038, 5956, 3550), units = "raw", rval = "distance")
+#' }
+aedes_point_side <- function(xyz,
+                             units = c("nm", "raw", "microns"),
+                             threshold = 5000,
+                             rval = c("side", "distance"),
+                             method = c("tps", "landmarks")) {
+  units <- match.arg(units)
+  rval <- match.arg(rval)
+  method <- match.arg(method)
+  stopifnot(is.numeric(threshold), length(threshold) == 1L,
+            is.finite(threshold), threshold >= 0)
+
+  xyz <- nat::xyzmatrix(xyz)
+  if (nrow(xyz) == 0L)
+    return(if (identical(rval, "side")) character(0) else numeric(0))
+
+  # Convert to nm: aedes_mirror() operates in nm or microns; we standardise
+  # on nm so that the returned distance has consistent units.
+  if (identical(units, "raw")) {
+    xyz <- aedes_raw2nm(xyz)
+  } else if (identical(units, "microns")) {
+    xyz <- xyz * 1e3
+  }
+
+  ok <- is.finite(rowSums(xyz))
+  mxyz <- matrix(NA_real_, nrow = nrow(xyz), ncol = 3L)
+  if (any(ok)) {
+    mxyz[ok, ] <- nat::xyzmatrix(
+      aedes_mirror(xyz[ok, , drop = FALSE], method = method, units = "nm")
+    )
+  }
+
+  # |dx| is twice the distance from the midline (point and mirror sit at
+  # +d and -d). Aedes mirrors across the X axis, hence column 1.
+  dist <- unname((mxyz[, 1] - xyz[, 1]) / 2)
+  dist[!is.finite(dist)] <- NA_real_
+
+  if (identical(rval, "distance"))
+    return(dist)
+
+  # dist < 0 -> left; dist == 0 deliberately maps to "R"
+  # (caller can use threshold > 0 to get "M").
+  side <- ifelse(dist < 0, "L", "R")
+  side[is.na(dist)] <- NA_character_
+  if (threshold > 0)
+    side[!is.na(dist) & abs(dist) < threshold] <- "M"
+
+  side
+}
+
 check_package_available <- function(pkg) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
     stop("Please install suggested package: ", pkg, call. = FALSE)

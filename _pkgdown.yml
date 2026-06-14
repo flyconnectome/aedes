@@ -22,12 +22,14 @@ reference:
   - aedes_voxdims
   - aedes_xyz2id
   - aedes_mirror
+  - aedes_point_side
 
 - title: Reading neurons
   desc: Pull skeletons and pick annotation points.
   contents:
   - read_aedes_neurons
   - aedes_soma_position
+  - aedes_soma_side
   - aedes_key_point
 
 - title: Editing the aedes_main table

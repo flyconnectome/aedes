@@ -213,8 +213,8 @@ test_that("aedes_soma_position method='l2+mesh' lands near the recorded soma", {
 
 
 test_that("aedes_soma_position auto cascade exposes L2 diagnostics", {
-  id <- "648518347399768369"
-  sp <- try(aedes_soma_position(id, method = "auto"), silent = TRUE)
+  kcid <- with_aedes(flywire_rootid('73888283381559121'))
+  sp <- try(aedes_soma_position(kcid, method = "auto"), silent = TRUE)
   skip_if(inherits(sp, "try-error") || is.na(sp$source[1]),
           "Skipping: no soma source available for test id")
 
@@ -234,12 +234,12 @@ test_that("aedes_soma_position auto cascade exposes L2 diagnostics", {
 
 
 test_that("aedes_soma_position returns the expected FlyTable soma for a known id", {
-  id <- "648518347399768369"
+  kcid <- with_aedes(flywire_rootid('73888283381559121'))
   # Recorded FlyTable soma_xyz for this neuron (raw voxel coords, 16/16/45 nm).
   expected_raw <- c(16231, 4747, 3051)
   expected_nm  <- aedes_raw2nm(matrix(expected_raw, ncol = 3))[1, ]
 
-  sp_raw <- try(aedes_soma_position(id, units = "raw"), silent = TRUE)
+  sp_raw <- try(aedes_soma_position(kcid, units = "raw"), silent = TRUE)
   skip_if(inherits(sp_raw, "try-error") || is.na(sp_raw$source[1]),
           "Skipping: no FlyTable access for test id")
 
@@ -247,7 +247,7 @@ test_that("aedes_soma_position returns the expected FlyTable soma for a known id
   expect_equal(sp_raw$position, nat::xyzmatrix2str(matrix(expected_raw, ncol = 3)))
 
   # nm units should match the raw round-trip
-  sp_nm <- aedes_soma_position(id)
+  sp_nm <- aedes_soma_position(kcid)
   expect_equal(sp_nm$source, "flytable")
   expect_equal(sp_nm$position, nat::xyzmatrix2str(matrix(expected_nm, ncol = 3)))
 })
@@ -282,11 +282,11 @@ test_that("aedes_soma_position silently collapses real nucleus-table positional 
 })
 
 
-test_that("read_aedes_neurons reroots 648518347399768369 near its FlyTable soma", {
-  id <- "648518347399768369"
+test_that("read_aedes_neurons reroots KC near its FlyTable soma", {
+  kcid <- with_aedes(flywire_rootid('73888283381559121'))
   expected_nm <- aedes_raw2nm(matrix(c(16231, 4747, 3051), ncol = 3))[1, ]
 
-  ns <- try(read_aedes_neurons(id, OmitFailures = FALSE), silent = TRUE)
+  ns <- try(read_aedes_neurons(kcid, OmitFailures = FALSE), silent = TRUE)
   skip_if(inherits(ns, "try-error") || length(ns) == 0L,
           "Skipping: l2skel/FlyTable service unavailable for test id")
 
