@@ -1,5 +1,9 @@
 # aedes v0.3
 
+* New `xform_aedes()` maps neurons, dotprops, meshes and coordinates between
+  Aedes and Drosophila FlyWire (FAFB v14.1) space, using bundled thin-plate
+  spline registrations built from cognate neuron pairs.
+
 * New `aedes_add_neurons()` for upserting rows in the FlyTable `aedes_main`
   table. Pins a single materialisation timestamp on both the supplied ids
   and a fresh `aedes_meta(expiry=0)` read so the join-by-`root_id` is

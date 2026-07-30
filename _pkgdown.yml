@@ -23,6 +23,7 @@ reference:
   - aedes_xyz2id
   - aedes_mirror
   - aedes_point_side
+  - xform_aedes
 
 - title: Reading neurons
   desc: Pull skeletons and pick annotation points.

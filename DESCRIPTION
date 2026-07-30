@@ -34,7 +34,13 @@ Imports:
     withr
 Suggests:
     Morpho,
+    elmr,
     gifski,
+    nat.flybrains,
+    nat.ggplot,
+    nat.jrcbrains,
+    nat.templatebrains,
+    neuprintr,
     knitr,
     RcppSimdJson,
     rgl,
@@ -48,6 +54,9 @@ VignetteBuilder: knitr
 Config/testthat/edition: 3
 Remotes:
     natverse/nat,
+    natverse/nat.ggplot,
+    natverse/nat.jrcbrains,
+    natverse/neuprintr,
     natverse/fafbseg,
     natverse/coconat,
     natverse/coconatfly
