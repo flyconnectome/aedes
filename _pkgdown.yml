@@ -36,6 +36,8 @@ reference:
   desc: Bulk add or update FlyTable rows.
   contents:
   - aedes_add_neurons
+  - aedes_set_meta
+  - aedes_set_group
 
 - title: Low level CAVE access
   contents:

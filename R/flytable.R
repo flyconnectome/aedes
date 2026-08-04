@@ -35,6 +35,104 @@ aedes_sequential_update <- function(df, version = NULL, timestamp = NULL) {
   df
 }
 
+#' Reject a mistaken `dry_run` argument
+#'
+#' The standard dry-run argument across aedes (and the wider natverse) is
+#' `dryrun`. Functions that also take `...` call this so a mistyped `dry_run`
+#' errors clearly instead of being silently captured as a column to write.
+#' @noRd
+.aedes_reject_dry_run <- function(...) {
+  bad <- intersect(c("dry_run", "dryRun", "dry.run"), names(list(...)))
+  if (length(bad))
+    stop("Use `dryrun`, not `", bad[1L], "`.", call. = FALSE)
+  invisible(NULL)
+}
+
+#' Pin a timestamp and read a timestamp-consistent aedes_main
+#'
+#' Normalises `ids` to root ids at a single pinned timestamp and returns the
+#' `aedes_main` table brought to the same timestamp, so that join-by-`root_id`
+#' is reliable. Shared by [aedes_add_neurons()] and [.aedes_update_existing()].
+#'
+#' @param ids Root ids in any form understood by [fafbseg::flywire_ids()].
+#' @return A list with `ids` (latest root ids), `am` (the updated table) and
+#'   `ts` (the pinned version/timestamp from [aedes_get_version()]).
+#' @noRd
+.aedes_pin_meta <- function(ids) {
+  fids <- fafbseg::flywire_ids(ids, unique = TRUE)
+  fids <- setdiff(fids, 0)
+  ts <- aedes_get_version(timestamp = "now")
+  lids <- with_aedes(fafbseg::flywire_latestid(fids, timestamp = ts$timestamp))
+  am <- aedes_meta(expiry = 0)
+  am <- aedes_sequential_update(am, version = ts$version, timestamp = ts$timestamp)
+  list(ids = lids, am = am, ts = ts)
+}
+
+#' Update existing aedes_main rows from a data.frame of column values
+#'
+#' @description Shared write engine for updating rows that already exist in
+#'   `aedes_main`. Resolves `df$root_id` to the table `_id` in a
+#'   timestamp-consistent snapshot and updates exactly the supplied columns on
+#'   the matching rows.
+#'
+#' @details Update-only: ids absent from the table are returned in `missing`
+#'   rather than appended -- the caller decides what to do with them. Values are
+#'   written verbatim (caller-supplied values always win); any no-overwrite
+#'   policy is the caller's responsibility, applied to `df` before calling.
+#'
+#' @param df A data.frame with a `root_id` column plus the columns to write.
+#' @param dryrun If `TRUE` (default) assemble and return the update frame
+#'   without writing.
+#' @param on_dup What to do when a `root_id` appears more than once among the
+#'   matched rows: `"error"` (default) or `"first"` (keep the first occurrence).
+#' @param am,ts Optional pre-pinned table and version (see [.aedes_pin_meta()]).
+#'   When both are supplied `df$root_id` is assumed already at `ts` and is not
+#'   re-resolved (avoids a second table read).
+#' @return A list with `updf` (rows written / to write, keyed by `_id`) and
+#'   `missing` (root_ids not found in the table).
+#' @noRd
+.aedes_update_existing <- function(df, dryrun = TRUE, on_dup = c("error", "first"),
+                                   am = NULL, ts = NULL) {
+  on_dup <- match.arg(on_dup)
+  if (!is.data.frame(df) || !"root_id" %in% names(df))
+    stop("`df` must be a data.frame with a `root_id` column.", call. = FALSE)
+  if (is.null(am) || is.null(ts)) {
+    pin <- .aedes_pin_meta(df$root_id)
+    df$root_id <- pin$ids
+    am <- pin$am
+    ts <- pin$ts
+  }
+  df$root_id <- as.character(df$root_id)
+  idx <- match(df$root_id, as.character(am$root_id))
+  found <- !is.na(idx)
+  missing <- unique(df$root_id[!found])
+
+  df_found <- df[found, , drop = FALSE]
+  idx <- idx[found]
+  dups <- unique(df_found$root_id[duplicated(df_found$root_id)])
+  if (length(dups)) {
+    if (on_dup == "error")
+      stop("Duplicated root_id(s) in the update set: ",
+           paste(utils::head(dups, 5L), collapse = ", "),
+           if (length(dups) > 5L) sprintf(" (+%d more)", length(dups) - 5L),
+           call. = FALSE)
+    keep <- !duplicated(df_found$root_id)
+    df_found <- df_found[keep, , drop = FALSE]
+    idx <- idx[keep]
+  }
+
+  updf <- df_found
+  updf[["_id"]] <- am[["_id"]][idx]
+  updf <- updf[c("_id", setdiff(names(updf), "_id"))]
+  rownames(updf) <- NULL
+  if (any(duplicated(updf[["_id"]])))
+    stop("Multiple root_ids map to the same aedes_main row (`_id`).", call. = FALSE)
+
+  if (!dryrun && nrow(updf) > 0L)
+    fafbseg::flytable_update_rows(updf, table = "aedes_main", append_allowed = FALSE)
+  list(updf = updf, missing = missing)
+}
+
 #' Update ids in aedes_main table manually
 #'
 #' @param update.serial_ids Whether to update the serial_id column uniquely
