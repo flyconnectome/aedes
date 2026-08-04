@@ -9,6 +9,12 @@
 #' @details Method auto (which maps to spine) should be much faster for look ups
 #' with many points, especially points in the same region of space.
 #'
+#' The `"spine"` (LMB transform service) backend queries scale 1 by default
+#' (previously scale 0). Scale 0 was retired server-side to save space and
+#' now returns HTTP 400 `Scale 0 not found`; scale 1 is still finer than any
+#' downstream lookup requires. If you need a different scale, pass
+#' `mip = <n>` through `...`.
+#'
 #' @export
 #'
 #' @examples
@@ -91,7 +97,7 @@ aedes_xyz2id <- function(
 aedes_supervoxels <- function(
     x,
     chunksize = 2000L,
-    mip = 0,
+    mip = 1,
     format = "array_float_Nx3",
     dataset = "wclee_aedes_brain",
     base_url = "https://flyem.mrc-lmb.cam.ac.uk/transform-service/query/dataset") {
@@ -143,7 +149,7 @@ aedes_supervoxels <- function(
 #' @noRd
 aedes_supervoxels_one <- function(
     pts,
-    mip = 0,
+    mip = 1,
     format = "array_float_Nx3",
     dataset = "wclee_aedes_brain",
     base_url = "https://flyem.mrc-lmb.cam.ac.uk/transform-service/query/dataset") {
