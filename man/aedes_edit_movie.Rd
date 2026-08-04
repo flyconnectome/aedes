@@ -28,7 +28,7 @@ filename.}
 
 \item{duration}{Duration in seconds (default 30).}
 
-\item{size}{Point size for \code{\link[rgl:primitives]{rgl::points3d()}}.}
+\item{size}{Point size for \code{\link[rgl:points3d]{rgl::points3d()}}.}
 
 \item{width, height}{Output gif dimensions in pixels.}
 

@@ -53,7 +53,7 @@ round-trip overhead at the cost of larger responses. Default 20 trades
 off well in practice; pass \code{1L} to revert to per-neuron fetches.}
 
 \item{cl}{Optional parallel cluster (or integer worker count) passed to
-\code{\link[pbapply:pbapply]{pbapply::pblapply()}} for chunk processing. \code{NULL} (default) runs
+\code{\link[pbapply:pblapply]{pbapply::pblapply()}} for chunk processing. \code{NULL} (default) runs
 sequentially with a progress bar. Useful when scoring hundreds to
 thousands of neurons via L2.}
 

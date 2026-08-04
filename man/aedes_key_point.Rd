@@ -15,7 +15,7 @@ aedes_key_point(ids, raw = TRUE, reroot = TRUE, ...)
 \item{reroot}{Whether to reroot the incoming neuron onto the furthest
 endpoint before simplifying.}
 
-\item{...}{Additional arguments passed to \code{\link[pbapply:pbapply]{pbapply::pbsapply()}}.}
+\item{...}{Additional arguments passed to \code{\link[pbapply:pbsapply]{pbapply::pbsapply()}}.}
 }
 \value{
 An N x 3 matrix of point locations (one row per input id).
