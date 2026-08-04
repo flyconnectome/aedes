@@ -76,8 +76,13 @@
 #' # fetched in its own coordinates and brought to JRC2018F: Aedes with this
 #' # function, the two fly datasets with xform_brain().
 #'
-#' # Aedes -- LPsP is annotated in the `flywire_type` column
+#' # Aedes -- LPsP is annotated in the `flywire_type` column. L2 skeletons join
+#' # chunk centroids, so they are visibly jagged: the median turning angle
+#' # between consecutive segments is ~40 degrees raw and ~4 once resampled.
+#' # Resample before plotting, or the arbors look spiky for reasons that have
+#' # nothing to do with the registration.
 #' aed <- read_aedes_neurons(aedes_ids("flywire_type:LPsP"), units = "nm")
+#' aed <- nat::nlapply(aed, nat::resample, stepsize = 1000)
 #' aed.jrc <- xform_aedes(aed, sample = "aedes", reference = "JRC2018F")
 #'
 #' # FlyWire -- read_l2skel() returns nm, and the bridge is defined in microns
@@ -94,12 +99,18 @@
 #'   hb * 8 / 1e3, sample = "JRCFIB2018F", reference = "JRC2018F"
 #' )
 #'
-#' # all three in one plot, a colour per dataset
+#' # All three in one plot, a colour per dataset. JRC2018F has +y running
+#' # ventrally, so scale_y_reverse() is needed to get the conventional
+#' # anterior view with dorsal at the top.
 #' library(nat.ggplot)
+#' library(ggplot2)
 #' gganat +
+#'   geom_neuron(nat.flybrains::JRC2018F.surf,
+#'               cols = c("grey88", "grey88"), alpha = 0.15) +
 #'   geom_neuron(aed.jrc, cols = c("darkorange", "gold")) +
 #'   geom_neuron(fw.jrc, cols = c("navy", "turquoise")) +
-#'   geom_neuron(hb.jrc, cols = c("darkred", "salmon"))
+#'   geom_neuron(hb.jrc, cols = c("darkred", "salmon")) +
+#'   scale_y_reverse()
 #' }
 xform_aedes <- function(x,
                         sample,
