@@ -53,6 +53,7 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
                                          "missing soma"),
                               required = c("superclass", "status", "initials"),
                               initials = getOption("aedes.initials")) {
+  .aedes_reject_dry_run(...)
   extra <- list(...)
 
   # Unmodified multi-value default => caller didn't supply status.
@@ -72,14 +73,12 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
     extra[["initials"]] <- initials
   }
 
-  fids <- fafbseg::flywire_ids(ids, unique = TRUE)
-  fids <- setdiff(fids, 0)
-  # pin a single timestamp for both the supplied ids and the flytable rows
-  ts <- aedes_get_version(timestamp = "now")
-  ids <- with_aedes(fafbseg::flywire_latestid(fids, timestamp = ts$timestamp))
-
-  am <- aedes_meta(expiry = 0)
-  am <- aedes_sequential_update(am, version = ts$version, timestamp = ts$timestamp)
+  # pin a single timestamp for both the supplied ids and the flytable rows,
+  # reading aedes_main fresh and bringing it to the same timestamp
+  pin <- .aedes_pin_meta(ids)
+  ids <- pin$ids
+  am  <- pin$am
+  ts  <- pin$ts
 
   # Validate status: fast accept if in the shortlist, else live-check against
   # the values already present in aedes_main. Case-sensitive on purpose.
@@ -196,22 +195,17 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
   rlist <- list()
 
   if (any(is_upd)) {
-    updf <- cbind(iidf[, "_id", drop = FALSE],
-                  indf[is_upd, , drop = FALSE])
-    # Auto-fill: don't clobber non-empty existing values -- rewrite those
-    # cells with the row's current value so the update is a no-op for them.
+    upd_in <- indf[is_upd, , drop = FALSE]
+    # Auto-fill: don't clobber non-empty existing values -- rewrite those cells
+    # with the row's current value so the engine writes a no-op for them. This
+    # no-overwrite policy is add_neurons-specific; the engine writes verbatim.
     for (col in auto_cols) {
       existing <- iidf[[col]]
       keep <- !is_str_empty(existing)
-      if (any(keep)) updf[[col]][keep] <- existing[keep]
+      if (any(keep)) upd_in[[col]][keep] <- existing[keep]
     }
-    if (any(duplicated(updf[["_id"]])))
-      stop("Duplicate rows to update!")
-    if (!dryrun)
-      fafbseg::flytable_update_rows(updf, table = "aedes_main",
-                                    append_allowed = FALSE)
-    else
-      rlist[["up"]] <- updf
+    res <- .aedes_update_existing(upd_in, dryrun = dryrun, am = am, ts = ts)
+    if (dryrun) rlist[["up"]] <- res$updf
   }
 
   if (any(!is_upd)) {
