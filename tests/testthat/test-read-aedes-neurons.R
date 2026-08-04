@@ -266,16 +266,25 @@ test_that("aedes_soma_position silently collapses real nucleus-table positional 
           !nzchar(rid) || identical(rid, "0"),
           "Skipping: unable to resolve test point to a root id")
 
-  sp_probe <- try(aedes_soma_position(rid, method = "nucleus"), silent = TRUE)
-  skip_if(inherits(sp_probe, "try-error") || is.na(sp_probe$source[1]),
+  # Capture warnings around a single call so we can (a) skip on any
+  # flywire_nuclei() service failure without confusing the assertion, and
+  # (b) still assert that the successful path emits no *dedup* warning.
+  # Two calls used to bracket this and the assertion caught unrelated
+  # transient service warnings on the second call.
+  ws <- character(0)
+  sp <- withCallingHandlers(
+    try(aedes_soma_position(rid, method = "nucleus"), silent = TRUE),
+    warning = function(w) {
+      ws <<- c(ws, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+  skip_if(inherits(sp, "try-error") || is.na(sp$source[1]) ||
+          any(grepl("flywire_nuclei\\(\\) failed", ws)),
           "Skipping: nucleus lookup unavailable for this supervoxel")
 
-  # Real assertion: lookup is silent (no dedup warning) and returns a finite
-  # parseable position.
-  expect_warning(
-    sp <- aedes_soma_position(rid, method = "nucleus"),
-    regexp = NA
-  )
+  # The dedup path itself must be silent (uses dplyr::distinct, no warning()).
+  expect_false(any(grepl("duplicate|dedup", ws, ignore.case = TRUE)))
   expect_equal(sp$source, "nucleus")
   expect_false(is.na(sp$position))
   expect_true(all(is.finite(as.numeric(nat::xyzmatrix(sp$position)))))
