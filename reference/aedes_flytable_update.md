@@ -29,6 +29,14 @@ aedes_flytable_update(
 
   Whether to show what would happen rather than doing it.
 
+## Value
+
+Invisibly, a list describing what was (or, under `dry_run`, would be)
+written: `updated`, a data frame of changed `aedes_main` rows (`_id`,
+`root_id`, `supervoxel_id`, `root_duplicated`), and `serial_ids`, a data
+frame of `_id` + newly assigned `serial_id` (or `NULL` when no serial
+ids were assigned, e.g. the default `update.serial_ids = FALSE`).
+
 ## Details
 
 This is now part of the scripted updates on flyem but even in future it

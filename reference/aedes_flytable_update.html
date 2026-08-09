@@ -66,6 +66,14 @@ default) and also set the root_duplicated column.</p></dd>
 
 </dl></div>
     <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>Invisibly, a list describing what was (or, under <code>dry_run</code>, would be)
+written: <code>updated</code>, a data frame of changed <code>aedes_main</code> rows (<code>_id</code>,
+<code>root_id</code>, <code>supervoxel_id</code>, <code>root_duplicated</code>), and <code>serial_ids</code>, a data
+frame of <code>_id</code> + newly assigned <code>serial_id</code> (or <code>NULL</code> when no serial ids
+were assigned, e.g. the default <code>update.serial_ids = FALSE</code>).</p>
+    </div>
+    <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>This is now part of the scripted updates on flyem but even in future
 it may occasionally be useful to trigger this manually.</p>
