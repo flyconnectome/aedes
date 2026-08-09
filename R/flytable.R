@@ -66,6 +66,11 @@ aedes_flytable_update <- function(update.serial_ids = FALSE, update_dups = TRUE,
 
   updated = aedes_sequential_update(cands)
   if (update_dups) {
+    # unchecked checkbox cells come back as NA; treat as FALSE so unchanged
+    # rows don't all read as "changed" against the computed logical column.
+    rd <- as.logical(cands$root_duplicated)
+    rd[is.na(rd)] <- FALSE
+    cands$root_duplicated <- rd
     updated <- updated %>%
       dplyr::mutate(good_status = is.na(.data$status) | .data$status != "duplicate") %>%
       dplyr::group_by(.data$root_id, .data$good_status) %>%
