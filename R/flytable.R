@@ -54,9 +54,11 @@ aedes_sequential_update <- function(df, version = NULL, timestamp = NULL) {
 #'   more than one entry \emph{after} setting aside any rows with
 #'   status=duplicate.
 #'
-#' @return Invisibly, the data frame of changed `aedes_main` rows that were (or,
-#'   under `dry_run`, would be) written -- the `_id`, `root_id`,
-#'   `supervoxel_id` and `root_duplicated` columns for rows that changed.
+#' @return Invisibly, a list describing what was (or, under `dry_run`, would be)
+#'   written: `updated`, a data frame of changed `aedes_main` rows (`_id`,
+#'   `root_id`, `supervoxel_id`, `root_duplicated`), and `serial_ids`, a data
+#'   frame of `_id` + newly assigned `serial_id` (or `NULL` when no serial ids
+#'   were assigned, e.g. the default `update.serial_ids = FALSE`).
 #' @keywords internal
 aedes_flytable_update <- function(update.serial_ids = FALSE, update_dups = TRUE, dry_run = FALSE) {
   aedes_main = fafbseg::flytable_query("select `_id`, root_id, supervoxel_id, point_xyz, serial_id, root_duplicated, status from aedes_main")
@@ -104,6 +106,7 @@ aedes_flytable_update <- function(update.serial_ids = FALSE, update_dups = TRUE,
     }
   }
 
+  serial_toupdate = NULL
   missing_serial = aedes_main %>%
     dplyr::select(dplyr::all_of(c("_id", "serial_id"))) %>%
     dplyr::filter(is.na(.data$serial_id))
@@ -119,6 +122,7 @@ aedes_flytable_update <- function(update.serial_ids = FALSE, update_dups = TRUE,
       missing_serial$serial_id = sprintf(
         formatstr,
         seq_len(nrow(missing_serial)) + last_serial)
+      serial_toupdate = missing_serial
       if (dry_run)
         message("dry run: there are ", nrow(missing_serial), " aedes serial_ids to update.")
       else {
@@ -127,7 +131,7 @@ aedes_flytable_update <- function(update.serial_ids = FALSE, update_dups = TRUE,
       }
     }
   }
-  invisible(toupdate)
+  invisible(list(updated = toupdate, serial_ids = serial_toupdate))
 }
 
 #' Write annotations to neuroglancer info file

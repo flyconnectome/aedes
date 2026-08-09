@@ -21,9 +21,11 @@ default) and also set the root_duplicated column.}
 \item{dry_run}{Whether to show what would happen rather than doing it.}
 }
 \value{
-Invisibly, the data frame of changed \code{aedes_main} rows that were (or,
-under \code{dry_run}, would be) written -- the \verb{_id}, \code{root_id},
-\code{supervoxel_id} and \code{root_duplicated} columns for rows that changed.
+Invisibly, a list describing what was (or, under \code{dry_run}, would be)
+written: \code{updated}, a data frame of changed \code{aedes_main} rows (\verb{_id},
+\code{root_id}, \code{supervoxel_id}, \code{root_duplicated}), and \code{serial_ids}, a data
+frame of \verb{_id} + newly assigned \code{serial_id} (or \code{NULL} when no serial ids
+were assigned, e.g. the default \code{update.serial_ids = FALSE}).
 }
 \description{
 Update ids in aedes_main table manually
