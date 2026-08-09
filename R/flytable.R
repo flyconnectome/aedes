@@ -83,6 +83,10 @@ aedes_flytable_update <- function(update.serial_ids = FALSE, update_dups = TRUE,
       dplyr::mutate(n = dplyr::n()) %>%
       dplyr::ungroup() %>%
       dplyr::mutate(root_duplicated = dplyr::case_when(
+        # NA root_ids are not a real group -- we don't know their identity, so
+        # never flag them as duplicated (they'll only be written to clear a
+        # previously-set TRUE).
+        is.na(.data$root_id) ~ FALSE,
         .data$good_status ~ .data$n > 1,
         TRUE ~ FALSE
       )) %>%
