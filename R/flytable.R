@@ -80,12 +80,17 @@ aedes_flytable_update <- function(update.serial_ids = FALSE, update_dups = TRUE,
   changed_cells = (updated != cands) | (is.na(cands) & !is.na(updated))
   changed_rows = rowSums(changed_cells, na.rm = TRUE) > 0
   n_changed = sum(changed_rows)
+  # Only write the columns this function can actually change. In particular the
+  # human-curated `status` (and `point_xyz`) columns are never in the payload,
+  # so they are never rewritten -- even for rows updated for other reasons.
+  mutable <- intersect(c("_id", "root_id", "supervoxel_id", "root_duplicated"),
+                       names(updated))
   if (n_changed > 0) {
     if (dry_run)
       message("dry run: there are ", n_changed, " changed aedes seatable rows.")
     else {
       message("Updating ", n_changed, " aedes seatable rows.")
-      fafbseg::flytable_update_rows(updated[changed_rows, , drop = FALSE], table = "aedes_main")
+      fafbseg::flytable_update_rows(updated[changed_rows, mutable, drop = FALSE], table = "aedes_main")
     }
   }
 
