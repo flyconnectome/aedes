@@ -20,6 +20,11 @@ default) and also set the root_duplicated column.}
 
 \item{dry_run}{Whether to show what would happen rather than doing it.}
 }
+\value{
+Invisibly, the data frame of changed \code{aedes_main} rows that were (or,
+under \code{dry_run}, would be) written -- the \verb{_id}, \code{root_id},
+\code{supervoxel_id} and \code{root_duplicated} columns for rows that changed.
+}
 \description{
 Update ids in aedes_main table manually
 }
