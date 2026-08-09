@@ -53,6 +53,12 @@ aedes_sequential_update <- function(df, version = NULL, timestamp = NULL) {
 #'   The root_duplicated column will only be ticked for root_ids when there is
 #'   more than one entry \emph{after} setting aside any rows with
 #'   status=duplicate.
+#'
+#' @return Invisibly, a list describing what was (or, under `dry_run`, would be)
+#'   written: `updated`, a data frame of changed `aedes_main` rows (`_id`,
+#'   `root_id`, `supervoxel_id`, `root_duplicated`), and `serial_ids`, a data
+#'   frame of `_id` + newly assigned `serial_id` (or `NULL` when no serial ids
+#'   were assigned, e.g. the default `update.serial_ids = FALSE`).
 #' @keywords internal
 aedes_flytable_update <- function(update.serial_ids = FALSE, update_dups = TRUE, dry_run = FALSE) {
   aedes_main = fafbseg::flytable_query("select `_id`, root_id, supervoxel_id, point_xyz, serial_id, root_duplicated, status from aedes_main")
@@ -66,6 +72,11 @@ aedes_flytable_update <- function(update.serial_ids = FALSE, update_dups = TRUE,
 
   updated = aedes_sequential_update(cands)
   if (update_dups) {
+    # unchecked checkbox cells come back as NA; treat as FALSE so unchanged
+    # rows don't all read as "changed" against the computed logical column.
+    rd <- as.logical(cands$root_duplicated)
+    rd[is.na(rd)] <- FALSE
+    cands$root_duplicated <- rd
     updated <- updated %>%
       dplyr::mutate(good_status = is.na(.data$status) | .data$status != "duplicate") %>%
       dplyr::group_by(.data$root_id, .data$good_status) %>%
@@ -80,39 +91,47 @@ aedes_flytable_update <- function(update.serial_ids = FALSE, update_dups = TRUE,
   changed_cells = (updated != cands) | (is.na(cands) & !is.na(updated))
   changed_rows = rowSums(changed_cells, na.rm = TRUE) > 0
   n_changed = sum(changed_rows)
+  # Only write the columns this function can actually change. In particular the
+  # human-curated `status` (and `point_xyz`) columns are never in the payload,
+  # so they are never rewritten -- even for rows updated for other reasons.
+  mutable <- intersect(c("_id", "root_id", "supervoxel_id", "root_duplicated"),
+                       names(updated))
+  toupdate <- updated[changed_rows, mutable, drop = FALSE]
   if (n_changed > 0) {
     if (dry_run)
       message("dry run: there are ", n_changed, " changed aedes seatable rows.")
     else {
       message("Updating ", n_changed, " aedes seatable rows.")
-      fafbseg::flytable_update_rows(updated[changed_rows, , drop = FALSE], table = "aedes_main")
+      fafbseg::flytable_update_rows(toupdate, table = "aedes_main")
     }
   }
 
+  serial_toupdate = NULL
   missing_serial = aedes_main %>%
     dplyr::select(dplyr::all_of(c("_id", "serial_id"))) %>%
     dplyr::filter(is.na(.data$serial_id))
   if (isTRUE(nrow(missing_serial) > 0)) {
     if (isFALSE(update.serial_ids)) {
       message("Not updating ", nrow(missing_serial), " aedes serial_ids.")
-      return(invisible(FALSE))
-    }
-    last_serial = max(as.integer(aedes_main$serial_id), na.rm = TRUE)
-    # check how many digits and zero pad if necessary
-    tn=table(nchar(aedes_main$serial_id))
-    ndigits=names(which.max(tn))
-    formatstr=paste0('%0', ndigits, 'd')
-    missing_serial$serial_id = sprintf(
-      formatstr,
-      seq_len(nrow(missing_serial)) + last_serial)
-    if (dry_run)
-      message("dry run: there are ", nrow(missing_serial), " aedes serial_ids to update.")
-    else {
-      message("Updating ", nrow(missing_serial), " aedes serial_ids.")
-      fafbseg::flytable_update_rows(missing_serial, table = "aedes_main")
+    } else {
+      last_serial = max(as.integer(aedes_main$serial_id), na.rm = TRUE)
+      # check how many digits and zero pad if necessary
+      tn=table(nchar(aedes_main$serial_id))
+      ndigits=names(which.max(tn))
+      formatstr=paste0('%0', ndigits, 'd')
+      missing_serial$serial_id = sprintf(
+        formatstr,
+        seq_len(nrow(missing_serial)) + last_serial)
+      serial_toupdate = missing_serial
+      if (dry_run)
+        message("dry run: there are ", nrow(missing_serial), " aedes serial_ids to update.")
+      else {
+        message("Updating ", nrow(missing_serial), " aedes serial_ids.")
+        fafbseg::flytable_update_rows(missing_serial, table = "aedes_main")
+      }
     }
   }
-  invisible(TRUE)
+  invisible(list(updated = toupdate, serial_ids = serial_toupdate))
 }
 
 #' Write annotations to neuroglancer info file
