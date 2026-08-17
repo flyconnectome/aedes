@@ -23,18 +23,22 @@ export(read_aedes_neurons)
 export(register_aedes_coconat)
 export(with_aedes)
 import(fafbseg)
-importFrom(dplyr,add_count)
-importFrom(dplyr,arrange)
-importFrom(dplyr,desc)
-importFrom(dplyr,distinct)
-importFrom(dplyr,filter)
-importFrom(dplyr,mutate)
-importFrom(dplyr,select)
-importFrom(graphics,par)
-importFrom(graphics,plot.new)
-importFrom(graphics,plot.window)
-importFrom(graphics,rect)
-importFrom(graphics,text)
+importFrom(dplyr,
+  add_count,
+  arrange,
+  desc,
+  distinct,
+  filter,
+  mutate,
+  select
+)
+importFrom(graphics,
+  par,
+  plot.new,
+  plot.window,
+  rect,
+  text
+)
 importFrom(magrittr,"%>%")
 importFrom(memoise,memoise)
 importFrom(rlang,.data)

@@ -37,10 +37,21 @@
 #' @param required Columns that must be supplied (via `...`, or via `status` /
 #'   `initials`). Defaults to `c("superclass", "status", "initials")`. Set to
 #'   `character(0)` to skip the check.
-#' @param initials Curator initials. Defaults to
-#'   `getOption("aedes.initials")`; set once per session with
+#' @param initials Curator initials for the single-string `initials` column.
+#'   Defaults to `getOption("aedes.initials")`; set once per session with
 #'   `options(aedes.initials = "XY")`. Passed through `...` semantics -- an
 #'   explicit `initials = ...` in `...` wins over the option.
+#' @param annotator Multi-select `annotator` column write policy. `TRUE`
+#'   (the default) appends `getOption("aedes.initials")` to the cell; `FALSE`
+#'   leaves the column alone; a character vector (or comma-joined string)
+#'   appends those tokens explicitly. On existing rows the tokens are merged
+#'   with the current cell contents (unique, sorted).
+#' @param proofreader Multi-select `proofreader` column write policy. Same
+#'   accepted values as `annotator`; defaults to `FALSE` (leave the column
+#'   alone).
+#' @param wipe If `TRUE`, replace the target multi-select column(s) with just
+#'   the new tokens instead of merging with existing cell contents. Default
+#'   `FALSE` (append).
 #' @return A list. With `dryrun = TRUE` it has elements `up` (rows that would
 #'   be updated) and/or `new` (rows that would be appended). With
 #'   `dryrun = FALSE` only `new` is returned (so the caller can see which
@@ -52,9 +63,13 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
                                          "needs_extending", "incomplete",
                                          "missing soma"),
                               required = c("superclass", "status", "initials"),
-                              initials = getOption("aedes.initials")) {
+                              initials = getOption("aedes.initials"),
+                              annotator = TRUE, proofreader = FALSE,
+                              wipe = FALSE) {
   .aedes_reject_dry_run(...)
   extra <- list(...)
+  ann_toks <- .aedes_resolve_initials(annotator,  "annotator")
+  prf_toks <- .aedes_resolve_initials(proofreader, "proofreader")
 
   # Unmodified multi-value default => caller didn't supply status.
   status_shortlist <- eval(formals(aedes_add_neurons)$status)
@@ -99,9 +114,10 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
     miss <- setdiff(required, names(extra))
     if (length(miss))
       stop("Missing required column(s): ", paste(miss, collapse = ", "),
-           ". Pass via `...`",
+           ". Pass via `...`, e.g. `superclass = \"KC\"`",
            if ("initials" %in% miss)
-             " (or set options(aedes.initials = ...))",
+             " -- for `initials` you can also set once with ",
+             "options(aedes.initials = \"XY\")",
            ".", call. = FALSE)
   }
 
@@ -204,6 +220,9 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
       keep <- !is_str_empty(existing)
       if (any(keep)) upd_in[[col]][keep] <- existing[keep]
     }
+    upd_in <- .aedes_append_multiselect(
+      upd_in, am, list(annotator = ann_toks, proofreader = prf_toks),
+      wipe = wipe)
     res <- .aedes_update_existing(upd_in, dryrun = dryrun, am = am, ts = ts)
     if (dryrun) rlist[["up"]] <- res$updf
   }
@@ -213,6 +232,9 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
     if (any(is.na(newdf$point_xyz)))
       stop("Failed to compute point_xyz for ", sum(is.na(newdf$point_xyz)),
            " new id(s).", call. = FALSE)
+    # New-row merge: no existing cells, so the merged list is just the tokens.
+    newdf <- .aedes_append_multiselect(
+      newdf, am, list(annotator = ann_toks, proofreader = prf_toks))
     rlist[["new"]] <- newdf
     if (!dryrun)
       # drop root_id -- the server derives it (and supervoxel_id) from point_xyz

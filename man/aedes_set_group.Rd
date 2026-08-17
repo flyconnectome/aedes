@@ -4,7 +4,16 @@
 \alias{aedes_set_group}
 \title{Group aedes neurons together in FlyTable}
 \usage{
-aedes_set_group(ids, group = NULL, join_existing = NA, dryrun = TRUE, ...)
+aedes_set_group(
+  ids,
+  group = NULL,
+  join_existing = NA,
+  dryrun = TRUE,
+  annotator = TRUE,
+  proofreader = FALSE,
+  wipe = FALSE,
+  ...
+)
 }
 \arguments{
 \item{ids}{Neurons to group, in any form understood by \code{\link[=aedes_ids]{aedes_ids()}}
@@ -24,6 +33,19 @@ ignore existing membership and mint a fresh group from \code{min(serial_id)}.}
 
 \item{dryrun}{logical: if \code{TRUE} (the default) return a preview without
 writing to FlyTable.}
+
+\item{annotator}{Multi-select \code{annotator} column write policy for rows that
+actually change group. \code{TRUE} (the default) appends
+\code{getOption("aedes.initials")} to the existing cell; \code{FALSE} leaves the
+column alone; a character vector (or comma-joined string) appends those
+tokens explicitly.}
+
+\item{proofreader}{Multi-select \code{proofreader} column write policy. Same
+accepted values as \code{annotator}; defaults to \code{FALSE}.}
+
+\item{wipe}{If \code{TRUE}, replace the target multi-select column(s) with just
+the new tokens instead of merging with existing cell contents. Default
+\code{FALSE} (append).}
 
 \item{...}{reserved (used to reject a mistaken \code{dry_run} argument).}
 }

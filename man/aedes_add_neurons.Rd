@@ -12,7 +12,10 @@ aedes_add_neurons(
   side = TRUE,
   status = c("adequate", "to_review", "needs_extending", "incomplete", "missing soma"),
   required = c("superclass", "status", "initials"),
-  initials = getOption("aedes.initials")
+  initials = getOption("aedes.initials"),
+  annotator = TRUE,
+  proofreader = FALSE,
+  wipe = FALSE
 )
 }
 \arguments{
@@ -41,10 +44,24 @@ error. Must be supplied unless \code{"status"} is removed from \code{required}.}
 \code{initials}). Defaults to \code{c("superclass", "status", "initials")}. Set to
 \code{character(0)} to skip the check.}
 
-\item{initials}{Curator initials. Defaults to
-\code{getOption("aedes.initials")}; set once per session with
+\item{initials}{Curator initials for the single-string \code{initials} column.
+Defaults to \code{getOption("aedes.initials")}; set once per session with
 \code{options(aedes.initials = "XY")}. Passed through \code{...} semantics -- an
 explicit \code{initials = ...} in \code{...} wins over the option.}
+
+\item{annotator}{Multi-select \code{annotator} column write policy. \code{TRUE}
+(the default) appends \code{getOption("aedes.initials")} to the cell; \code{FALSE}
+leaves the column alone; a character vector (or comma-joined string)
+appends those tokens explicitly. On existing rows the tokens are merged
+with the current cell contents (unique, sorted).}
+
+\item{proofreader}{Multi-select \code{proofreader} column write policy. Same
+accepted values as \code{annotator}; defaults to \code{FALSE} (leave the column
+alone).}
+
+\item{wipe}{If \code{TRUE}, replace the target multi-select column(s) with just
+the new tokens instead of merging with existing cell contents. Default
+\code{FALSE} (append).}
 }
 \value{
 A list. With \code{dryrun = TRUE} it has elements \code{up} (rows that would

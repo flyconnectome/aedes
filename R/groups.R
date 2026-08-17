@@ -31,6 +31,16 @@
 #'   ignore existing membership and mint a fresh group from `min(serial_id)`.
 #' @param dryrun logical: if `TRUE` (the default) return a preview without
 #'   writing to FlyTable.
+#' @param annotator Multi-select `annotator` column write policy for rows that
+#'   actually change group. `TRUE` (the default) appends
+#'   `getOption("aedes.initials")` to the existing cell; `FALSE` leaves the
+#'   column alone; a character vector (or comma-joined string) appends those
+#'   tokens explicitly.
+#' @param proofreader Multi-select `proofreader` column write policy. Same
+#'   accepted values as `annotator`; defaults to `FALSE`.
+#' @param wipe If `TRUE`, replace the target multi-select column(s) with just
+#'   the new tokens instead of merging with existing cell contents. Default
+#'   `FALSE` (append).
 #' @param ... reserved (used to reject a mistaken `dry_run` argument).
 #'
 #' @returns A preview data.frame with one row per selected neuron: `root_id`,
@@ -39,8 +49,12 @@
 #' @seealso [aedes_set_meta()], [aedes_add_neurons()]
 #' @export
 aedes_set_group <- function(ids, group = NULL, join_existing = NA,
-                            dryrun = TRUE, ...) {
+                            dryrun = TRUE,
+                            annotator = TRUE, proofreader = FALSE,
+                            wipe = FALSE, ...) {
   .aedes_reject_dry_run(...)
+  ann_toks <- .aedes_resolve_initials(annotator,  "annotator")
+  prf_toks <- .aedes_resolve_initials(proofreader, "proofreader")
   as_int <- function(x) suppressWarnings(as.integer(as.character(x)))
 
   pin <- .aedes_pin_meta(aedes_ids(ids))
@@ -140,6 +154,8 @@ aedes_set_group <- function(ids, group = NULL, join_existing = NA,
   if (any(changed) && !dryrun) {
     updf <- data.frame(root_id = rids[changed], group = new_group[changed],
                        stringsAsFactors = FALSE)
+    updf <- .aedes_append_multiselect(
+      updf, am, list(annotator = ann_toks, proofreader = prf_toks), wipe = wipe)
     .aedes_update_existing(updf, dryrun = FALSE, am = am, ts = ts)
     return(invisible(preview))
   }

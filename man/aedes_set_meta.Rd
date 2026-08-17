@@ -4,7 +4,16 @@
 \alias{aedes_set_meta}
 \title{Bulk-update metadata for existing aedes neurons in FlyTable}
 \usage{
-aedes_set_meta(ids = NULL, df = NULL, dryrun = TRUE, update_roots = TRUE, ...)
+aedes_set_meta(
+  ids = NULL,
+  df = NULL,
+  dryrun = TRUE,
+  update_roots = TRUE,
+  annotator = TRUE,
+  proofreader = FALSE,
+  wipe = FALSE,
+  ...
+)
 }
 \arguments{
 \item{ids}{root_ids in any form understood by \code{\link[=aedes_ids]{aedes_ids()}} (including a query
@@ -19,6 +28,18 @@ writing to FlyTable.}
 
 \item{update_roots}{whether to bring \code{root_id}s to the pinned timestamp with
 \code{\link[fafbseg:flywire_latestid]{fafbseg::flywire_latestid()}} before matching.}
+
+\item{annotator}{Multi-select \code{annotator} column write policy. \code{TRUE}
+(the default) appends \code{getOption("aedes.initials")} to the existing cell;
+\code{FALSE} leaves the column alone; a character vector (or comma-joined
+string) appends those tokens explicitly.}
+
+\item{proofreader}{Multi-select \code{proofreader} column write policy. Same
+accepted values as \code{annotator}; defaults to \code{FALSE}.}
+
+\item{wipe}{If \code{TRUE}, replace the target multi-select column(s) with just
+the new tokens instead of merging with existing cell contents. Default
+\code{FALSE} (append).}
 
 \item{...}{reserved (used to reject a mistaken \code{dry_run} argument).}
 }

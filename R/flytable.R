@@ -48,6 +48,89 @@ aedes_sequential_update <- function(df, version = NULL, timestamp = NULL) {
   invisible(NULL)
 }
 
+#' Resolve an annotator/proofreader argument to the tokens to append
+#'
+#' Accepts `TRUE` (use `getOption("aedes.initials")`), `FALSE`/`NULL` (no-op),
+#' or a character vector of one or more initials (comma-joined strings are
+#' split, symmetric with how a multi-select cell reads back). Returns `NULL`
+#' when nothing should be written to the column, or a non-empty character
+#' vector of tokens to append.
+#' @noRd
+.aedes_resolve_initials <- function(x, argname) {
+  if (isFALSE(x) || is.null(x)) return(NULL)
+  if (isTRUE(x)) {
+    ini <- getOption("aedes.initials")
+    if (!is.character(ini) || length(ini) != 1L || is.na(ini) || !nzchar(ini))
+      stop("`", argname, " = TRUE` needs `aedes.initials` set. Set once with ",
+           "options(aedes.initials = \"XY\") or pass ", argname,
+           " = \"XY\" explicitly.", call. = FALSE)
+    x <- ini
+  }
+  if (!is.character(x))
+    stop("`", argname, "` must be TRUE, FALSE, or a character vector.",
+         call. = FALSE)
+  toks <- unlist(strsplit(x, ",", fixed = TRUE), use.names = FALSE)
+  toks <- trimws(toks[!is.na(toks) & nzchar(toks)])
+  if (!length(toks))
+    stop("`", argname, "` has no non-empty initials tokens.", call. = FALSE)
+  unique(toks)
+}
+
+#' Append (or wipe-and-set) tokens on multi-select column(s) of an update frame
+#'
+#' Generic per-column merge for FlyTable multi-select cells. `values` names
+#' any subset of multi-select columns and gives a character vector of tokens
+#' to add. For each `updf` row, the existing cell in `am` (indexed by
+#' `root_id`) is read, split on commas if a string, unioned with the new
+#' tokens (sorted, deduped) and re-emitted as a comma-joined scalar. Columns
+#' with `NULL` tokens are skipped; rows absent from `am` (i.e. new rows) merge
+#' against empty and end up with just the new tokens.
+#'
+#' Empty-cell detection is generous: `NA`, the literal strings `"NA"` and
+#' `"NaN"`, and empty/whitespace-only strings all count as empty (matches how
+#' comma-collapsed seatable cells sometimes round-trip through CSV / pandas).
+#'
+#' `wipe = TRUE` replaces the cell with just the new tokens (existing content
+#' ignored). `wipe = FALSE` (the default) appends.
+#'
+#' Output is a plain comma-joined scalar per row -- fafbseg's multi-select
+#' write path (`flytable_listify_multiselect_col`) splits it back into a list
+#' per cell for the JSON payload, so no `I(list(...))` wrapping is needed here.
+#' @noRd
+.aedes_append_multiselect <- function(updf, am, values, wipe = FALSE) {
+  values <- values[!vapply(values, is.null, logical(1))]
+  if (!length(values)) return(updf)
+  idx <- match(as.character(updf$root_id), as.character(am$root_id))
+
+  # Drop only actual NA and empty/whitespace-only; treat "NA"/"NaN" as data.
+  # Legacy stray "NA" tokens from historical writes will sit until a caller
+  # rewrites with wipe = TRUE; we never silently drop what looks like initials.
+  clean <- function(x) {
+    x <- as.character(x)
+    x <- trimws(x[!is.na(x)])
+    x[nzchar(x)]
+  }
+  split_cell <- function(cell) {
+    if (is.list(cell)) return(clean(unlist(cell, use.names = FALSE)))
+    if (length(cell) == 0L) return(character(0))
+    if (length(cell) > 1L) return(clean(cell))
+    cell <- as.character(cell)
+    if (is.na(cell)) return(character(0))
+    clean(strsplit(cell, ",", fixed = TRUE)[[1L]])
+  }
+
+  for (col in names(values)) {
+    new_tokens <- clean(values[[col]])
+    existing <- if (wipe || !col %in% names(am))
+      rep(NA, nrow(updf)) else am[[col]][idx]
+    updf[[col]] <- vapply(seq_along(existing), function(i) {
+      cur <- if (wipe) character(0) else split_cell(existing[[i]])
+      paste(sort(unique(c(cur, new_tokens))), collapse = ",")
+    }, character(1))
+  }
+  updf
+}
+
 #' Pin a timestamp and read a timestamp-consistent aedes_main
 #'
 #' Pins a single timestamp, normalises `ids` to root ids at it, and reads

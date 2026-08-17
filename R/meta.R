@@ -126,6 +126,15 @@ aedes_ids <- function(ids, ignore.case = FALSE, fixed = FALSE, unique = FALSE,
 #'   writing to FlyTable.
 #' @param update_roots whether to bring `root_id`s to the pinned timestamp with
 #'   [fafbseg::flywire_latestid()] before matching.
+#' @param annotator Multi-select `annotator` column write policy. `TRUE`
+#'   (the default) appends `getOption("aedes.initials")` to the existing cell;
+#'   `FALSE` leaves the column alone; a character vector (or comma-joined
+#'   string) appends those tokens explicitly.
+#' @param proofreader Multi-select `proofreader` column write policy. Same
+#'   accepted values as `annotator`; defaults to `FALSE`.
+#' @param wipe If `TRUE`, replace the target multi-select column(s) with just
+#'   the new tokens instead of merging with existing cell contents. Default
+#'   `FALSE` (append).
 #' @param ... reserved (used to reject a mistaken `dry_run` argument).
 #'
 #' @returns a data.frame of the rows written (or, on a dry run, that would be
@@ -133,8 +142,12 @@ aedes_ids <- function(ids, ignore.case = FALSE, fixed = FALSE, unique = FALSE,
 #' @seealso [aedes_add_neurons()], [aedes_set_group()]
 #' @export
 aedes_set_meta <- function(ids = NULL, df = NULL, dryrun = TRUE,
-                           update_roots = TRUE, ...) {
+                           update_roots = TRUE,
+                           annotator = TRUE, proofreader = FALSE,
+                           wipe = FALSE, ...) {
   .aedes_reject_dry_run(...)
+  ann_toks <- .aedes_resolve_initials(annotator,  "annotator")
+  prf_toks <- .aedes_resolve_initials(proofreader, "proofreader")
   if (is.null(df)) {
     if (!is.data.frame(ids))
       stop("`ids` must be a data.frame if you do not provide a `df` argument!")
@@ -174,6 +187,8 @@ aedes_set_meta <- function(ids = NULL, df = NULL, dryrun = TRUE,
          call. = FALSE)
   }
 
+  df <- .aedes_append_multiselect(
+    df, am, list(annotator = ann_toks, proofreader = prf_toks), wipe = wipe)
   res <- .aedes_update_existing(df, dryrun = dryrun, am = am, ts = ts)
   res$updf
 }
