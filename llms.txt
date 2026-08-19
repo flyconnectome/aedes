@@ -251,6 +251,10 @@ Bulk add or update FlyTable rows.
 
 - [`aedes_add_neurons()`](aedes_add_neurons.md) : Add new neurons (and
   update existing ones) in the aedes_main flytable
+- [`aedes_set_meta()`](aedes_set_meta.md) : Bulk-update metadata for
+  existing aedes neurons in FlyTable
+- [`aedes_set_group()`](aedes_set_group.md) : Group aedes neurons
+  together in FlyTable
 
 ## Low level CAVE access
 

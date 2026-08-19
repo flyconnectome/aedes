@@ -12,6 +12,7 @@ aedes_meta(
   version = NULL,
   timestamp = NULL,
   unique = FALSE,
+  translate_ids = NA,
   ...
 )
 
@@ -54,6 +55,12 @@ aedes_ids(
   Whether to drop duplicate `root_id` rows (with duplicates attached as
   an attribute).
 
+- translate_ids:
+
+  Whether to bring explicitly supplied `ids` forward to the requested
+  `version`/`timestamp` before matching (see Details). `NA` (the
+  default) decides automatically.
+
 - ...:
 
   Additional arguments passed to
@@ -74,6 +81,17 @@ will be simply as returned by the flytable (which updates them every
 half hour). If you want to be sure that ids match the most up to date
 state of the segmentation possible then you can ask for
 `timestamp='now'`.
+
+For a **query string** the match happens against that mapped table, so
+no further work is needed. For **explicit root `ids`** the join is by
+`root_id`, so ids that are stale relative to the requested timepoint
+would silently fail to match. `translate_ids` guards against this by
+bringing the supplied ids forward with
+[`fafbseg::flywire_latestid()`](https://rdrr.io/pkg/fafbseg/man/flywire_latestid.html)
+first. The default (`NA`) turns this on only when it is both needed and
+meaningful: explicit ids are supplied *and* a `version`/`timestamp` is
+given. With no version/timestamp nothing is translated, since the
+flytable is simply at the state of its last half-hourly update.
 
 ## Examples
 

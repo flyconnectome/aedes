@@ -46,6 +46,7 @@
 <span>  version <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  timestamp <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  unique <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  translate_ids <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -90,6 +91,12 @@ rather than regular expressions (default FALSE).</p></dd>
 attached as an attribute).</p></dd>
 
 
+<dt id="arg-translate-ids">translate_ids<a class="anchor" aria-label="anchor" href="#arg-translate-ids"></a></dt>
+<dd><p>Whether to bring explicitly supplied <code>ids</code> forward to
+the requested <code>version</code>/<code>timestamp</code> before matching (see Details).
+<code>NA</code> (the default) decides automatically.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments passed to <code><a href="https://rdrr.io/pkg/fafbseg/man/cam_meta.html" class="external-link">fafbseg::cam_meta()</a></code> (e.g.
 cache controls such as <code>expiry</code>, <code>refresh</code>).</p></dd>
@@ -108,6 +115,15 @@ returned data frame will be mapped to the corresponding timepoint using the
 will be simply as returned by the flytable (which updates them every half
 hour). If you want to be sure that ids match the most up to date state of
 the segmentation possible then you can ask for <code>timestamp='now'</code>.</p>
+<p>For a <strong>query string</strong> the match happens against that mapped table, so no
+further work is needed. For <strong>explicit root <code>ids</code></strong> the join is by
+<code>root_id</code>, so ids that are stale relative to the requested timepoint would
+silently fail to match. <code>translate_ids</code> guards against this by bringing the
+supplied ids forward with <code><a href="https://rdrr.io/pkg/fafbseg/man/flywire_latestid.html" class="external-link">fafbseg::flywire_latestid()</a></code> first. The default
+(<code>NA</code>) turns this on only when it is both needed and meaningful: explicit
+ids are supplied <em>and</em> a <code>version</code>/<code>timestamp</code> is given. With no
+version/timestamp nothing is translated, since the flytable is simply at
+the state of its last half-hourly update.</p>
     </div>
 
     <div class="section level2">

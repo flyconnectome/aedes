@@ -5,14 +5,14 @@ timestamp via aedes_sequential_update() so that join-by-root_id is
 reliable. Rows whose root_id is already present are updated with any
 extra columns supplied via ...; rows that are absent are appended with a
 point_xyz computed by aedes_key_point(). supervoxel_id and
-serial_id are left blank — a server-side process fills them in from
+serial_id are left blank – a server-side process fills them in from
 point_xyz."><meta property="og:description" content="Brings the supplied ids to the current segmentation timestamp,
 reads the aedes_main table fresh, and pins both sides to the same
 timestamp via aedes_sequential_update() so that join-by-root_id is
 reliable. Rows whose root_id is already present are updated with any
 extra columns supplied via ...; rows that are absent are appended with a
 point_xyz computed by aedes_key_point(). supervoxel_id and
-serial_id are left blank — a server-side process fills them in from
+serial_id are left blank – a server-side process fills them in from
 point_xyz."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
@@ -54,13 +54,25 @@ timestamp via <code><a href="aedes_sequential_update.html">aedes_sequential_upda
 reliable. Rows whose <code>root_id</code> is already present are updated with any
 extra columns supplied via <code>...</code>; rows that are absent are appended with a
 <code>point_xyz</code> computed by <code><a href="aedes_key_point.html">aedes_key_point()</a></code>. <code>supervoxel_id</code> and
-<code>serial_id</code> are left blank — a server-side process fills them in from
+<code>serial_id</code> are left blank – a server-side process fills them in from
 <code>point_xyz</code>.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">aedes_add_neurons</span><span class="op">(</span><span class="va">ids</span>, dryrun <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">aedes_add_neurons</span><span class="op">(</span></span>
+<span>  <span class="va">ids</span>,</span>
+<span>  dryrun <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  <span class="va">...</span>,</span>
+<span>  soma <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  side <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  status <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"adequate"</span>, <span class="st">"to_review"</span>, <span class="st">"needs_extending"</span>, <span class="st">"incomplete"</span>, <span class="st">"missing soma"</span><span class="op">)</span>,</span>
+<span>  required <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"superclass"</span>, <span class="st">"status"</span>, <span class="st">"initials"</span><span class="op">)</span>,</span>
+<span>  initials <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"aedes.initials"</span><span class="op">)</span>,</span>
+<span>  annotator <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  proofreader <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  wipe <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -78,7 +90,59 @@ returns the data frames that would have been used.</p></dd>
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional columns to set on each row (e.g. <code>cell_class = "KC"</code>).
-Recycled across all input ids.</p></dd>
+Recycled across all input ids. Values here always win over the auto-fill
+below.</p></dd>
+
+
+<dt id="arg-soma">soma<a class="anchor" aria-label="anchor" href="#arg-soma"></a></dt>
+<dd><p>If <code>TRUE</code> (the default), auto-fill <code>soma_xyz</code> and <code>nucleus_id</code>
+from <code><a href="aedes_soma_position.html">aedes_soma_position()</a></code>.</p></dd>
+
+
+<dt id="arg-side">side<a class="anchor" aria-label="anchor" href="#arg-side"></a></dt>
+<dd><p>If <code>TRUE</code> (the default), auto-fill <code>side</code> from
+<code><a href="aedes_point_side.html">aedes_point_side()</a></code> applied to the soma; falls back to the L2 key point
+(with a warning) for ids where the soma cascade returns nothing.</p></dd>
+
+
+<dt id="arg-status">status<a class="anchor" aria-label="anchor" href="#arg-status"></a></dt>
+<dd><p>FlyTable status. A shortlist of the common values is exposed
+in the signature for tab-completion. Any other value is live-checked
+against the vocabulary already present in <code>aedes_main</code>; unknown values
+error. Must be supplied unless <code>"status"</code> is removed from <code>required</code>.</p></dd>
+
+
+<dt id="arg-required">required<a class="anchor" aria-label="anchor" href="#arg-required"></a></dt>
+<dd><p>Columns that must be supplied (via <code>...</code>, or via <code>status</code> /
+<code>initials</code>). Defaults to <code>c("superclass", "status", "initials")</code>. Set to
+<code>character(0)</code> to skip the check.</p></dd>
+
+
+<dt id="arg-initials">initials<a class="anchor" aria-label="anchor" href="#arg-initials"></a></dt>
+<dd><p>Curator initials for the single-string <code>initials</code> column.
+Defaults to <code>getOption("aedes.initials")</code>; set once per session with
+<code>options(aedes.initials = "XY")</code>. Passed through <code>...</code> semantics – an
+explicit <code>initials = ...</code> in <code>...</code> wins over the option.</p></dd>
+
+
+<dt id="arg-annotator">annotator<a class="anchor" aria-label="anchor" href="#arg-annotator"></a></dt>
+<dd><p>Multi-select <code>annotator</code> column write policy. <code>TRUE</code>
+(the default) appends <code>getOption("aedes.initials")</code> to the cell; <code>FALSE</code>
+leaves the column alone; a character vector (or comma-joined string)
+appends those tokens explicitly. On existing rows the tokens are merged
+with the current cell contents (unique, sorted).</p></dd>
+
+
+<dt id="arg-proofreader">proofreader<a class="anchor" aria-label="anchor" href="#arg-proofreader"></a></dt>
+<dd><p>Multi-select <code>proofreader</code> column write policy. Same
+accepted values as <code>annotator</code>; defaults to <code>FALSE</code> (leave the column
+alone).</p></dd>
+
+
+<dt id="arg-wipe">wipe<a class="anchor" aria-label="anchor" href="#arg-wipe"></a></dt>
+<dd><p>If <code>TRUE</code>, replace the target multi-select column(s) with just
+the new tokens instead of merging with existing cell contents. Default
+<code>FALSE</code> (append).</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -87,6 +151,17 @@ Recycled across all input ids.</p></dd>
 be updated) and/or <code>new</code> (rows that would be appended). With
 <code>dryrun = FALSE</code> only <code>new</code> is returned (so the caller can see which
 <code>point_xyz</code> values were chosen).</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>By default the function also auto-fills <code>soma_xyz</code>, <code>nucleus_id</code>
+and <code>side</code> for each row via <code><a href="aedes_soma_position.html">aedes_soma_position()</a></code> and
+<code><a href="aedes_point_side.html">aedes_point_side()</a></code>. When the soma cascade returns no position for an id
+the fallback for <code>side</code> is <code><a href="aedes_point_side.html">aedes_point_side()</a></code> on the L2 key point, and
+a warning naming the affected ids is issued.</p>
+<p>Auto-fill columns (<code>soma_xyz</code>, <code>nucleus_id</code>, <code>side</code>, <code>point_xyz</code>) never
+overwrite a non-NA value on an existing row. Values passed via <code>...</code>
+always win over the auto-fill and always overwrite on existing rows.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

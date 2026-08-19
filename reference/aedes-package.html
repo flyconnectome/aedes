@@ -39,6 +39,23 @@
 
 
     <div class="section level2">
+    <h2 id="package-options">Package Options<a class="anchor" aria-label="anchor" href="#package-options"></a></h2>
+    <p></p><ul><li><p><code>aedes.version</code> Default materialisation selector used by
+<code><a href="aedes_get_version.html">aedes_get_version</a></code> (and, transitively, everything that pins a
+timestamp – <code><a href="aedes_meta.html">aedes_meta</a></code>, <code><a href="aedes_add_neurons.html">aedes_add_neurons</a></code>,
+<code><a href="aedes_set_meta.html">aedes_set_meta</a></code>, <code><a href="aedes_set_group.html">aedes_set_group</a></code>). Accepts
+<code>"latest"</code> (default when unset), <code>"now"</code>, an integer
+materialisation version or an explicit timestamp. Set with
+<code><a href="aedes_set_version.html">aedes_set_version</a></code> or <code>options(aedes.version = ...)</code>.</p></li>
+<li><p><code>aedes.initials</code> Curator initials used to auto-fill the
+single-string <code>initials</code> column and, when
+<code>annotator = TRUE</code> / <code>proofreader = TRUE</code>, appended to the
+corresponding multi-select column. Consumed by
+<code><a href="aedes_add_neurons.html">aedes_add_neurons</a></code>, <code><a href="aedes_set_meta.html">aedes_set_meta</a></code> and
+<code><a href="aedes_set_group.html">aedes_set_group</a></code>. Set once per session with
+<code>options(aedes.initials = "XY")</code>.</p></li>
+</ul></div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p>Useful links:</p><ul><li><p><a href="https://github.com/flyconnectome/aedes" class="external-link">https://github.com/flyconnectome/aedes</a></p></li>
 <li><p><a href="https://flyconnectome.github.io/aedes/" class="external-link">https://flyconnectome.github.io/aedes/</a></p></li>
