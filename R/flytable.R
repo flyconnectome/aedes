@@ -35,6 +35,188 @@ aedes_sequential_update <- function(df, version = NULL, timestamp = NULL) {
   df
 }
 
+#' Reject a mistaken `dry_run` argument
+#'
+#' The standard dry-run argument across aedes (and the wider natverse) is
+#' `dryrun`. Functions that also take `...` call this so a mistyped `dry_run`
+#' errors clearly instead of being silently captured as a column to write.
+#' @noRd
+.aedes_reject_dry_run <- function(...) {
+  bad <- intersect(c("dry_run", "dryRun", "dry.run"), names(list(...)))
+  if (length(bad))
+    stop("Use `dryrun`, not `", bad[1L], "`.", call. = FALSE)
+  invisible(NULL)
+}
+
+#' Resolve an annotator/proofreader argument to the tokens to append
+#'
+#' Accepts `TRUE` (use `getOption("aedes.initials")`), `FALSE`/`NULL` (no-op),
+#' or a character vector of one or more initials (comma-joined strings are
+#' split, symmetric with how a multi-select cell reads back). Returns `NULL`
+#' when nothing should be written to the column, or a non-empty character
+#' vector of tokens to append.
+#' @noRd
+.aedes_resolve_initials <- function(x, argname) {
+  if (isFALSE(x) || is.null(x)) return(NULL)
+  if (isTRUE(x)) {
+    ini <- getOption("aedes.initials")
+    if (!is.character(ini) || length(ini) != 1L || is.na(ini) || !nzchar(ini))
+      stop("`", argname, " = TRUE` needs `aedes.initials` set. Set once with ",
+           "options(aedes.initials = \"XY\") or pass ", argname,
+           " = \"XY\" explicitly.", call. = FALSE)
+    x <- ini
+  }
+  if (!is.character(x))
+    stop("`", argname, "` must be TRUE, FALSE, or a character vector.",
+         call. = FALSE)
+  toks <- unlist(strsplit(x, ",", fixed = TRUE), use.names = FALSE)
+  toks <- trimws(toks[!is.na(toks) & nzchar(toks)])
+  if (!length(toks))
+    stop("`", argname, "` has no non-empty initials tokens.", call. = FALSE)
+  unique(toks)
+}
+
+#' Append (or wipe-and-set) tokens on multi-select column(s) of an update frame
+#'
+#' Generic per-column merge for FlyTable multi-select cells. `values` names
+#' any subset of multi-select columns and gives a character vector of tokens
+#' to add. For each `updf` row, the existing cell in `am` (indexed by
+#' `root_id`) is read, split on commas if a string, unioned with the new
+#' tokens (sorted, deduped) and re-emitted as a comma-joined scalar. Columns
+#' with `NULL` tokens are skipped; rows absent from `am` (i.e. new rows) merge
+#' against empty and end up with just the new tokens.
+#'
+#' Empty-cell detection is generous: `NA`, the literal strings `"NA"` and
+#' `"NaN"`, and empty/whitespace-only strings all count as empty (matches how
+#' comma-collapsed seatable cells sometimes round-trip through CSV / pandas).
+#'
+#' `wipe = TRUE` replaces the cell with just the new tokens (existing content
+#' ignored). `wipe = FALSE` (the default) appends.
+#'
+#' Output is a plain comma-joined scalar per row -- fafbseg's multi-select
+#' write path (`flytable_listify_multiselect_col`) splits it back into a list
+#' per cell for the JSON payload, so no `I(list(...))` wrapping is needed here.
+#' @noRd
+.aedes_append_multiselect <- function(updf, am, values, wipe = FALSE) {
+  values <- values[!vapply(values, is.null, logical(1))]
+  if (!length(values)) return(updf)
+  idx <- match(as.character(updf$root_id), as.character(am$root_id))
+
+  # Drop only actual NA and empty/whitespace-only; treat "NA"/"NaN" as data.
+  # Legacy stray "NA" tokens from historical writes will sit until a caller
+  # rewrites with wipe = TRUE; we never silently drop what looks like initials.
+  clean <- function(x) {
+    x <- as.character(x)
+    x <- trimws(x[!is.na(x)])
+    x[nzchar(x)]
+  }
+  split_cell <- function(cell) {
+    if (is.list(cell)) return(clean(unlist(cell, use.names = FALSE)))
+    if (length(cell) == 0L) return(character(0))
+    if (length(cell) > 1L) return(clean(cell))
+    cell <- as.character(cell)
+    if (is.na(cell)) return(character(0))
+    clean(strsplit(cell, ",", fixed = TRUE)[[1L]])
+  }
+
+  for (col in names(values)) {
+    new_tokens <- clean(values[[col]])
+    existing <- if (wipe || !col %in% names(am))
+      rep(NA, nrow(updf)) else am[[col]][idx]
+    updf[[col]] <- vapply(seq_along(existing), function(i) {
+      cur <- if (wipe) character(0) else split_cell(existing[[i]])
+      paste(sort(unique(c(cur, new_tokens))), collapse = ",")
+    }, character(1))
+  }
+  updf
+}
+
+#' Pin a timestamp and read a timestamp-consistent aedes_main
+#'
+#' Pins a single timestamp, normalises `ids` to root ids at it, and reads
+#' `aedes_main` mapped to the same timestamp -- so that join-by-`root_id` is
+#' reliable. The table read relies on [aedes_meta()]'s own `version`/`timestamp`
+#' mapping (which brings `root_id` forward via `supervoxel_id`); a single pinned
+#' `ts` is shared with the id resolution so both sides agree. Shared by
+#' [aedes_add_neurons()] and [.aedes_update_existing()].
+#'
+#' @param ids Root ids in any form understood by [fafbseg::flywire_ids()].
+#' @return A list with `ids` (latest root ids), `am` (the mapped table) and
+#'   `ts` (the pinned version/timestamp from [aedes_get_version()]).
+#' @noRd
+.aedes_pin_meta <- function(ids) {
+  fids <- setdiff(fafbseg::flywire_ids(ids, unique = TRUE), 0)
+  ts <- aedes_get_version(timestamp = "now")
+  lids <- with_aedes(fafbseg::flywire_latestid(fids, timestamp = ts$timestamp))
+  am <- aedes_meta(version = ts$version, timestamp = ts$timestamp, expiry = 0)
+  list(ids = lids, am = am, ts = ts)
+}
+
+#' Update existing aedes_main rows from a data.frame of column values
+#'
+#' @description Shared write engine for updating rows that already exist in
+#'   `aedes_main`. Resolves `df$root_id` to the table `_id` in a
+#'   timestamp-consistent snapshot and updates exactly the supplied columns on
+#'   the matching rows.
+#'
+#' @details Update-only: ids absent from the table are returned in `missing`
+#'   rather than appended -- the caller decides what to do with them. Values are
+#'   written verbatim (caller-supplied values always win); any no-overwrite
+#'   policy is the caller's responsibility, applied to `df` before calling.
+#'
+#' @param df A data.frame with a `root_id` column plus the columns to write.
+#' @param dryrun If `TRUE` (default) assemble and return the update frame
+#'   without writing.
+#' @param on_dup What to do when a `root_id` appears more than once among the
+#'   matched rows: `"error"` (default) or `"first"` (keep the first occurrence).
+#' @param am,ts Optional pre-pinned table and version (see [.aedes_pin_meta()]).
+#'   When both are supplied `df$root_id` is assumed already at `ts` and is not
+#'   re-resolved (avoids a second table read).
+#' @return A list with `updf` (rows written / to write, keyed by `_id`) and
+#'   `missing` (root_ids not found in the table).
+#' @noRd
+.aedes_update_existing <- function(df, dryrun = TRUE, on_dup = c("error", "first"),
+                                   am = NULL, ts = NULL) {
+  on_dup <- match.arg(on_dup)
+  if (!is.data.frame(df) || !"root_id" %in% names(df))
+    stop("`df` must be a data.frame with a `root_id` column.", call. = FALSE)
+  if (is.null(am) || is.null(ts)) {
+    pin <- .aedes_pin_meta(df$root_id)
+    df$root_id <- pin$ids
+    am <- pin$am
+    ts <- pin$ts
+  }
+  df$root_id <- as.character(df$root_id)
+  idx <- match(df$root_id, as.character(am$root_id))
+  found <- !is.na(idx)
+  missing <- unique(df$root_id[!found])
+
+  df_found <- df[found, , drop = FALSE]
+  idx <- idx[found]
+  dups <- unique(df_found$root_id[duplicated(df_found$root_id)])
+  if (length(dups)) {
+    if (on_dup == "error")
+      stop("Duplicated root_id(s) in the update set: ",
+           paste(utils::head(dups, 5L), collapse = ", "),
+           if (length(dups) > 5L) sprintf(" (+%d more)", length(dups) - 5L),
+           call. = FALSE)
+    keep <- !duplicated(df_found$root_id)
+    df_found <- df_found[keep, , drop = FALSE]
+    idx <- idx[keep]
+  }
+
+  updf <- df_found
+  updf[["_id"]] <- am[["_id"]][idx]
+  updf <- updf[c("_id", setdiff(names(updf), "_id"))]
+  rownames(updf) <- NULL
+  if (any(duplicated(updf[["_id"]])))
+    stop("Multiple root_ids map to the same aedes_main row (`_id`).", call. = FALSE)
+
+  if (!dryrun && nrow(updf) > 0L)
+    fafbseg::flytable_update_rows(updf, table = "aedes_main", append_allowed = FALSE)
+  list(updf = updf, missing = missing)
+}
+
 #' Update ids in aedes_main table manually
 #'
 #' @param update.serial_ids Whether to update the serial_id column uniquely

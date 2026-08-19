@@ -4,7 +4,19 @@
 \alias{aedes_add_neurons}
 \title{Add new neurons (and update existing ones) in the aedes_main flytable}
 \usage{
-aedes_add_neurons(ids, dryrun = TRUE, ...)
+aedes_add_neurons(
+  ids,
+  dryrun = TRUE,
+  ...,
+  soma = TRUE,
+  side = TRUE,
+  status = c("adequate", "to_review", "needs_extending", "incomplete", "missing soma"),
+  required = c("superclass", "status", "initials"),
+  initials = getOption("aedes.initials"),
+  annotator = TRUE,
+  proofreader = FALSE,
+  wipe = FALSE
+)
 }
 \arguments{
 \item{ids}{Root ids of neurons to add or update.}
@@ -13,7 +25,43 @@ aedes_add_neurons(ids, dryrun = TRUE, ...)
 returns the data frames that would have been used.}
 
 \item{...}{Additional columns to set on each row (e.g. \code{cell_class = "KC"}).
-Recycled across all input ids.}
+Recycled across all input ids. Values here always win over the auto-fill
+below.}
+
+\item{soma}{If \code{TRUE} (the default), auto-fill \code{soma_xyz} and \code{nucleus_id}
+from \code{\link[=aedes_soma_position]{aedes_soma_position()}}.}
+
+\item{side}{If \code{TRUE} (the default), auto-fill \code{side} from
+\code{\link[=aedes_point_side]{aedes_point_side()}} applied to the soma; falls back to the L2 key point
+(with a warning) for ids where the soma cascade returns nothing.}
+
+\item{status}{FlyTable status. A shortlist of the common values is exposed
+in the signature for tab-completion. Any other value is live-checked
+against the vocabulary already present in \code{aedes_main}; unknown values
+error. Must be supplied unless \code{"status"} is removed from \code{required}.}
+
+\item{required}{Columns that must be supplied (via \code{...}, or via \code{status} /
+\code{initials}). Defaults to \code{c("superclass", "status", "initials")}. Set to
+\code{character(0)} to skip the check.}
+
+\item{initials}{Curator initials for the single-string \code{initials} column.
+Defaults to \code{getOption("aedes.initials")}; set once per session with
+\code{options(aedes.initials = "XY")}. Passed through \code{...} semantics -- an
+explicit \code{initials = ...} in \code{...} wins over the option.}
+
+\item{annotator}{Multi-select \code{annotator} column write policy. \code{TRUE}
+(the default) appends \code{getOption("aedes.initials")} to the cell; \code{FALSE}
+leaves the column alone; a character vector (or comma-joined string)
+appends those tokens explicitly. On existing rows the tokens are merged
+with the current cell contents (unique, sorted).}
+
+\item{proofreader}{Multi-select \code{proofreader} column write policy. Same
+accepted values as \code{annotator}; defaults to \code{FALSE} (leave the column
+alone).}
+
+\item{wipe}{If \code{TRUE}, replace the target multi-select column(s) with just
+the new tokens instead of merging with existing cell contents. Default
+\code{FALSE} (append).}
 }
 \value{
 A list. With \code{dryrun = TRUE} it has elements \code{up} (rows that would
@@ -28,6 +76,17 @@ timestamp via \code{\link[=aedes_sequential_update]{aedes_sequential_update()}} 
 reliable. Rows whose \code{root_id} is already present are updated with any
 extra columns supplied via \code{...}; rows that are absent are appended with a
 \code{point_xyz} computed by \code{\link[=aedes_key_point]{aedes_key_point()}}. \code{supervoxel_id} and
-\code{serial_id} are left blank — a server-side process fills them in from
+\code{serial_id} are left blank -- a server-side process fills them in from
 \code{point_xyz}.
+}
+\details{
+By default the function also auto-fills \code{soma_xyz}, \code{nucleus_id}
+and \code{side} for each row via \code{\link[=aedes_soma_position]{aedes_soma_position()}} and
+\code{\link[=aedes_point_side]{aedes_point_side()}}. When the soma cascade returns no position for an id
+the fallback for \code{side} is \code{\link[=aedes_point_side]{aedes_point_side()}} on the L2 key point, and
+a warning naming the affected ids is issued.
+
+Auto-fill columns (\code{soma_xyz}, \code{nucleus_id}, \code{side}, \code{point_xyz}) never
+overwrite a non-NA value on an existing row. Values passed via \code{...}
+always win over the auto-fill and always overwrite on existing rows.
 }

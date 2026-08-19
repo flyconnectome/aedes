@@ -12,6 +12,7 @@ aedes_meta(
   version = NULL,
   timestamp = NULL,
   unique = FALSE,
+  translate_ids = NA,
   ...
 )
 
@@ -40,6 +41,10 @@ rather than regular expressions (default FALSE).}
 \item{unique}{Whether to drop duplicate \code{root_id} rows (with duplicates
 attached as an attribute).}
 
+\item{translate_ids}{Whether to bring explicitly supplied \code{ids} forward to
+the requested \code{version}/\code{timestamp} before matching (see Details).
+\code{NA} (the default) decides automatically.}
+
 \item{...}{Additional arguments passed to \code{\link[fafbseg:cam_meta]{fafbseg::cam_meta()}} (e.g.
 cache controls such as \code{expiry}, \code{refresh}).}
 }
@@ -57,6 +62,16 @@ returned data frame will be mapped to the corresponding timepoint using the
 will be simply as returned by the flytable (which updates them every half
 hour). If you want to be sure that ids match the most up to date state of
 the segmentation possible then you can ask for \code{timestamp='now'}.
+
+For a \strong{query string} the match happens against that mapped table, so no
+further work is needed. For \strong{explicit root \code{ids}} the join is by
+\code{root_id}, so ids that are stale relative to the requested timepoint would
+silently fail to match. \code{translate_ids} guards against this by bringing the
+supplied ids forward with \code{\link[fafbseg:flywire_latestid]{fafbseg::flywire_latestid()}} first. The default
+(\code{NA}) turns this on only when it is both needed and meaningful: explicit
+ids are supplied \emph{and} a \code{version}/\code{timestamp} is given. With no
+version/timestamp nothing is translated, since the flytable is simply at
+the state of its last half-hourly update.
 }
 \examples{
 \dontrun{
