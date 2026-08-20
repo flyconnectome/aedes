@@ -29,8 +29,16 @@ longest path from the root may not contain a branch point at all. If no
 branch point can be identified the original root point is used as a
 fallback.
 }
+\details{
+A thin wrapper around \code{\link[fafbseg:flywire_key_point]{fafbseg::flywire_key_point()}} evaluated in
+the aedes segmentation context via \code{\link[=with_aedes]{with_aedes()}}.
+}
 \examples{
 \dontrun{
 aedes_key_point('648518347569414567')
 }
+}
+\seealso{
+\code{\link[fafbseg:flywire_key_point]{fafbseg::flywire_key_point()}},
+\code{\link[fafbseg:key_point_from_neuron]{fafbseg::key_point_from_neuron()}}
 }
