@@ -8,7 +8,7 @@ test_that("key_point_from_neuron picks a finite point on a stored L2 skeleton", 
   n <- readRDS(f)
   expect_s3_class(n, "neuron")
 
-  pt <- key_point_from_neuron(n, reroot = TRUE)
+  pt <- fafbseg::key_point_from_neuron(n, reroot = TRUE)
   expect_length(as.numeric(pt), 3L)
   expect_true(all(is.finite(pt)))
 
@@ -21,7 +21,7 @@ test_that("key_point_from_neuron picks a finite point on a stored L2 skeleton", 
   # rerooting onto the furthest endpoint should be deterministic for the
   # same input, and (typically) different from no-reroot when the original
   # root is itself a branch-bearing node.
-  pt_again <- key_point_from_neuron(n, reroot = TRUE)
+  pt_again <- fafbseg::key_point_from_neuron(n, reroot = TRUE)
   expect_equal(pt_again, pt)
 })
 

@@ -7,7 +7,10 @@
   Avoids the heavy `aedes_flytable_update()` pass. (#8)
 * New `aedes_key_point()` returns a "good" annotation point on a neuron:
   the principal branch point of its L2 skeleton, with the neuron
-  optionally rerooted onto its furthest endpoint first. (#8)
+  optionally rerooted onto its furthest endpoint first. (#8) The dataset-
+  agnostic machinery now lives in `fafbseg` as `flywire_key_point()` /
+  `key_point_from_neuron()` (requires `fafbseg (>= 0.15.15)`);
+  `aedes_key_point()` is a thin `with_aedes()` wrapper around it.
 * `aedes_sequential_update()` gains `version` and `timestamp` arguments so
   callers can pin all downstream service calls (`aedes_xyz2id()`,
   `fafbseg::flywire_updateids()`) to the same materialisation. Defaults
