@@ -38,6 +38,18 @@ aedes_key_point(ids, raw = TRUE, reroot = TRUE, ...)
 
 An N x 3 matrix of point locations (one row per input id).
 
+## Details
+
+A thin wrapper around
+[`fafbseg::flywire_key_point()`](https://rdrr.io/pkg/fafbseg/man/key_point_from_neuron.html)
+evaluated in the aedes segmentation context via
+[`with_aedes()`](choose_aedes.md).
+
+## See also
+
+[`fafbseg::flywire_key_point()`](https://rdrr.io/pkg/fafbseg/man/key_point_from_neuron.html),
+[`fafbseg::key_point_from_neuron()`](https://rdrr.io/pkg/fafbseg/man/key_point_from_neuron.html)
+
 ## Examples
 
 ``` r

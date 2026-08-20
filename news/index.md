@@ -15,7 +15,14 @@
   “good” annotation point on a neuron: the principal branch point of its
   L2 skeleton, with the neuron optionally rerooted onto its furthest
   endpoint first.
-  ([\#8](https://github.com/flyconnectome/aedes/issues/8))
+  ([\#8](https://github.com/flyconnectome/aedes/issues/8)) The dataset-
+  agnostic machinery now lives in `fafbseg` as
+  [`flywire_key_point()`](https://rdrr.io/pkg/fafbseg/man/key_point_from_neuron.html)
+  /
+  [`key_point_from_neuron()`](https://rdrr.io/pkg/fafbseg/man/key_point_from_neuron.html)
+  (requires `fafbseg (>= 0.15.15)`);
+  [`aedes_key_point()`](../reference/aedes_key_point.md) is a thin
+  [`with_aedes()`](../reference/choose_aedes.md) wrapper around it.
 - [`aedes_sequential_update()`](../reference/aedes_sequential_update.md)
   gains `version` and `timestamp` arguments so callers can pin all
   downstream service calls
