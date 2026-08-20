@@ -66,7 +66,20 @@ suppressMessages({
 deform_repo <- Sys.getenv("AEDES_DEFORM_REPO", "../2025aedes")
 n_landmarks <- as.integer(Sys.getenv("AEDES_TPS_N", "3000"))
 alpha <- 3 # how hard to favour high-variability regions
-stopifnot(dir.exists(deform_repo), is.finite(n_landmarks), n_landmarks > 4)
+# LAMBDA OVERRIDE FOR THE PACKAGE COPY ONLY. Empty = use the source bridge's own lambda, which is what
+# this script has always done and remains the default -- nothing changes unless the variable is set.
+#
+# It exists because the thinning does not converge. Measured against the FULL 16095-landmark field:
+# n=3000 disagrees by a median 8.43 um, and doubling to 6000 only reaches 7.07 um, against the
+# bridge's own 6.86 um error. Raising n is therefore not the fix. The suspected cause is that the
+# composite interpolates ~16k MUTUALLY DISAGREEING anchors at lambda 1e-8, so each thinning
+# interpolates a different subset of those disagreements exactly and lands on a different field.
+# A larger lambda smooths the field enough to thin stably -- if it does, which is being measured
+# rather than assumed. Setting this changes a SHIPPED artefact, so it is a deliberate act.
+.lam <- Sys.getenv("AEDES_TPS_LAMBDA", "")
+lambda_override <- if (nzchar(.lam)) as.numeric(.lam) else NULL
+stopifnot(dir.exists(deform_repo), is.finite(n_landmarks), n_landmarks > 4,
+          is.null(lambda_override) || (is.finite(lambda_override) && lambda_override >= 0))
 
 # ---------------------------------------------------------------------------
 # Adaptive thinning: even in space, denser where the field varies
@@ -125,10 +138,18 @@ build_one <- function(src_file, out_file) {
     "  %d of %d landmarks kept; precomputing coefficients...",
     length(keep), nrow(r$refmat)
   ))
-  cf <- Morpho::computeTransform(tar, ref, type = "tps", lambda = r$lambda)
+  # NOT `%||%`: base R only gained it in 4.4.0, and this script is run standalone with Rscript
+  # without attaching the package that defines the local copy. An explicit test works everywhere.
+  lam <- if (is.null(lambda_override)) r$lambda else lambda_override
+  if (!identical(lam, r$lambda))
+    message(sprintf("  lambda OVERRIDDEN for the package copy: %.3g (bridge's own is %.3g)",
+                    lam, r$lambda))
+  cf <- Morpho::computeTransform(tar, ref, type = "tps", lambda = lam)
   # nat::xform() dispatches on "tpsreg"; Morpho::applyTransform on "tpsCoeff"
   class(cf) <- c("tpsreg", class(cf))
   attr(cf, "source") <- basename(src_file)
+  attr(cf, "lambda") <- lam          # what this copy was actually built with, not what the bridge used
+  attr(cf, "n_landmarks") <- length(keep)
   attr(cf, "created") <- as.character(Sys.Date())
   saveRDS(cf, out_file, compress = "xz")
   message(sprintf(
