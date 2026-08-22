@@ -69,13 +69,18 @@ alpha <- 3 # how hard to favour high-variability regions
 # LAMBDA OVERRIDE FOR THE PACKAGE COPY ONLY. Empty = use the source bridge's own lambda, which is what
 # this script has always done and remains the default -- nothing changes unless the variable is set.
 #
-# It exists because the thinning does not converge. Measured against the FULL 16095-landmark field:
-# n=3000 disagrees by a median 8.43 um, and doubling to 6000 only reaches 7.07 um, against the
-# bridge's own 6.86 um error. Raising n is therefore not the fix. The suspected cause is that the
-# composite interpolates ~16k MUTUALLY DISAGREEING anchors at lambda 1e-8, so each thinning
-# interpolates a different subset of those disagreements exactly and lands on a different field.
-# A larger lambda smooths the field enough to thin stably -- if it does, which is being measured
-# rather than assumed. Setting this changes a SHIPPED artefact, so it is a deliberate act.
+# ⚠ THE HYPOTHESIS THIS WAS BUILT TO TEST IS REFUTED, AND SO IS THE READING THAT MOTIVATED IT.
+# Raising lambda is monotonically WORSE at every n measured. At n=3000: lambda 1e3 gives deviation
+# 13.09 um / fw 0.272 / rv 0.174, and 1e4 gives 15.96 um / fw 0.176 / rv 0.088 -- the reverse
+# direction collapsing, which is the signature of a field that UNDER-moves (finding #7). A smoother
+# field does not thin more stably; it simply stops deforming. Leave this unset.
+#
+# The earlier note here claimed "the thinning does not converge, so raising n is not the fix". That
+# compared two THINNINGS against each other, where two approximations can disagree while both
+# approach the truth. Measured against the FULL field, every metric improves monotonically with n --
+# deviation 8.47 -> 6.84 -> 4.80 um and fw 0.368 -> 0.389 -> 0.410 across n = 3000/6000/8000. n IS
+# the lever, and the package now ships 8000. The knob is kept only so the refutation stays runnable.
+# Setting it changes a SHIPPED artefact, so it is a deliberate act.
 .lam <- Sys.getenv("AEDES_TPS_LAMBDA", "")
 lambda_override <- if (nzchar(.lam)) as.numeric(.lam) else NULL
 stopifnot(dir.exists(deform_repo), is.finite(n_landmarks), n_landmarks > 4,

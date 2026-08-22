@@ -216,10 +216,16 @@ xform_aedes <- function(x,
 # while going through Morpho::applyTransform(), which does use the coefficients.
 .aedes_flywire_reg <- memoise::memoise(function(to = c("flywire", "aedes")) {
   to <- match.arg(to)
+  # n = 8000, not 3000. The thinning is a real trade and the lever is n, measured against the FULL
+  # 16k-landmark field rather than against another thinning: deviation 8.47 -> 4.80 um, forward
+  # NBLAST 0.368 -> 0.410, reverse 0.365 -> 0.451. That closes 48% of the forward and 71% of the
+  # reverse cost of the old 3000-point copy, for 3.5 s per applyTransform() against 1.4 s, and still
+  # 4.8x faster than shipping the field unthinned (16.7 s). Do NOT raise lambda to compensate --
+  # measured monotonically worse across 1e3 and 1e4, with the reverse direction collapsing to 0.088.
   f <- if (to == "flywire") {
-    "aedes_flywire_3000_tps.rds"
+    "aedes_flywire_8000_tps.rds"
   } else {
-    "flywire_aedes_3000_tps.rds"
+    "flywire_aedes_8000_tps.rds"
   }
   cf <- readRDS(system.file("extdata", f, package = "aedes", mustWork = TRUE))
   function(xyz, ...) Morpho::applyTransform(xyz, cf)
