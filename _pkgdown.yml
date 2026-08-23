@@ -39,6 +39,11 @@ reference:
   - aedes_set_meta
   - aedes_set_group
 
+- title: Connectivity
+  desc: Summarise synaptic partners.
+  contents:
+  - aedes_partner_summary
+
 - title: Low level CAVE access
   contents:
   - aedes_cave_client
