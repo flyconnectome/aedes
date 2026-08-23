@@ -59,6 +59,13 @@ Bulk add or update FlyTable rows.
 - [`aedes_set_group()`](aedes_set_group.md) : Group aedes neurons
   together in FlyTable
 
+## Connectivity
+
+Summarise synaptic partners.
+
+- [`aedes_partner_summary()`](aedes_partner_summary.md) : Summarise the
+  synaptic partners of one or more Aedes neurons
+
 ## Low level CAVE access
 
 - [`aedes_cave_client()`](aedes_cave_client.md) : Low level access to
