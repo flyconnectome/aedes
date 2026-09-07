@@ -108,9 +108,11 @@ aedes_ids <- function(ids, ignore.case = FALSE, fixed = FALSE, unique = FALSE,
 
 #' Bulk-update metadata for existing aedes neurons in FlyTable
 #'
-#' @description Updates rows that already exist in the `aedes_main` FlyTable from
-#'   a data.frame of per-row metadata. Update-only: every `root_id` must already
-#'   be present (use [aedes_add_neurons()] to create rows).
+#' @description Update-only bulk edit of arbitrary metadata columns on rows
+#'   that are already present in the `aedes_main` FlyTable. Every `root_id`
+#'   must already be present, otherwise nothing is written -- use
+#'   [aedes_add_neurons()] to create rows, and [aedes_set_group()] when the
+#'   only column you need to touch is `group`.
 #'
 #' @details Rows with status `bad_nucleus`, `duplicate` or `not_a_neuron` are
 #'   dropped before updating; any remaining `root_id` not found in `aedes_main`
@@ -139,8 +141,33 @@ aedes_ids <- function(ids, ignore.case = FALSE, fixed = FALSE, unique = FALSE,
 #'
 #' @returns a data.frame of the rows written (or, on a dry run, that would be
 #'   written), keyed by FlyTable `_id`.
-#' @seealso [aedes_add_neurons()], [aedes_set_group()]
+#' @seealso [aedes_add_neurons()] to add rows that are not yet present;
+#'   [aedes_set_group()] for the dedicated `group`-only path;
+#'   [aedes_meta()] to query the same table.
 #' @export
+#' @examples
+#' \dontrun{
+#' options(aedes.initials = "GJ")
+#'
+#' # Update a handful of neurons: two columns, recycled across all ids.
+#' ids <- c("648518347569414567", "648518347399768369")
+#' aedes_set_meta(ids,
+#'                data.frame(cell_type = c("KCa'b'", "KCg"),
+#'                           status    = "adequate"))
+#'
+#' # Or pass a single data.frame that already carries `root_id`
+#' df <- data.frame(root_id   = ids,
+#'                  cell_type = c("KCa'b'", "KCg"),
+#'                  status    = "adequate",
+#'                  stringsAsFactors = FALSE)
+#' aedes_set_meta(df)                       # dry run (default)
+#' aedes_set_meta(df, dryrun = FALSE)       # commit
+#'
+#' # Query-string ids also work: update every ALPN with a note
+#' aedes_set_meta("class:ALPN",
+#'                data.frame(notes = "reviewed 2026-09"),
+#'                dryrun = FALSE)
+#' }
 aedes_set_meta <- function(ids = NULL, df = NULL, dryrun = TRUE,
                            update_roots = TRUE,
                            annotator = TRUE, proofreader = FALSE,

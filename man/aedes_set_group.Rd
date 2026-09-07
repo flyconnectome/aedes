@@ -55,10 +55,12 @@ A preview data.frame with one row per selected neuron: \code{root_id},
 live write.
 }
 \description{
-Assigns a shared \code{group} id to a set of neurons in the
-\code{aedes_main} FlyTable -- the convenient way to build serial / cell-type
-groups and, via \code{join_existing}, to add neurons to a group that already
-exists.
+Writes only the \code{group} column of the \code{aedes_main} FlyTable,
+assigning a shared \code{group} id to a set of neurons -- the convenient way
+to build serial / cell-type groups and, via \code{join_existing}, to add
+neurons to a group that already exists. For editing arbitrary metadata
+columns use \code{\link[=aedes_set_meta]{aedes_set_meta()}}; to add rows that are not yet present
+use \code{\link[=aedes_add_neurons]{aedes_add_neurons()}}.
 }
 \details{
 By convention a group is identified by an integer equal to the
@@ -73,6 +75,31 @@ group. Only the \code{group} column is written, via the shared update engine tha
 also backs \code{\link[=aedes_set_meta]{aedes_set_meta()}}; the same pinned table snapshot is reused so
 the returned preview matches what is written.
 }
+\examples{
+\dontrun{
+options(aedes.initials = "GJ")
+
+# Mint a fresh group from a set of ungrouped neurons: the resulting
+# `group` id is min(serial_id) of the members.
+ids <- c("648518347569414567", "648518347399768369")
+aedes_set_group(ids)                       # dry run: preview only
+aedes_set_group(ids, dryrun = FALSE)       # commit
+
+# Add another neuron to an existing group. When some selected neurons
+# are already grouped, join_existing is required (NA = refuse to guess).
+aedes_set_group(c(ids, "648518347123456789"),
+                join_existing = TRUE, dryrun = FALSE)
+
+# Join by example: use the group of a reference neuron
+aedes_set_group("648518347999999999",
+                group = "648518347569414567", dryrun = FALSE)
+
+# Ungroup: group=0 or group=NA
+aedes_set_group(ids, group = 0, dryrun = FALSE)
+}
+}
 \seealso{
-\code{\link[=aedes_set_meta]{aedes_set_meta()}}, \code{\link[=aedes_add_neurons]{aedes_add_neurons()}}
+\code{\link[=aedes_set_meta]{aedes_set_meta()}} for arbitrary metadata updates;
+\code{\link[=aedes_add_neurons]{aedes_add_neurons()}} to add rows that are not yet present;
+\code{\link[=aedes_meta]{aedes_meta()}} to query the same table.
 }

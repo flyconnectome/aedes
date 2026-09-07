@@ -48,9 +48,11 @@ a data.frame of the rows written (or, on a dry run, that would be
 written), keyed by FlyTable \verb{_id}.
 }
 \description{
-Updates rows that already exist in the \code{aedes_main} FlyTable from
-a data.frame of per-row metadata. Update-only: every \code{root_id} must already
-be present (use \code{\link[=aedes_add_neurons]{aedes_add_neurons()}} to create rows).
+Update-only bulk edit of arbitrary metadata columns on rows
+that are already present in the \code{aedes_main} FlyTable. Every \code{root_id}
+must already be present, otherwise nothing is written -- use
+\code{\link[=aedes_add_neurons]{aedes_add_neurons()}} to create rows, and \code{\link[=aedes_set_group]{aedes_set_group()}} when the
+only column you need to touch is \code{group}.
 }
 \details{
 Rows with status \code{bad_nucleus}, \code{duplicate} or \code{not_a_neuron} are
@@ -58,6 +60,32 @@ dropped before updating; any remaining \code{root_id} not found in \code{aedes_m
 is an error (nothing is written). Writes go through the shared update engine,
 which pins a single timestamp so join-by-\code{root_id} is reliable.
 }
+\examples{
+\dontrun{
+options(aedes.initials = "GJ")
+
+# Update a handful of neurons: two columns, recycled across all ids.
+ids <- c("648518347569414567", "648518347399768369")
+aedes_set_meta(ids,
+               data.frame(cell_type = c("KCa'b'", "KCg"),
+                          status    = "adequate"))
+
+# Or pass a single data.frame that already carries `root_id`
+df <- data.frame(root_id   = ids,
+                 cell_type = c("KCa'b'", "KCg"),
+                 status    = "adequate",
+                 stringsAsFactors = FALSE)
+aedes_set_meta(df)                       # dry run (default)
+aedes_set_meta(df, dryrun = FALSE)       # commit
+
+# Query-string ids also work: update every ALPN with a note
+aedes_set_meta("class:ALPN",
+               data.frame(notes = "reviewed 2026-09"),
+               dryrun = FALSE)
+}
+}
 \seealso{
-\code{\link[=aedes_add_neurons]{aedes_add_neurons()}}, \code{\link[=aedes_set_group]{aedes_set_group()}}
+\code{\link[=aedes_add_neurons]{aedes_add_neurons()}} to add rows that are not yet present;
+\code{\link[=aedes_set_group]{aedes_set_group()}} for the dedicated \code{group}-only path;
+\code{\link[=aedes_meta]{aedes_meta()}} to query the same table.
 }

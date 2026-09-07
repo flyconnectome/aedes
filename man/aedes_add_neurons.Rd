@@ -70,14 +70,18 @@ be updated) and/or \code{new} (rows that would be appended). With
 \code{point_xyz} values were chosen).
 }
 \description{
-Brings the supplied \code{ids} to the current segmentation timestamp,
-reads the \code{aedes_main} table fresh, and pins both sides to the same
-timestamp via \code{\link[=aedes_sequential_update]{aedes_sequential_update()}} so that join-by-\code{root_id} is
-reliable. Rows whose \code{root_id} is already present are updated with any
-extra columns supplied via \code{...}; rows that are absent are appended with a
-\code{point_xyz} computed by \code{\link[=aedes_key_point]{aedes_key_point()}}. \code{supervoxel_id} and
-\code{serial_id} are left blank -- a server-side process fills them in from
-\code{point_xyz}.
+Upserts rows in the \code{aedes_main} FlyTable: absent \code{root_id}s
+are appended, present ones are updated with any extra columns supplied
+via \code{...}. This is the entry point when you have a set of neurons that
+may or may not already be tracked; for pure metadata edits on rows that
+are already present use \code{\link[=aedes_set_meta]{aedes_set_meta()}}, and for group assignment use
+\code{\link[=aedes_set_group]{aedes_set_group()}}.
+
+Newly appended rows get an auto-computed \code{point_xyz} (via
+\code{\link[=aedes_key_point]{aedes_key_point()}}); \code{supervoxel_id} and \code{serial_id} are left blank and
+filled in server-side from \code{point_xyz}. The input \code{ids} and a fresh read
+of \code{aedes_main} are pinned to the same segmentation timestamp so that
+join-by-\code{root_id} is reliable.
 }
 \details{
 By default the function also auto-fills \code{soma_xyz}, \code{nucleus_id}
@@ -89,4 +93,34 @@ a warning naming the affected ids is issued.
 Auto-fill columns (\code{soma_xyz}, \code{nucleus_id}, \code{side}, \code{point_xyz}) never
 overwrite a non-NA value on an existing row. Values passed via \code{...}
 always win over the auto-fill and always overwrite on existing rows.
+}
+\examples{
+\dontrun{
+# Set your curator initials once per session (used for the annotator column
+# and the required `initials` column on new rows)
+options(aedes.initials = "GJ")
+
+# Dry run first: see the frames that would be written. Two new neurons,
+# both to be added as KC superclass. status is required; the shortlist
+# in the signature gives tab-completion.
+aedes_add_neurons(
+  c("648518347569414567", "648518347399768369"),
+  superclass = "KC", status = "adequate")
+
+# Commit for real
+aedes_add_neurons(
+  c("648518347569414567", "648518347399768369"),
+  dryrun = FALSE, superclass = "KC", status = "adequate")
+
+# Skip soma/side auto-fill (e.g. neurons with no soma in the volume)
+aedes_add_neurons("648518347569414567",
+                  superclass = "KC", status = "missing soma",
+                  soma = FALSE, side = FALSE)
+}
+}
+\seealso{
+\code{\link[=aedes_set_meta]{aedes_set_meta()}} for pure metadata updates on rows already
+present in \code{aedes_main}; \code{\link[=aedes_set_group]{aedes_set_group()}} for group assignment;
+\code{\link[=aedes_key_point]{aedes_key_point()}}, \code{\link[=aedes_soma_position]{aedes_soma_position()}}, \code{\link[=aedes_point_side]{aedes_point_side()}} for
+the auto-fill helpers.
 }

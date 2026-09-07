@@ -138,7 +138,7 @@ aedes_sequential_update <- function(df, version = NULL, timestamp = NULL) {
 #' reliable. The table read relies on [aedes_meta()]'s own `version`/`timestamp`
 #' mapping (which brings `root_id` forward via `supervoxel_id`); a single pinned
 #' `ts` is shared with the id resolution so both sides agree. Shared by
-#' [aedes_add_neurons()] and [.aedes_update_existing()].
+#' [aedes_add_neurons()] and `.aedes_update_existing()`.
 #'
 #' @param ids Root ids in any form understood by [fafbseg::flywire_ids()].
 #' @return A list with `ids` (latest root ids), `am` (the mapped table) and
@@ -169,7 +169,7 @@ aedes_sequential_update <- function(df, version = NULL, timestamp = NULL) {
 #'   without writing.
 #' @param on_dup What to do when a `root_id` appears more than once among the
 #'   matched rows: `"error"` (default) or `"first"` (keep the first occurrence).
-#' @param am,ts Optional pre-pinned table and version (see [.aedes_pin_meta()]).
+#' @param am,ts Optional pre-pinned table and version (see `.aedes_pin_meta()`).
 #'   When both are supplied `df$root_id` is assumed already at `ts` and is not
 #'   re-resolved (avoids a second table read).
 #' @return A list with `updf` (rows written / to write, keyed by `_id`) and
