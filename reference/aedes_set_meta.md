@@ -1,9 +1,11 @@
 # Bulk-update metadata for existing aedes neurons in FlyTable
 
-Updates rows that already exist in the `aedes_main` FlyTable from a
-data.frame of per-row metadata. Update-only: every `root_id` must
-already be present (use [`aedes_add_neurons()`](aedes_add_neurons.md) to
-create rows).
+Update-only bulk edit of arbitrary metadata columns on rows that are
+already present in the `aedes_main` FlyTable. Every `root_id` must
+already be present, otherwise nothing is written – use
+[`aedes_add_neurons()`](aedes_add_neurons.md) to create rows, and
+[`aedes_set_group()`](aedes_set_group.md) when the only column you need
+to touch is `group`.
 
 ## Usage
 
@@ -82,5 +84,34 @@ is reliable.
 
 ## See also
 
-[`aedes_add_neurons()`](aedes_add_neurons.md),
-[`aedes_set_group()`](aedes_set_group.md)
+[`aedes_add_neurons()`](aedes_add_neurons.md) to add rows that are not
+yet present; [`aedes_set_group()`](aedes_set_group.md) for the dedicated
+`group`-only path; [`aedes_meta()`](aedes_meta.md) to query the same
+table.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+options(aedes.initials = "GJ")
+
+# Update a handful of neurons: two columns, recycled across all ids.
+ids <- c("648518347569414567", "648518347399768369")
+aedes_set_meta(ids,
+               data.frame(cell_type = c("KCa'b'", "KCg"),
+                          status    = "adequate"))
+
+# Or pass a single data.frame that already carries `root_id`
+df <- data.frame(root_id   = ids,
+                 cell_type = c("KCa'b'", "KCg"),
+                 status    = "adequate",
+                 stringsAsFactors = FALSE)
+aedes_set_meta(df)                       # dry run (default)
+aedes_set_meta(df, dryrun = FALSE)       # commit
+
+# Query-string ids also work: update every ALPN with a note
+aedes_set_meta("class:ALPN",
+               data.frame(notes = "reviewed 2026-09"),
+               dryrun = FALSE)
+} # }
+```

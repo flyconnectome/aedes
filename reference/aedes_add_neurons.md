@@ -1,14 +1,17 @@
 # Add new neurons (and update existing ones) in the aedes_main flytable
 
-Brings the supplied `ids` to the current segmentation timestamp, reads
-the `aedes_main` table fresh, and pins both sides to the same timestamp
-via [`aedes_sequential_update()`](aedes_sequential_update.md) so that
-join-by-`root_id` is reliable. Rows whose `root_id` is already present
-are updated with any extra columns supplied via `...`; rows that are
-absent are appended with a `point_xyz` computed by
-[`aedes_key_point()`](aedes_key_point.md). `supervoxel_id` and
-`serial_id` are left blank – a server-side process fills them in from
-`point_xyz`.
+Upserts rows in the `aedes_main` FlyTable: absent `root_id`s are
+appended, present ones are updated with any extra columns supplied via
+`...`. This is the entry point when you have a set of neurons that may
+or may not already be tracked; for pure metadata edits on rows that are
+already present use [`aedes_set_meta()`](aedes_set_meta.md), and for
+group assignment use [`aedes_set_group()`](aedes_set_group.md).
+
+Newly appended rows get an auto-computed `point_xyz` (via
+[`aedes_key_point()`](aedes_key_point.md)); `supervoxel_id` and
+`serial_id` are left blank and filled in server-side from `point_xyz`.
+The input `ids` and a fresh read of `aedes_main` are pinned to the same
+segmentation timestamp so that join-by-`root_id` is reliable.
 
 ## Usage
 
@@ -116,3 +119,39 @@ warning naming the affected ids is issued.
 Auto-fill columns (`soma_xyz`, `nucleus_id`, `side`, `point_xyz`) never
 overwrite a non-NA value on an existing row. Values passed via `...`
 always win over the auto-fill and always overwrite on existing rows.
+
+## See also
+
+[`aedes_set_meta()`](aedes_set_meta.md) for pure metadata updates on
+rows already present in `aedes_main`;
+[`aedes_set_group()`](aedes_set_group.md) for group assignment;
+[`aedes_key_point()`](aedes_key_point.md),
+[`aedes_soma_position()`](aedes_soma_position.md),
+[`aedes_point_side()`](aedes_point_side.md) for the auto-fill helpers.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+# Set your curator initials once per session (used for the annotator column
+# and the required `initials` column on new rows)
+options(aedes.initials = "GJ")
+
+# Dry run first: see the frames that would be written. Two new neurons,
+# both to be added as KC superclass. status is required; the shortlist
+# in the signature gives tab-completion.
+aedes_add_neurons(
+  c("648518347569414567", "648518347399768369"),
+  superclass = "KC", status = "adequate")
+
+# Commit for real
+aedes_add_neurons(
+  c("648518347569414567", "648518347399768369"),
+  dryrun = FALSE, superclass = "KC", status = "adequate")
+
+# Skip soma/side auto-fill (e.g. neurons with no soma in the volume)
+aedes_add_neurons("648518347569414567",
+                  superclass = "KC", status = "missing soma",
+                  soma = FALSE, side = FALSE)
+} # }
+```

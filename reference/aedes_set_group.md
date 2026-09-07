@@ -1,8 +1,11 @@
 # Group aedes neurons together in FlyTable
 
-Assigns a shared `group` id to a set of neurons in the `aedes_main`
-FlyTable – the convenient way to build serial / cell-type groups and,
-via `join_existing`, to add neurons to a group that already exists.
+Writes only the `group` column of the `aedes_main` FlyTable, assigning a
+shared `group` id to a set of neurons – the convenient way to build
+serial / cell-type groups and, via `join_existing`, to add neurons to a
+group that already exists. For editing arbitrary metadata columns use
+[`aedes_set_meta()`](aedes_set_meta.md); to add rows that are not yet
+present use [`aedes_add_neurons()`](aedes_add_neurons.md).
 
 ## Usage
 
@@ -94,5 +97,32 @@ what is written.
 
 ## See also
 
-[`aedes_set_meta()`](aedes_set_meta.md),
-[`aedes_add_neurons()`](aedes_add_neurons.md)
+[`aedes_set_meta()`](aedes_set_meta.md) for arbitrary metadata updates;
+[`aedes_add_neurons()`](aedes_add_neurons.md) to add rows that are not
+yet present; [`aedes_meta()`](aedes_meta.md) to query the same table.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+options(aedes.initials = "GJ")
+
+# Mint a fresh group from a set of ungrouped neurons: the resulting
+# `group` id is min(serial_id) of the members.
+ids <- c("648518347569414567", "648518347399768369")
+aedes_set_group(ids)                       # dry run: preview only
+aedes_set_group(ids, dryrun = FALSE)       # commit
+
+# Add another neuron to an existing group. When some selected neurons
+# are already grouped, join_existing is required (NA = refuse to guess).
+aedes_set_group(c(ids, "648518347123456789"),
+                join_existing = TRUE, dryrun = FALSE)
+
+# Join by example: use the group of a reference neuron
+aedes_set_group("648518347999999999",
+                group = "648518347569414567", dryrun = FALSE)
+
+# Ungroup: group=0 or group=NA
+aedes_set_group(ids, group = 0, dryrun = FALSE)
+} # }
+```
