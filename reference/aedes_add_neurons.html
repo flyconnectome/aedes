@@ -89,7 +89,9 @@ join-by-<code>root_id</code> is reliable.</p>
 
 
 <dl><dt id="arg-ids">ids<a class="anchor" aria-label="anchor" href="#arg-ids"></a></dt>
-<dd><p>Root ids of neurons to add or update.</p></dd>
+<dd><p>Root ids of neurons to add or update. Must be valid (non-<code>0</code>,
+non-<code>NA</code>) flywire ids; they are brought to the current root id before
+matching.</p></dd>
 
 
 <dt id="arg-dryrun">dryrun<a class="anchor" aria-label="anchor" href="#arg-dryrun"></a></dt>
@@ -171,6 +173,15 @@ a warning naming the affected ids is issued.</p>
 <p>Auto-fill columns (<code>soma_xyz</code>, <code>nucleus_id</code>, <code>side</code>, <code>point_xyz</code>) never
 overwrite a non-NA value on an existing row. Values passed via <code>...</code>
 always win over the auto-fill and always overwrite on existing rows.</p>
+<p><code>ids</code> are efficiently mapped to the latest segmentation state (with
+<code><a href="https://rdrr.io/pkg/fafbseg/man/flywire_latestid.html" class="external-link">fafbseg::flywire_latestid()</a></code>) before use, so distinct inputs (e.g.
+historical versions of one proofread neuron) can collapse onto the same
+root id. Such duplicates are dropped with a warning when every annotation
+column supplied via <code>...</code> is a single value recycled across all rows.
+However, if any <code>...</code> column carries multiple values (a vector longer than
+one) the collision is an error, since it may not be clear which value to
+keep – supply duplicate-free <code>ids</code>, or one value per column. Note that
+invalid ids (<code>0</code>, <code>NA</code> or malformed) are rejected up front.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

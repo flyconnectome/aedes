@@ -35,7 +35,9 @@ aedes_add_neurons(
 
 - ids:
 
-  Root ids of neurons to add or update.
+  Root ids of neurons to add or update. Must be valid (non-`0`,
+  non-`NA`) flywire ids; they are brought to the current root id before
+  matching.
 
 - dryrun:
 
@@ -119,6 +121,17 @@ warning naming the affected ids is issued.
 Auto-fill columns (`soma_xyz`, `nucleus_id`, `side`, `point_xyz`) never
 overwrite a non-NA value on an existing row. Values passed via `...`
 always win over the auto-fill and always overwrite on existing rows.
+
+`ids` are efficiently mapped to the latest segmentation state (with
+[`fafbseg::flywire_latestid()`](https://rdrr.io/pkg/fafbseg/man/flywire_latestid.html))
+before use, so distinct inputs (e.g. historical versions of one
+proofread neuron) can collapse onto the same root id. Such duplicates
+are dropped with a warning when every annotation column supplied via
+`...` is a single value recycled across all rows. However, if any `...`
+column carries multiple values (a vector longer than one) the collision
+is an error, since it may not be clear which value to keep – supply
+duplicate-free `ids`, or one value per column. Note that invalid ids
+(`0`, `NA` or malformed) are rejected up front.
 
 ## See also
 
