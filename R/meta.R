@@ -191,9 +191,8 @@ aedes_set_meta <- function(ids = NULL, df = NULL, dryrun = TRUE,
   pin <- .aedes_pin_meta(df$root_id)
   am <- pin$am
   ts <- pin$ts
-  if (update_roots)
-    df$root_id <- with_aedes(
-      fafbseg::flywire_latestid(df$root_id, timestamp = ts$timestamp))
+  # `pin$ids` is already `df$root_id` brought to the pinned timestamp, 1:1.
+  if (update_roots) df$root_id <- pin$ids
 
   # Status hygiene: never edit these rows via this path.
   status <- am$status[match(df$root_id, as.character(am$root_id))]

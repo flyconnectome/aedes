@@ -141,14 +141,18 @@ aedes_sequential_update <- function(df, version = NULL, timestamp = NULL) {
 #' [aedes_add_neurons()] and `.aedes_update_existing()`.
 #'
 #' @param ids Root ids in any form understood by [fafbseg::flywire_ids()].
-#' @return A list with `ids` (latest root ids), `am` (the mapped table) and
-#'   `ts` (the pinned version/timestamp from [aedes_get_version()]).
+#' @return A list with `ids` (latest root ids, 1:1 with and in the same order
+#'   as the input -- not deduplicated, so distinct inputs that resolve to one
+#'   neuron appear more than once), `am` (the mapped table) and `ts` (the pinned
+#'   version/timestamp from [aedes_get_version()]).
 #' @noRd
 .aedes_pin_meta <- function(ids) {
-  fids <- setdiff(fafbseg::flywire_ids(ids, unique = TRUE), 0)
   ts <- aedes_get_version(timestamp = "now")
-  lids <- with_aedes(fafbseg::flywire_latestid(fids, timestamp = ts$timestamp))
-  am <- aedes_meta(version = ts$version, timestamp = ts$timestamp, expiry = 0)
+  # Resolve 1:1 with the input (order- and length-preserving) so callers can
+  # keep `ids` paired with any per-row metadata; deduplication is the caller's
+  # concern, applied on the assembled frame.
+  lids <- with_aedes(fafbseg::flywire_latestid(ids, timestamp = ts$timestamp))
+  am <- aedes_meta(timestamp = ts$timestamp, expiry = 0)
   list(ids = lids, am = am, ts = ts)
 }
 
@@ -167,17 +171,13 @@ aedes_sequential_update <- function(df, version = NULL, timestamp = NULL) {
 #' @param df A data.frame with a `root_id` column plus the columns to write.
 #' @param dryrun If `TRUE` (default) assemble and return the update frame
 #'   without writing.
-#' @param on_dup What to do when a `root_id` appears more than once among the
-#'   matched rows: `"error"` (default) or `"first"` (keep the first occurrence).
 #' @param am,ts Optional pre-pinned table and version (see `.aedes_pin_meta()`).
 #'   When both are supplied `df$root_id` is assumed already at `ts` and is not
 #'   re-resolved (avoids a second table read).
 #' @return A list with `updf` (rows written / to write, keyed by `_id`) and
 #'   `missing` (root_ids not found in the table).
 #' @noRd
-.aedes_update_existing <- function(df, dryrun = TRUE, on_dup = c("error", "first"),
-                                   am = NULL, ts = NULL) {
-  on_dup <- match.arg(on_dup)
+.aedes_update_existing <- function(df, dryrun = TRUE, am = NULL, ts = NULL) {
   if (!is.data.frame(df) || !"root_id" %in% names(df))
     stop("`df` must be a data.frame with a `root_id` column.", call. = FALSE)
   if (is.null(am) || is.null(ts)) {
@@ -194,16 +194,11 @@ aedes_sequential_update <- function(df, version = NULL, timestamp = NULL) {
   df_found <- df[found, , drop = FALSE]
   idx <- idx[found]
   dups <- unique(df_found$root_id[duplicated(df_found$root_id)])
-  if (length(dups)) {
-    if (on_dup == "error")
-      stop("Duplicated root_id(s) in the update set: ",
-           paste(utils::head(dups, 5L), collapse = ", "),
-           if (length(dups) > 5L) sprintf(" (+%d more)", length(dups) - 5L),
-           call. = FALSE)
-    keep <- !duplicated(df_found$root_id)
-    df_found <- df_found[keep, , drop = FALSE]
-    idx <- idx[keep]
-  }
+  if (length(dups))
+    stop("Duplicated root_id(s) in the update set: ",
+         paste(utils::head(dups, 5L), collapse = ", "),
+         if (length(dups) > 5L) sprintf(" (+%d more)", length(dups) - 5L),
+         call. = FALSE)
 
   updf <- df_found
   updf[["_id"]] <- am[["_id"]][idx]

@@ -86,7 +86,7 @@ aedes_set_group <- function(ids, group = NULL, join_existing = NA,
   pin <- .aedes_pin_meta(aedes_ids(ids))
   am <- pin$am
   ts <- pin$ts
-  rids <- pin$ids
+  rids <- unique(pin$ids)
   if (!length(rids)) stop("No valid ids.", call. = FALSE)
 
   idx <- match(rids, as.character(am$root_id))
