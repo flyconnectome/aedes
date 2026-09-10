@@ -148,7 +148,7 @@ aedes_sequential_update <- function(df, version = NULL, timestamp = NULL) {
   fids <- setdiff(fafbseg::flywire_ids(ids, unique = TRUE), 0)
   ts <- aedes_get_version(timestamp = "now")
   lids <- with_aedes(fafbseg::flywire_latestid(fids, timestamp = ts$timestamp))
-  am <- aedes_meta(version = ts$version, timestamp = ts$timestamp, expiry = 0)
+  am <- aedes_meta(timestamp = ts$timestamp, expiry = 0)
   list(ids = lids, am = am, ts = ts)
 }
 
