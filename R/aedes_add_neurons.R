@@ -23,7 +23,19 @@
 #'   overwrite a non-NA value on an existing row. Values passed via `...`
 #'   always win over the auto-fill and always overwrite on existing rows.
 #'
-#' @param ids Root ids of neurons to add or update.
+#'   `ids` are efficiently mapped to the latest segmentation state (with
+#'   [fafbseg::flywire_latestid()]) before use, so distinct inputs (e.g.
+#'   historical versions of one proofread neuron) can collapse onto the same
+#'   root id. Such duplicates are dropped with a warning when every annotation
+#'   column supplied via `...` is a single value recycled across all rows.
+#'   However, if any `...` column carries multiple values (a vector longer than
+#'   one) the collision is an error, since it may not be clear which value to
+#'   keep -- supply duplicate-free `ids`, or one value per column. Note that
+#'   invalid ids (`0`, `NA` or malformed) are rejected up front.
+#'
+#' @param ids Root ids of neurons to add or update. Must be valid (non-`0`,
+#'   non-`NA`) flywire ids; they are brought to the current root id before
+#'   matching.
 #' @param dryrun If `TRUE` (the default) no writes are performed; the function
 #'   returns the data frames that would have been used.
 #' @param ... Additional columns to set on each row (e.g. `cell_class = "KC"`).
@@ -98,6 +110,13 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
                               annotator = TRUE, proofreader = FALSE,
                               wipe = FALSE) {
   .aedes_reject_dry_run(...)
+  ids <- as.character(ids)
+  bad <- is.na(ids) | !grepl("^[1-9][0-9]*$", ids)
+  if (any(bad))
+    stop(sum(bad), " invalid id(s) (0, NA or malformed): ",
+         paste(utils::head(ids[bad], 5L), collapse = ", "),
+         if (sum(bad) > 5L) sprintf(" (+%d more)", sum(bad) - 5L), ".",
+         call. = FALSE)
   extra <- list(...)
   ann_toks <- .aedes_resolve_initials(annotator,  "annotator")
   prf_toks <- .aedes_resolve_initials(proofreader, "proofreader")
@@ -155,6 +174,26 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
   # Base input frame with caller-supplied columns.
   indf <- data.frame(root_id = ids, stringsAsFactors = FALSE)
   for (nm in names(extra)) indf[[nm]] <- extra[[nm]]
+
+  # Distinct input ids can resolve to one neuron after pinning to a common
+  # timestamp. Dropping duplicates is only safe when every supplied column is a
+  # single value recycled across all rows; if any column carries per-id values
+  # we cannot know which to keep, so refuse. `ids` stays 1:1 with `indf` here
+  # (pin resolves order- and length-preserving), so `keep` subsets both.
+  if (anyDuplicated(ids)) {
+    vec_cols <- names(extra)[lengths(extra) > 1L]
+    if (length(vec_cols))
+      stop("Distinct input ids resolved to the same neuron while per-id ",
+           "values were supplied for column(s): ",
+           paste(vec_cols, collapse = ", "),
+           ". Supply duplicate-free ids, or one value per column.", call. = FALSE)
+    keep <- !duplicated(ids)
+    warning(sum(!keep), " duplicate id(s) dropped (distinct inputs resolving ",
+            "to one neuron); ", sum(keep), " unique neuron(s) remain.",
+            call. = FALSE)
+    ids  <- ids[keep]
+    indf <- indf[keep, , drop = FALSE]
+  }
 
   # Split existing vs missing (order-preserving via match).
   iidx  <- match(ids, am$root_id)

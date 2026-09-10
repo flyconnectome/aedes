@@ -19,7 +19,9 @@ aedes_add_neurons(
 )
 }
 \arguments{
-\item{ids}{Root ids of neurons to add or update.}
+\item{ids}{Root ids of neurons to add or update. Must be valid (non-\code{0},
+non-\code{NA}) flywire ids; they are brought to the current root id before
+matching.}
 
 \item{dryrun}{If \code{TRUE} (the default) no writes are performed; the function
 returns the data frames that would have been used.}
@@ -93,6 +95,16 @@ a warning naming the affected ids is issued.
 Auto-fill columns (\code{soma_xyz}, \code{nucleus_id}, \code{side}, \code{point_xyz}) never
 overwrite a non-NA value on an existing row. Values passed via \code{...}
 always win over the auto-fill and always overwrite on existing rows.
+
+\code{ids} are efficiently mapped to the latest segmentation state (with
+\code{\link[fafbseg:flywire_latestid]{fafbseg::flywire_latestid()}}) before use, so distinct inputs (e.g.
+historical versions of one proofread neuron) can collapse onto the same
+root id. Such duplicates are dropped with a warning when every annotation
+column supplied via \code{...} is a single value recycled across all rows.
+However, if any \code{...} column carries multiple values (a vector longer than
+one) the collision is an error, since it may not be clear which value to
+keep -- supply duplicate-free \code{ids}, or one value per column. Note that
+invalid ids (\code{0}, \code{NA} or malformed) are rejected up front.
 }
 \examples{
 \dontrun{
