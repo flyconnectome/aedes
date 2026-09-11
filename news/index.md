@@ -1,14 +1,15 @@
 # Changelog
 
-## aedes v0.3
+## aedes 0.4
 
 - [`aedes_meta()`](../reference/aedes_meta.md) and
   [`aedes_ids()`](../reference/aedes_meta.md) gain explicit `expiry` and
   `refresh` arguments (defaulting to `expiry = 0`, `refresh = FALSE`) so
   callers see the latest FlyTable metadata by default. Requires
-  `fafbseg (>= 0.15.16)`, whose
+  `fafbseg (>= 0.15.17)`, whose
   [`cam_meta()`](https://rdrr.io/pkg/fafbseg/man/cam_meta.html)/[`flytable_cached_table()`](https://rdrr.io/pkg/fafbseg/man/flytable_cached_table.html)
   now also default to `expiry = 0`.
+  ([\#16](https://github.com/flyconnectome/aedes/issues/16))
 - [`aedes_add_neurons()`](../reference/aedes_add_neurons.md) accepts a
   data.frame `ids` carrying a `root_id` column plus per-row metadata
   columns (one value per id, as opposed to the recycled scalars of
@@ -17,6 +18,10 @@
   `nucleus_id`, `side`, `point_xyz`) simply overrides the auto-fill, and
   the soma/side service calls are skipped when the data.frame already
   supplies those columns.
+  ([\#17](https://github.com/flyconnectome/aedes/issues/17))
+
+## aedes v0.3
+
 - New [`aedes_add_neurons()`](../reference/aedes_add_neurons.md) for
   upserting rows in the FlyTable `aedes_main` table. Pins a single
   materialisation timestamp on both the supplied ids and a fresh
