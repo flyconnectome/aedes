@@ -19,9 +19,10 @@ aedes_add_neurons(
 )
 }
 \arguments{
-\item{ids}{Root ids of neurons to add or update. Must be valid (non-\code{0},
-non-\code{NA}) flywire ids; they are brought to the current root id before
-matching.}
+\item{ids}{Root ids of neurons to add or update, or a data.frame carrying a
+\code{root_id} column plus any per-row metadata columns (see Details). Ids must
+be valid (non-\code{0}, non-\code{NA}) flywire ids; they are brought to the current
+root id before matching.}
 
 \item{dryrun}{If \code{TRUE} (the default) no writes are performed; the function
 returns the data frames that would have been used.}
@@ -74,7 +75,8 @@ be updated) and/or \code{new} (rows that would be appended). With
 \description{
 Upserts rows in the \code{aedes_main} FlyTable: absent \code{root_id}s
 are appended, present ones are updated with any extra columns supplied
-via \code{...}. This is the entry point when you have a set of neurons that
+via \code{...} or as columns of a data.frame \code{ids}. This is the entry point
+when you have a set of neurons that
 may or may not already be tracked; for pure metadata edits on rows that
 are already present use \code{\link[=aedes_set_meta]{aedes_set_meta()}}, and for group assignment use
 \code{\link[=aedes_set_group]{aedes_set_group()}}.
@@ -95,6 +97,14 @@ a warning naming the affected ids is issued.
 Auto-fill columns (\code{soma_xyz}, \code{nucleus_id}, \code{side}, \code{point_xyz}) never
 overwrite a non-NA value on an existing row. Values passed via \code{...}
 always win over the auto-fill and always overwrite on existing rows.
+
+\code{ids} may instead be a data.frame with a \code{root_id} column; its other
+columns are folded in as per-row metadata, exactly as if passed via \code{...}
+but with one value per id rather than a single recycled value. A column
+supplied in both the data.frame and \code{...} is an error. A data.frame column
+that names an auto-fill column (\code{soma_xyz}, \code{nucleus_id}, \code{side},
+\code{point_xyz}) simply overrides the auto-fill for that column, the same way
+a \code{...} value would.
 
 \code{ids} are efficiently mapped to the latest segmentation state (with
 \code{\link[fafbseg:flywire_latestid]{fafbseg::flywire_latestid()}}) before use, so distinct inputs (e.g.
@@ -128,6 +138,15 @@ aedes_add_neurons(
 aedes_add_neurons("648518347569414567",
                   superclass = "KC", status = "missing soma",
                   soma = FALSE, side = FALSE)
+
+# Per-row metadata via a data.frame: one `class`/`cell_type` per id.
+df <- data.frame(
+  root_id   = c("648518347569414567", "648518347399768369"),
+  class     = "KC",
+  cell_type = c("KCa'b'", "KCg"),
+  status    = "adequate",
+  stringsAsFactors = FALSE)
+aedes_add_neurons(df)
 }
 }
 \seealso{
