@@ -1,5 +1,9 @@
 # aedes v0.3
 
+* `aedes_meta()` and `aedes_ids()` gain explicit `expiry` and `refresh`
+  arguments (defaulting to `expiry = 0`, `refresh = FALSE`) so callers see the
+  latest FlyTable metadata by default. Requires `fafbseg (>= 0.15.16)`, whose
+  `cam_meta()`/`flytable_cached_table()` now also default to `expiry = 0`.
 * `aedes_add_neurons()` accepts a data.frame `ids` carrying a `root_id`
   column plus per-row metadata columns (one value per id, as opposed to the
   recycled scalars of `...`). A column supplied both in the data.frame and

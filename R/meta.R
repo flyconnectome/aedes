@@ -11,8 +11,13 @@
 #' @param translate_ids Whether to bring explicitly supplied `ids` forward to
 #'   the requested `version`/`timestamp` before matching (see Details).
 #'   `NA` (the default) decides automatically.
-#' @param ... Additional arguments passed to [fafbseg::cam_meta()] (e.g.
-#'   cache controls such as `expiry`, `refresh`).
+#' @param expiry Cache expiry in seconds passed to [fafbseg::cam_meta()].
+#'   Defaults to `0`, always checking for updates so you see the latest
+#'   metadata; set a positive value to trust the cache within that window, or
+#'   `Inf` to use the on-disk cache without checking.
+#' @param refresh Logical passed to [fafbseg::cam_meta()]; if `TRUE` force a
+#'   complete re-download of the table, ignoring any cache.
+#' @param ... Additional arguments passed to [fafbseg::cam_meta()].
 #' @return For `aedes_meta()`, a data.frame of metadata. For `aedes_ids()`, a
 #'   vector of root IDs.
 #'
@@ -44,7 +49,8 @@
 #' aedes_ids("class:ALPN", version='latest')
 #' }
 aedes_meta <- function(ids = NULL, ignore.case = FALSE, fixed = FALSE, version = NULL,
-                       timestamp = NULL, unique = FALSE, translate_ids = NA, ...) {
+                       timestamp = NULL, unique = FALSE, translate_ids = NA,
+                       expiry = 0, refresh = FALSE, ...) {
   with_aedes(fafbseg::cam_meta(
     ids = ids,
     ignore.case = ignore.case,
@@ -54,6 +60,8 @@ aedes_meta <- function(ids = NULL, ignore.case = FALSE, fixed = FALSE, version =
     timestamp = timestamp,
     unique = unique,
     translate_ids = translate_ids,
+    expiry = expiry,
+    refresh = refresh,
     ...
   ))
 }
@@ -99,10 +107,12 @@ aedes_get_version <- function(which = getOption("aedes.version", default = "late
 #' @rdname aedes_meta
 #' @export
 aedes_ids <- function(ids, ignore.case = FALSE, fixed = FALSE, unique = FALSE,
-                      version = NULL, timestamp = NULL, ...) {
+                      version = NULL, timestamp = NULL,
+                      expiry = 0, refresh = FALSE, ...) {
   vi = aedes_get_version(timestamp = timestamp, version = version)
   am = aedes_meta(ids, ignore.case = ignore.case, fixed = fixed, unique = unique,
-                  version = vi$version, timestamp = vi$timestamp, ...)
+                  version = vi$version, timestamp = vi$timestamp,
+                  expiry = expiry, refresh = refresh, ...)
   am$root_id
 }
 

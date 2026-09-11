@@ -13,6 +13,8 @@ aedes_meta(
   timestamp = NULL,
   unique = FALSE,
   translate_ids = NA,
+  expiry = 0,
+  refresh = FALSE,
   ...
 )
 
@@ -23,6 +25,8 @@ aedes_ids(
   unique = FALSE,
   version = NULL,
   timestamp = NULL,
+  expiry = 0,
+  refresh = FALSE,
   ...
 )
 }
@@ -45,8 +49,15 @@ attached as an attribute).}
 the requested \code{version}/\code{timestamp} before matching (see Details).
 \code{NA} (the default) decides automatically.}
 
-\item{...}{Additional arguments passed to \code{\link[fafbseg:cam_meta]{fafbseg::cam_meta()}} (e.g.
-cache controls such as \code{expiry}, \code{refresh}).}
+\item{expiry}{Cache expiry in seconds passed to \code{\link[fafbseg:cam_meta]{fafbseg::cam_meta()}}.
+Defaults to \code{0}, always checking for updates so you see the latest
+metadata; set a positive value to trust the cache within that window, or
+\code{Inf} to use the on-disk cache without checking.}
+
+\item{refresh}{Logical passed to \code{\link[fafbseg:cam_meta]{fafbseg::cam_meta()}}; if \code{TRUE} force a
+complete re-download of the table, ignoring any cache.}
+
+\item{...}{Additional arguments passed to \code{\link[fafbseg:cam_meta]{fafbseg::cam_meta()}}.}
 }
 \value{
 For \code{aedes_meta()}, a data.frame of metadata. For \code{aedes_ids()}, a
