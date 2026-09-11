@@ -2,7 +2,8 @@
 #'
 #' @description Upserts rows in the `aedes_main` FlyTable: absent `root_id`s
 #'   are appended, present ones are updated with any extra columns supplied
-#'   via `...`. This is the entry point when you have a set of neurons that
+#'   via `...` or as columns of a data.frame `ids`. This is the entry point
+#'   when you have a set of neurons that
 #'   may or may not already be tracked; for pure metadata edits on rows that
 #'   are already present use [aedes_set_meta()], and for group assignment use
 #'   [aedes_set_group()].
@@ -23,6 +24,14 @@
 #'   overwrite a non-NA value on an existing row. Values passed via `...`
 #'   always win over the auto-fill and always overwrite on existing rows.
 #'
+#'   `ids` may instead be a data.frame with a `root_id` column; its other
+#'   columns are folded in as per-row metadata, exactly as if passed via `...`
+#'   but with one value per id rather than a single recycled value. A column
+#'   supplied in both the data.frame and `...` is an error. A data.frame column
+#'   that names an auto-fill column (`soma_xyz`, `nucleus_id`, `side`,
+#'   `point_xyz`) simply overrides the auto-fill for that column, the same way
+#'   a `...` value would.
+#'
 #'   `ids` are efficiently mapped to the latest segmentation state (with
 #'   [fafbseg::flywire_latestid()]) before use, so distinct inputs (e.g.
 #'   historical versions of one proofread neuron) can collapse onto the same
@@ -33,9 +42,10 @@
 #'   keep -- supply duplicate-free `ids`, or one value per column. Note that
 #'   invalid ids (`0`, `NA` or malformed) are rejected up front.
 #'
-#' @param ids Root ids of neurons to add or update. Must be valid (non-`0`,
-#'   non-`NA`) flywire ids; they are brought to the current root id before
-#'   matching.
+#' @param ids Root ids of neurons to add or update, or a data.frame carrying a
+#'   `root_id` column plus any per-row metadata columns (see Details). Ids must
+#'   be valid (non-`0`, non-`NA`) flywire ids; they are brought to the current
+#'   root id before matching.
 #' @param dryrun If `TRUE` (the default) no writes are performed; the function
 #'   returns the data frames that would have been used.
 #' @param ... Additional columns to set on each row (e.g. `cell_class = "KC"`).
@@ -99,6 +109,15 @@
 #' aedes_add_neurons("648518347569414567",
 #'                   superclass = "KC", status = "missing soma",
 #'                   soma = FALSE, side = FALSE)
+#'
+#' # Per-row metadata via a data.frame: one `class`/`cell_type` per id.
+#' df <- data.frame(
+#'   root_id   = c("648518347569414567", "648518347399768369"),
+#'   class     = "KC",
+#'   cell_type = c("KCa'b'", "KCg"),
+#'   status    = "adequate",
+#'   stringsAsFactors = FALSE)
+#' aedes_add_neurons(df)
 #' }
 aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
                               soma = TRUE, side = TRUE,
@@ -110,6 +129,25 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
                               annotator = TRUE, proofreader = FALSE,
                               wipe = FALSE) {
   .aedes_reject_dry_run(...)
+  extra <- list(...)
+
+  # A data.frame `ids` carries `root_id` plus any per-row metadata columns.
+  # Fold those extra columns into `extra` (the same slot `...` uses) so they
+  # participate in the required-checks, status validation and auto-fill in
+  # exactly the same way -- just one value per id rather than a recycled
+  # scalar. A column supplied in both the data.frame and `...` is ambiguous.
+  if (is.data.frame(ids)) {
+    if (!"root_id" %in% names(ids))
+      stop("A data.frame `ids` must contain a `root_id` column.", call. = FALSE)
+    dfcols <- setdiff(names(ids), "root_id")
+    clash <- intersect(dfcols, names(extra))
+    if (length(clash))
+      stop("Column(s) supplied via both the data.frame and `...`: ",
+           paste(clash, collapse = ", "), ".", call. = FALSE)
+    for (nm in dfcols) extra[[nm]] <- ids[[nm]]
+    ids <- ids$root_id
+  }
+
   ids <- as.character(ids)
   bad <- is.na(ids) | !grepl("^[1-9][0-9]*$", ids)
   if (any(bad))
@@ -117,7 +155,6 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
          paste(utils::head(ids[bad], 5L), collapse = ", "),
          if (sum(bad) > 5L) sprintf(" (+%d more)", sum(bad) - 5L), ".",
          call. = FALSE)
-  extra <- list(...)
   ann_toks <- .aedes_resolve_initials(annotator,  "annotator")
   prf_toks <- .aedes_resolve_initials(proofreader, "proofreader")
 
@@ -125,6 +162,9 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
   status_shortlist <- eval(formals(aedes_add_neurons)$status)
   if (length(status) > 1L) status <- NULL
   if (!is.null(status)) {
+    if ("status" %in% names(extra))
+      stop("`status` supplied both as an argument and as a data.frame column.",
+           call. = FALSE)
     if (!is.character(status) || length(status) != 1L || is.na(status))
       stop("`status` must be a single non-NA string.", call. = FALSE)
     extra[["status"]] <- status
@@ -201,21 +241,31 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
   iidf  <- am[iidx[is_upd], , drop = FALSE]
 
   # ---- Soma / side enrichment (computed for all ids up-front) ------------
+  # Columns the caller supplied (via `...` or the data.frame) suppress the
+  # matching auto-fill and win outright, so skip the service calls that would
+  # only feed a suppressed column.
+  has_soma_xyz  <- "soma_xyz"   %in% names(extra)
+  has_nucleus   <- "nucleus_id" %in% names(extra)
+  has_side      <- "side"       %in% names(extra)
+  has_point_xyz <- "point_xyz"  %in% names(extra)
+  do_soma <- soma && !(has_soma_xyz && has_nucleus)
+  do_side <- side && !has_side
+
   auto_soma_raw <- rep(NA_character_, length(ids))
   auto_nucleus  <- rep(NA_integer_,   length(ids))
   auto_side_vec <- rep(NA_character_, length(ids))
-  if (soma || side) {
+  if (do_soma || do_side) {
     sp_nm <- aedes_soma_position(ids, units = "nm",
                                  version = ts$version, timestamp = ts$timestamp)
     ok <- !is.na(sp_nm$position) & nzchar(sp_nm$position)
-    if (soma) {
+    if (do_soma) {
       if (any(ok)) {
         xyz_nm  <- nat::xyzmatrix(sp_nm$position[ok])
         auto_soma_raw[ok] <- nat::xyzmatrix2str(aedes_nm2raw(xyz_nm))
       }
       auto_nucleus <- as.integer(sp_nm$nucleus_id)
     }
-    if (side && any(ok)) {
+    if (do_side && any(ok)) {
       xyz_nm <- nat::xyzmatrix(sp_nm$position[ok])
       auto_side_vec[ok] <- aedes_point_side(xyz_nm, units = "nm")
     }
@@ -227,12 +277,14 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
   # yielded no position so side must fall back to the L2 key point.
   is_str_empty <- function(x) is.na(x) | !nzchar(as.character(x))
   needs_kp <- rep(FALSE, length(ids))
-  needs_kp[!is_upd] <- TRUE
-  if (any(is_upd)) {
-    upd_pt_empty <- is_str_empty(iidf$point_xyz)
-    needs_kp[which(is_upd)[upd_pt_empty]] <- TRUE
+  if (!has_point_xyz) {
+    needs_kp[!is_upd] <- TRUE
+    if (any(is_upd)) {
+      upd_pt_empty <- is_str_empty(iidf$point_xyz)
+      needs_kp[which(is_upd)[upd_pt_empty]] <- TRUE
+    }
   }
-  if (side) needs_kp[is.na(auto_side_vec)] <- TRUE
+  if (do_side) needs_kp[is.na(auto_side_vec)] <- TRUE
 
   key_pts_raw <- rep(NA_character_, length(ids))
   key_pts_nm  <- matrix(NA_real_, nrow = length(ids), ncol = 3)
@@ -243,7 +295,7 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
   }
 
   # side fallback: rows still NA on side but with a computed key point.
-  if (side) {
+  if (do_side) {
     fb <- is.na(auto_side_vec) & !is.na(key_pts_raw)
     if (any(fb)) {
       auto_side_vec[fb] <- aedes_point_side(
@@ -260,19 +312,19 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
 
   # ---- Attach auto values (caller's `...` wins) ---------------------------
   auto_cols <- character(0)
-  if (soma && !"soma_xyz"   %in% names(extra)) {
+  if (soma && !has_soma_xyz) {
     indf$soma_xyz   <- auto_soma_raw
     auto_cols <- c(auto_cols, "soma_xyz")
   }
-  if (soma && !"nucleus_id" %in% names(extra)) {
+  if (soma && !has_nucleus) {
     indf$nucleus_id <- auto_nucleus
     auto_cols <- c(auto_cols, "nucleus_id")
   }
-  if (side && !"side" %in% names(extra)) {
+  if (side && !has_side) {
     indf$side <- auto_side_vec
     auto_cols <- c(auto_cols, "side")
   }
-  if (!"point_xyz" %in% names(extra)) {
+  if (!has_point_xyz) {
     indf$point_xyz <- key_pts_raw
     auto_cols <- c(auto_cols, "point_xyz")
   }
