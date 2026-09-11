@@ -7,6 +7,35 @@ test_that("aedes_add_neurons rejects invalid ids", {
 })
 
 
+test_that("aedes_add_neurons validates a data.frame `ids` up front", {
+  # All of these fail before any service call, so they need no live data.
+
+  # A data.frame must carry a root_id column.
+  expect_error(
+    aedes_add_neurons(data.frame(superclass = "KC", status = "adequate")),
+    "root_id")
+
+  # Invalid root_id values are caught by the same id check as the vector path.
+  expect_error(
+    aedes_add_neurons(data.frame(root_id = c("648518347399768369", "0"))),
+    "invalid id")
+
+  # A column supplied via both the data.frame and `...` is ambiguous.
+  expect_error(
+    aedes_add_neurons(
+      data.frame(root_id = "648518347399768369", superclass = "KC"),
+      superclass = "PN"),
+    "both the data.frame")
+
+  # `status` from the data.frame and as an argument at once is an error.
+  expect_error(
+    aedes_add_neurons(
+      data.frame(root_id = "648518347399768369", status = "adequate"),
+      status = "to_review", annotator = FALSE),
+    "both as an argument and as a data.frame column")
+})
+
+
 test_that("aedes_add_neurons collapses ids that resolve to one neuron", {
   # Stable handle: a supervoxel resolved to its current root at test time.
   # Passing that root twice exercises the duplicate-resolution policy without
