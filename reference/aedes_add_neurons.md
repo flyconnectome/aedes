@@ -2,10 +2,11 @@
 
 Upserts rows in the `aedes_main` FlyTable: absent `root_id`s are
 appended, present ones are updated with any extra columns supplied via
-`...`. This is the entry point when you have a set of neurons that may
-or may not already be tracked; for pure metadata edits on rows that are
-already present use [`aedes_set_meta()`](aedes_set_meta.md), and for
-group assignment use [`aedes_set_group()`](aedes_set_group.md).
+`...` or as columns of a data.frame `ids`. This is the entry point when
+you have a set of neurons that may or may not already be tracked; for
+pure metadata edits on rows that are already present use
+[`aedes_set_meta()`](aedes_set_meta.md), and for group assignment use
+[`aedes_set_group()`](aedes_set_group.md).
 
 Newly appended rows get an auto-computed `point_xyz` (via
 [`aedes_key_point()`](aedes_key_point.md)); `supervoxel_id` and
@@ -35,9 +36,10 @@ aedes_add_neurons(
 
 - ids:
 
-  Root ids of neurons to add or update. Must be valid (non-`0`,
-  non-`NA`) flywire ids; they are brought to the current root id before
-  matching.
+  Root ids of neurons to add or update, or a data.frame carrying a
+  `root_id` column plus any per-row metadata columns (see Details). Ids
+  must be valid (non-`0`, non-`NA`) flywire ids; they are brought to the
+  current root id before matching.
 
 - dryrun:
 
@@ -122,6 +124,14 @@ Auto-fill columns (`soma_xyz`, `nucleus_id`, `side`, `point_xyz`) never
 overwrite a non-NA value on an existing row. Values passed via `...`
 always win over the auto-fill and always overwrite on existing rows.
 
+`ids` may instead be a data.frame with a `root_id` column; its other
+columns are folded in as per-row metadata, exactly as if passed via
+`...` but with one value per id rather than a single recycled value. A
+column supplied in both the data.frame and `...` is an error. A
+data.frame column that names an auto-fill column (`soma_xyz`,
+`nucleus_id`, `side`, `point_xyz`) simply overrides the auto-fill for
+that column, the same way a `...` value would.
+
 `ids` are efficiently mapped to the latest segmentation state (with
 [`fafbseg::flywire_latestid()`](https://rdrr.io/pkg/fafbseg/man/flywire_latestid.html))
 before use, so distinct inputs (e.g. historical versions of one
@@ -166,5 +176,14 @@ aedes_add_neurons(
 aedes_add_neurons("648518347569414567",
                   superclass = "KC", status = "missing soma",
                   soma = FALSE, side = FALSE)
+
+# Per-row metadata via a data.frame: one `class`/`cell_type` per id.
+df <- data.frame(
+  root_id   = c("648518347569414567", "648518347399768369"),
+  class     = "KC",
+  cell_type = c("KCa'b'", "KCg"),
+  status    = "adequate",
+  stringsAsFactors = FALSE)
+aedes_add_neurons(df)
 } # }
 ```

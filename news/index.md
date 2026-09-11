@@ -2,6 +2,14 @@
 
 ## aedes v0.3
 
+- [`aedes_add_neurons()`](../reference/aedes_add_neurons.md) accepts a
+  data.frame `ids` carrying a `root_id` column plus per-row metadata
+  columns (one value per id, as opposed to the recycled scalars of
+  `...`). A column supplied both in the data.frame and `...` is an
+  error; a data.frame column naming an auto-fill column (`soma_xyz`,
+  `nucleus_id`, `side`, `point_xyz`) simply overrides the auto-fill, and
+  the soma/side service calls are skipped when the data.frame already
+  supplies those columns.
 - New [`aedes_add_neurons()`](../reference/aedes_add_neurons.md) for
   upserting rows in the FlyTable `aedes_main` table. Pins a single
   materialisation timestamp on both the supplied ids and a fresh
