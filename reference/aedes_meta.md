@@ -13,6 +13,8 @@ aedes_meta(
   timestamp = NULL,
   unique = FALSE,
   translate_ids = NA,
+  expiry = 0,
+  refresh = FALSE,
   ...
 )
 
@@ -23,6 +25,8 @@ aedes_ids(
   unique = FALSE,
   version = NULL,
   timestamp = NULL,
+  expiry = 0,
+  refresh = FALSE,
   ...
 )
 ```
@@ -61,11 +65,25 @@ aedes_ids(
   `version`/`timestamp` before matching (see Details). `NA` (the
   default) decides automatically.
 
+- expiry:
+
+  Cache expiry in seconds passed to
+  [`fafbseg::cam_meta()`](https://rdrr.io/pkg/fafbseg/man/cam_meta.html).
+  Defaults to `0`, always checking for updates so you see the latest
+  metadata; set a positive value to trust the cache within that window,
+  or `Inf` to use the on-disk cache without checking.
+
+- refresh:
+
+  Logical passed to
+  [`fafbseg::cam_meta()`](https://rdrr.io/pkg/fafbseg/man/cam_meta.html);
+  if `TRUE` force a complete re-download of the table, ignoring any
+  cache.
+
 - ...:
 
   Additional arguments passed to
-  [`fafbseg::cam_meta()`](https://rdrr.io/pkg/fafbseg/man/cam_meta.html)
-  (e.g. cache controls such as `expiry`, `refresh`).
+  [`fafbseg::cam_meta()`](https://rdrr.io/pkg/fafbseg/man/cam_meta.html).
 
 ## Value
 

@@ -47,6 +47,8 @@
 <span>  timestamp <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  unique <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  translate_ids <span class="op">=</span> <span class="cn">NA</span>,</span>
+<span>  expiry <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -57,6 +59,8 @@
 <span>  unique <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  version <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  timestamp <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  expiry <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -97,9 +101,20 @@ the requested <code>version</code>/<code>timestamp</code> before matching (see D
 <code>NA</code> (the default) decides automatically.</p></dd>
 
 
+<dt id="arg-expiry">expiry<a class="anchor" aria-label="anchor" href="#arg-expiry"></a></dt>
+<dd><p>Cache expiry in seconds passed to <code><a href="https://rdrr.io/pkg/fafbseg/man/cam_meta.html" class="external-link">fafbseg::cam_meta()</a></code>.
+Defaults to <code>0</code>, always checking for updates so you see the latest
+metadata; set a positive value to trust the cache within that window, or
+<code>Inf</code> to use the on-disk cache without checking.</p></dd>
+
+
+<dt id="arg-refresh">refresh<a class="anchor" aria-label="anchor" href="#arg-refresh"></a></dt>
+<dd><p>Logical passed to <code><a href="https://rdrr.io/pkg/fafbseg/man/cam_meta.html" class="external-link">fafbseg::cam_meta()</a></code>; if <code>TRUE</code> force a
+complete re-download of the table, ignoring any cache.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional arguments passed to <code><a href="https://rdrr.io/pkg/fafbseg/man/cam_meta.html" class="external-link">fafbseg::cam_meta()</a></code> (e.g.
-cache controls such as <code>expiry</code>, <code>refresh</code>).</p></dd>
+<dd><p>Additional arguments passed to <code><a href="https://rdrr.io/pkg/fafbseg/man/cam_meta.html" class="external-link">fafbseg::cam_meta()</a></code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
