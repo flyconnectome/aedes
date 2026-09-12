@@ -9,10 +9,12 @@
 #'   [aedes_set_group()].
 #'
 #'   Newly appended rows get an auto-computed `point_xyz` (via
-#'   [aedes_key_point()]); `supervoxel_id` and `serial_id` are left blank and
-#'   filled in server-side from `point_xyz`. The input `ids` and a fresh read
-#'   of `aedes_main` are pinned to the same segmentation timestamp so that
-#'   join-by-`root_id` is reliable.
+#'   [aedes_key_point()]), and their `root_id` and `supervoxel_id` are written
+#'   directly rather than left for the server to backfill -- so a later add of
+#'   the same neuron is recognised as an update rather than silently appended a
+#'   second time (`serial_id` is assigned by FlyTable on insert). The input
+#'   `ids` and a fresh read of `aedes_main` are pinned to the same segmentation
+#'   timestamp so that join-by-`root_id` is reliable.
 #'
 #' @details By default the function also auto-fills `soma_xyz`, `nucleus_id`
 #'   and `side` for each row via [aedes_soma_position()] and
@@ -23,6 +25,16 @@
 #'   Auto-fill columns (`soma_xyz`, `nucleus_id`, `side`, `point_xyz`) never
 #'   overwrite a non-NA value on an existing row. Values passed via `...`
 #'   always win over the auto-fill and always overwrite on existing rows.
+#'
+#'   Computing a new row's `supervoxel_id` needs a `point_xyz` (the auto key
+#'   point, or one supplied by the caller). Any new id for which no key point
+#'   could be computed and none was supplied is still added, but with a warning
+#'   and a blank `supervoxel_id`/`point_xyz` (its `root_id` is written
+#'   regardless).
+#'
+#'   With `group = TRUE` and `dryrun = FALSE` the freshly-added neurons are
+#'   passed to [aedes_set_group()] after insertion, minting (or joining) a group
+#'   for them in the same call.
 #'
 #'   `ids` may instead be a data.frame with a `root_id` column; its other
 #'   columns are folded in as per-row metadata, exactly as if passed via `...`
@@ -78,10 +90,14 @@
 #' @param wipe If `TRUE`, replace the target multi-select column(s) with just
 #'   the new tokens instead of merging with existing cell contents. Default
 #'   `FALSE` (append).
+#' @param group If `TRUE`, group the newly-added neurons via [aedes_set_group()]
+#'   immediately after insertion. Only acts when `dryrun = FALSE`; defaults to
+#'   `FALSE`.
 #' @return A list. With `dryrun = TRUE` it has elements `up` (rows that would
 #'   be updated) and/or `new` (rows that would be appended). With
-#'   `dryrun = FALSE` only `new` is returned (so the caller can see which
-#'   `point_xyz` values were chosen).
+#'   `dryrun = FALSE` it has `new` (the appended rows, so the caller can see the
+#'   chosen `point_xyz`/`supervoxel_id`) and, when `group = TRUE`, `group` (the
+#'   [aedes_set_group()] preview).
 #' @seealso [aedes_set_meta()] for pure metadata updates on rows already
 #'   present in `aedes_main`; [aedes_set_group()] for group assignment;
 #'   [aedes_key_point()], [aedes_soma_position()], [aedes_point_side()] for
@@ -105,6 +121,11 @@
 #'   c("648518347569414567", "648518347399768369"),
 #'   dryrun = FALSE, superclass = "KC", status = "adequate")
 #'
+#' # Add the two neurons and immediately group them together
+#' aedes_add_neurons(
+#'   c("648518347569414567", "648518347399768369"),
+#'   dryrun = FALSE, superclass = "KC", status = "adequate", group = TRUE)
+#'
 #' # Skip soma/side auto-fill (e.g. neurons with no soma in the volume)
 #' aedes_add_neurons("648518347569414567",
 #'                   superclass = "KC", status = "missing soma",
@@ -127,9 +148,15 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
                               required = c("superclass", "status", "initials"),
                               initials = getOption("aedes.initials"),
                               annotator = TRUE, proofreader = FALSE,
-                              wipe = FALSE) {
+                              wipe = FALSE, group = FALSE) {
   .aedes_reject_dry_run(...)
   extra <- list(...)
+  if (!is.logical(group) || length(group) != 1L || is.na(group))
+    stop("`group` must be a single TRUE/FALSE.", call. = FALSE)
+  if (group && dryrun)
+    warning("group=TRUE has no effect under dryrun=TRUE; ",
+            "re-run with dryrun=FALSE to add and group the neurons.",
+            call. = FALSE)
 
   # A data.frame `ids` carries `root_id` plus any per-row metadata columns.
   # Fold those extra columns into `extra` (the same slot `...` uses) so they
@@ -351,16 +378,49 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
 
   if (any(!is_upd)) {
     newdf <- indf[!is_upd, , drop = FALSE]
-    if (any(is.na(newdf$point_xyz)))
-      stop("Failed to compute point_xyz for ", sum(is.na(newdf$point_xyz)),
-           " new id(s).", call. = FALSE)
+
+    # Write root_id and supervoxel_id ourselves rather than leaving both blank
+    # for the server to backfill from point_xyz. Writing root_id up front means
+    # a later add of the same neuron is recognised as an update rather than
+    # silently appended a second time. Both derive from a point_xyz (the auto
+    # key point, or one supplied by the caller); warn about -- but still add --
+    # any row that has none, leaving its supervoxel_id/point_xyz blank.
+    have_pt <- !is_str_empty(newdf$point_xyz)
+    if (any(!have_pt)) {
+      miss_ids <- newdf$root_id[!have_pt]
+      warning(sum(!have_pt), " new id(s) have no point_xyz (no key point could ",
+              "be computed and none was supplied); adding them with blank ",
+              "supervoxel_id/point_xyz: ",
+              paste(utils::head(miss_ids, 3), collapse = ", "),
+              if (length(miss_ids) > 3)
+                sprintf(" (+%d more)", length(miss_ids) - 3),
+              call. = FALSE)
+    }
+    newdf$supervoxel_id <- NA_character_
+    if (any(have_pt))
+      newdf$supervoxel_id[have_pt] <- as.character(aedes_xyz2id(
+        newdf$point_xyz[have_pt], rawcoords = TRUE, root = FALSE,
+        version = ts$version, timestamp = ts$timestamp))
+
     # New-row merge: no existing cells, so the merged list is just the tokens.
     newdf <- .aedes_append_multiselect(
       newdf, am, list(annotator = ann_toks, proofreader = prf_toks))
     rlist[["new"]] <- newdf
-    if (!dryrun)
-      # drop root_id -- the server derives it (and supervoxel_id) from point_xyz
-      fafbseg::flytable_append_rows(newdf[-1], table = "aedes_main")
+    if (!dryrun) {
+      fafbseg::flytable_append_rows(newdf, table = "aedes_main")
+      # Group the freshly-added neurons if requested. serial_id is assigned by
+      # FlyTable on insert, so a fresh read (aedes_set_group pins its own) sees
+      # the new rows and can mint / join a group by root_id.
+      if (isTRUE(group)) {
+        gp <- aedes_set_group(newdf$root_id, dryrun = FALSE,
+                              annotator = annotator, proofreader = proofreader,
+                              wipe = wipe)
+        rlist[["group"]] <- gp
+      }
+    }
+  } else if (isTRUE(group) && !dryrun) {
+    warning("group=TRUE but no new rows were added; nothing to group.",
+            call. = FALSE)
   }
   rlist
 }

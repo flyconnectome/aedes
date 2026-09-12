@@ -15,7 +15,8 @@ aedes_add_neurons(
   initials = getOption("aedes.initials"),
   annotator = TRUE,
   proofreader = FALSE,
-  wipe = FALSE
+  wipe = FALSE,
+  group = FALSE
 )
 }
 \arguments{
@@ -65,12 +66,17 @@ alone).}
 \item{wipe}{If \code{TRUE}, replace the target multi-select column(s) with just
 the new tokens instead of merging with existing cell contents. Default
 \code{FALSE} (append).}
+
+\item{group}{If \code{TRUE}, group the newly-added neurons via \code{\link[=aedes_set_group]{aedes_set_group()}}
+immediately after insertion. Only acts when \code{dryrun = FALSE}; defaults to
+\code{FALSE}.}
 }
 \value{
 A list. With \code{dryrun = TRUE} it has elements \code{up} (rows that would
 be updated) and/or \code{new} (rows that would be appended). With
-\code{dryrun = FALSE} only \code{new} is returned (so the caller can see which
-\code{point_xyz} values were chosen).
+\code{dryrun = FALSE} it has \code{new} (the appended rows, so the caller can see the
+chosen \code{point_xyz}/\code{supervoxel_id}) and, when \code{group = TRUE}, \code{group} (the
+\code{\link[=aedes_set_group]{aedes_set_group()}} preview).
 }
 \description{
 Upserts rows in the \code{aedes_main} FlyTable: absent \code{root_id}s
@@ -82,10 +88,12 @@ are already present use \code{\link[=aedes_set_meta]{aedes_set_meta()}}, and for
 \code{\link[=aedes_set_group]{aedes_set_group()}}.
 
 Newly appended rows get an auto-computed \code{point_xyz} (via
-\code{\link[=aedes_key_point]{aedes_key_point()}}); \code{supervoxel_id} and \code{serial_id} are left blank and
-filled in server-side from \code{point_xyz}. The input \code{ids} and a fresh read
-of \code{aedes_main} are pinned to the same segmentation timestamp so that
-join-by-\code{root_id} is reliable.
+\code{\link[=aedes_key_point]{aedes_key_point()}}), and their \code{root_id} and \code{supervoxel_id} are written
+directly rather than left for the server to backfill -- so a later add of
+the same neuron is recognised as an update rather than silently appended a
+second time (\code{serial_id} is assigned by FlyTable on insert). The input
+\code{ids} and a fresh read of \code{aedes_main} are pinned to the same segmentation
+timestamp so that join-by-\code{root_id} is reliable.
 }
 \details{
 By default the function also auto-fills \code{soma_xyz}, \code{nucleus_id}
@@ -97,6 +105,16 @@ a warning naming the affected ids is issued.
 Auto-fill columns (\code{soma_xyz}, \code{nucleus_id}, \code{side}, \code{point_xyz}) never
 overwrite a non-NA value on an existing row. Values passed via \code{...}
 always win over the auto-fill and always overwrite on existing rows.
+
+Computing a new row's \code{supervoxel_id} needs a \code{point_xyz} (the auto key
+point, or one supplied by the caller). Any new id for which no key point
+could be computed and none was supplied is still added, but with a warning
+and a blank \code{supervoxel_id}/\code{point_xyz} (its \code{root_id} is written
+regardless).
+
+With \code{group = TRUE} and \code{dryrun = FALSE} the freshly-added neurons are
+passed to \code{\link[=aedes_set_group]{aedes_set_group()}} after insertion, minting (or joining) a group
+for them in the same call.
 
 \code{ids} may instead be a data.frame with a \code{root_id} column; its other
 columns are folded in as per-row metadata, exactly as if passed via \code{...}
@@ -133,6 +151,11 @@ aedes_add_neurons(
 aedes_add_neurons(
   c("648518347569414567", "648518347399768369"),
   dryrun = FALSE, superclass = "KC", status = "adequate")
+
+# Add the two neurons and immediately group them together
+aedes_add_neurons(
+  c("648518347569414567", "648518347399768369"),
+  dryrun = FALSE, superclass = "KC", status = "adequate", group = TRUE)
 
 # Skip soma/side auto-fill (e.g. neurons with no soma in the volume)
 aedes_add_neurons("648518347569414567",

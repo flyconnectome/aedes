@@ -36,6 +36,17 @@ test_that("aedes_add_neurons validates a data.frame `ids` up front", {
 })
 
 
+test_that("aedes_add_neurons validates the `group` argument up front", {
+  # `group` is checked before any service call, so this needs no live data.
+  expect_error(aedes_add_neurons("648518347399768369", group = "yes"),
+               "single TRUE/FALSE")
+  expect_error(aedes_add_neurons("648518347399768369", group = NA),
+               "single TRUE/FALSE")
+  expect_error(aedes_add_neurons("648518347399768369", group = c(TRUE, FALSE)),
+               "single TRUE/FALSE")
+})
+
+
 test_that("aedes_add_neurons collapses ids that resolve to one neuron", {
   # Stable handle: a supervoxel resolved to its current root at test time.
   # Passing that root twice exercises the duplicate-resolution policy without
