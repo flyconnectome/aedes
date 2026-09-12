@@ -1,17 +1,46 @@
 # aedes 0.4
 
-* `aedes_meta()` and `aedes_ids()` gain explicit `expiry` and `refresh`
-  arguments (defaulting to `expiry = 0`, `refresh = FALSE`) so callers see the
-  latest FlyTable metadata by default. Requires `fafbseg (>= 0.15.17)`, whose
-  `cam_meta()`/`flytable_cached_table()` now also default to `expiry = 0`.
-  (#16)
+This version includes substantial improvements to the functions for handling 
+flytable metadata (especially `aedes_add_neurons()`), which should now provide 
+an efficient approach to add newrows including automatic definition of key 
+points on the neuron, soma location, side of brain etc.
+
+* New `aedes_set_meta()` bulk-updates existing flytable rows. (#10)
+* New `aedes_set_group()` sets group to lowest serial_id (but maintains selected
+  serial number if joining an existing group in the table). (#10)
+* `aedes_add_neurons()` enrichment: auto-fill `soma_xyz`/`nucleus_id`/`side`/`point_xyz`
+  and require `superclass`/`status`/`initials` on new rows; also adds
+  annotator/proofreader multi-select handling. (#10)
+* `aedes_meta()` gains a `translate_ids` argument to ensure incoming ids match 
+  the requested materialisation state so that rows are reliably selected. (#10)
 * `aedes_add_neurons()` accepts a data.frame `ids` carrying a `root_id`
-  column plus per-row metadata columns (one value per id, as opposed to the
-  recycled scalars of `...`). A column supplied both in the data.frame and
-  `...` is an error; a data.frame column naming an auto-fill column
-  (`soma_xyz`, `nucleus_id`, `side`, `point_xyz`) simply overrides the
-  auto-fill, and the soma/side service calls are skipped when the data.frame
-  already supplies those columns. (#17)
+  column plus per-row metadata (one value per id, vs. the recycled scalars of
+  `...`); a data.frame column naming an auto-fill field overrides the
+  auto-fill and skips the corresponding soma/side service call. (#17)
+* `aedes_meta()` / `aedes_ids()` default `expiry = 0` and document
+  `expiry`/`refresh`, so metadata reads are fresh by default. Requires
+  `fafbseg (>= 0.15.17)`. (#16)
+* `aedes_add_neurons()`: robust handling of ids that collapse to one neuron
+  after pinning — recycled scalars drop the duplicate with a warning, per-id
+  values are a hard error. (#15)
+* New `aedes_partner_summary()`, an Aedes-aware wrapper around
+  `fafbseg::flywire_partner_summary()` (one row per synaptic partner). (#14)
+* `aedes_key_point()` delegates to `fafbseg::flywire_key_point()` /
+  `key_point_from_neuron()`, becoming a thin `with_aedes()` wrapper. (#13)
+* `aedes_flytable_update()`: don't flag NA `root_id`s as duplicated. (#12)
+* `aedes_flytable_update()`: only write columns that can change, treat NA
+  `root_duplicated` as FALSE, and return the changed-rows data frame. (#11)
+* New `aedes_soma_side()` / `aedes_point_side()`; predict the side of a point
+  or soma. (#9)
+
+Committed directly to `main`:
+
+* `aedes_xyz2id()` now defaults to `mip = 1` (the LMB transform service
+  dropped scale 0). (fbdbc71)
+* Docs: clarify the three `aedes_main` editing functions (c25ff33); add a
+  citation and Zenodo badge (d768f1c).
+
+**Full diff**: <https://github.com/flyconnectome/aedes/compare/v0.3...v0.4>
 
 # aedes v0.3
 
@@ -22,10 +51,7 @@
   Avoids the heavy `aedes_flytable_update()` pass. (#8)
 * New `aedes_key_point()` returns a "good" annotation point on a neuron:
   the principal branch point of its L2 skeleton, with the neuron
-  optionally rerooted onto its furthest endpoint first. (#8) The dataset-
-  agnostic machinery now lives in `fafbseg` as `flywire_key_point()` /
-  `key_point_from_neuron()` (requires `fafbseg (>= 0.15.15)`);
-  `aedes_key_point()` is a thin `with_aedes()` wrapper around it.
+  optionally rerooted onto its furthest endpoint first. (#8)
 * `aedes_sequential_update()` gains `version` and `timestamp` arguments so
   callers can pin all downstream service calls (`aedes_xyz2id()`,
   `fafbseg::flywire_updateids()`) to the same materialisation. Defaults
