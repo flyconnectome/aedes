@@ -9,10 +9,12 @@
 #'   [aedes_set_group()].
 #'
 #'   Newly appended rows get an auto-computed `point_xyz` (via
-#'   [aedes_key_point()]); `supervoxel_id` and `serial_id` are left blank and
-#'   filled in server-side from `point_xyz`. The input `ids` and a fresh read
-#'   of `aedes_main` are pinned to the same segmentation timestamp so that
-#'   join-by-`root_id` is reliable.
+#'   [aedes_key_point()]), and their `root_id` and `supervoxel_id` are written
+#'   directly rather than left for the server to backfill -- so a later add of
+#'   the same neuron is recognised as an update rather than silently appended a
+#'   second time (`serial_id` is assigned by FlyTable on insert). The input
+#'   `ids` and a fresh read of `aedes_main` are pinned to the same segmentation
+#'   timestamp so that join-by-`root_id` is reliable.
 #'
 #' @details By default the function also auto-fills `soma_xyz`, `nucleus_id`
 #'   and `side` for each row via [aedes_soma_position()] and
@@ -23,6 +25,12 @@
 #'   Auto-fill columns (`soma_xyz`, `nucleus_id`, `side`, `point_xyz`) never
 #'   overwrite a non-NA value on an existing row. Values passed via `...`
 #'   always win over the auto-fill and always overwrite on existing rows.
+#'
+#'   Computing a new row's `supervoxel_id` needs a `point_xyz` (the auto key
+#'   point, or one supplied by the caller). Any new id for which no key point
+#'   could be computed and none was supplied is still added, but with a warning
+#'   and a blank `supervoxel_id`/`point_xyz` (its `root_id` is written
+#'   regardless).
 #'
 #'   `ids` may instead be a data.frame with a `root_id` column; its other
 #'   columns are folded in as per-row metadata, exactly as if passed via `...`
@@ -80,8 +88,8 @@
 #'   `FALSE` (append).
 #' @return A list. With `dryrun = TRUE` it has elements `up` (rows that would
 #'   be updated) and/or `new` (rows that would be appended). With
-#'   `dryrun = FALSE` only `new` is returned (so the caller can see which
-#'   `point_xyz` values were chosen).
+#'   `dryrun = FALSE` it has `new` (the appended rows, so the caller can see the
+#'   chosen `point_xyz`/`supervoxel_id`).
 #' @seealso [aedes_set_meta()] for pure metadata updates on rows already
 #'   present in `aedes_main`; [aedes_set_group()] for group assignment;
 #'   [aedes_key_point()], [aedes_soma_position()], [aedes_point_side()] for
@@ -351,16 +359,36 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
 
   if (any(!is_upd)) {
     newdf <- indf[!is_upd, , drop = FALSE]
-    if (any(is.na(newdf$point_xyz)))
-      stop("Failed to compute point_xyz for ", sum(is.na(newdf$point_xyz)),
-           " new id(s).", call. = FALSE)
+
+    # Write root_id and supervoxel_id ourselves rather than leaving both blank
+    # for the server to backfill from point_xyz. Writing root_id up front means
+    # a later add of the same neuron is recognised as an update rather than
+    # silently appended a second time. Both derive from a point_xyz (the auto
+    # key point, or one supplied by the caller); warn about -- but still add --
+    # any row that has none, leaving its supervoxel_id/point_xyz blank.
+    have_pt <- !is_str_empty(newdf$point_xyz)
+    if (any(!have_pt)) {
+      miss_ids <- newdf$root_id[!have_pt]
+      warning(sum(!have_pt), " new id(s) have no point_xyz (no key point could ",
+              "be computed and none was supplied); adding them with blank ",
+              "supervoxel_id/point_xyz: ",
+              paste(utils::head(miss_ids, 3), collapse = ", "),
+              if (length(miss_ids) > 3)
+                sprintf(" (+%d more)", length(miss_ids) - 3),
+              call. = FALSE)
+    }
+    newdf$supervoxel_id <- NA_character_
+    if (any(have_pt))
+      newdf$supervoxel_id[have_pt] <- as.character(aedes_xyz2id(
+        newdf$point_xyz[have_pt], rawcoords = TRUE, root = FALSE,
+        version = ts$version, timestamp = ts$timestamp))
+
     # New-row merge: no existing cells, so the merged list is just the tokens.
     newdf <- .aedes_append_multiselect(
       newdf, am, list(annotator = ann_toks, proofreader = prf_toks))
     rlist[["new"]] <- newdf
     if (!dryrun)
-      # drop root_id -- the server derives it (and supervoxel_id) from point_xyz
-      fafbseg::flytable_append_rows(newdf[-1], table = "aedes_main")
+      fafbseg::flytable_append_rows(newdf, table = "aedes_main")
   }
   rlist
 }
