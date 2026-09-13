@@ -7,10 +7,12 @@ may or may not already be tracked; for pure metadata edits on rows that
 are already present use aedes_set_meta(), and for group assignment use
 aedes_set_group().
 Newly appended rows get an auto-computed point_xyz (via
-aedes_key_point()); supervoxel_id and serial_id are left blank and
-filled in server-side from point_xyz. The input ids and a fresh read
-of aedes_main are pinned to the same segmentation timestamp so that
-join-by-root_id is reliable."><meta property="og:description" content="Upserts rows in the aedes_main FlyTable: absent root_ids
+aedes_key_point()), and their root_id and supervoxel_id are written
+directly rather than left for the server to backfill – so a later add of
+the same neuron is recognised as an update rather than silently appended a
+second time (serial_id is assigned by FlyTable on insert). The input
+ids and a fresh read of aedes_main are pinned to the same segmentation
+timestamp so that join-by-root_id is reliable."><meta property="og:description" content="Upserts rows in the aedes_main FlyTable: absent root_ids
 are appended, present ones are updated with any extra columns supplied
 via ... or as columns of a data.frame ids. This is the entry point
 when you have a set of neurons that
@@ -18,10 +20,12 @@ may or may not already be tracked; for pure metadata edits on rows that
 are already present use aedes_set_meta(), and for group assignment use
 aedes_set_group().
 Newly appended rows get an auto-computed point_xyz (via
-aedes_key_point()); supervoxel_id and serial_id are left blank and
-filled in server-side from point_xyz. The input ids and a fresh read
-of aedes_main are pinned to the same segmentation timestamp so that
-join-by-root_id is reliable."></head><body>
+aedes_key_point()), and their root_id and supervoxel_id are written
+directly rather than left for the server to backfill – so a later add of
+the same neuron is recognised as an update rather than silently appended a
+second time (serial_id is assigned by FlyTable on insert). The input
+ids and a fresh read of aedes_main are pinned to the same segmentation
+timestamp so that join-by-root_id is reliable."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -29,7 +33,7 @@ join-by-root_id is reliable."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">aedes</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -64,10 +68,12 @@ may or may not already be tracked; for pure metadata edits on rows that
 are already present use <code><a href="aedes_set_meta.html">aedes_set_meta()</a></code>, and for group assignment use
 <code><a href="aedes_set_group.html">aedes_set_group()</a></code>.</p>
 <p>Newly appended rows get an auto-computed <code>point_xyz</code> (via
-<code><a href="aedes_key_point.html">aedes_key_point()</a></code>); <code>supervoxel_id</code> and <code>serial_id</code> are left blank and
-filled in server-side from <code>point_xyz</code>. The input <code>ids</code> and a fresh read
-of <code>aedes_main</code> are pinned to the same segmentation timestamp so that
-join-by-<code>root_id</code> is reliable.</p>
+<code><a href="aedes_key_point.html">aedes_key_point()</a></code>), and their <code>root_id</code> and <code>supervoxel_id</code> are written
+directly rather than left for the server to backfill – so a later add of
+the same neuron is recognised as an update rather than silently appended a
+second time (<code>serial_id</code> is assigned by FlyTable on insert). The input
+<code>ids</code> and a fresh read of <code>aedes_main</code> are pinned to the same segmentation
+timestamp so that join-by-<code>root_id</code> is reliable.</p>
     </div>
 
     <div class="section level2">
@@ -83,7 +89,8 @@ join-by-<code>root_id</code> is reliable.</p>
 <span>  initials <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"aedes.initials"</span><span class="op">)</span>,</span>
 <span>  annotator <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  proofreader <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  wipe <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  wipe <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  group <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -159,13 +166,24 @@ alone).</p></dd>
 the new tokens instead of merging with existing cell contents. Default
 <code>FALSE</code> (append).</p></dd>
 
+
+<dt id="arg-group">group<a class="anchor" aria-label="anchor" href="#arg-group"></a></dt>
+<dd><p>Grouping for the added neurons. <code>FALSE</code> (the default) leaves the
+<code>group</code> column alone. <code>TRUE</code> groups the newly-added neurons via
+<code><a href="aedes_set_group.html">aedes_set_group()</a></code> immediately after insertion (only when
+<code>dryrun = FALSE</code>). A single serial_id-style group id (a positive whole
+number) is instead written directly into the <code>group</code> column and uploaded
+with the rows, exactly as a per-row <code>group</code> column of a data.frame <code>ids</code>
+would be.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A list. With <code>dryrun = TRUE</code> it has elements <code>up</code> (rows that would
 be updated) and/or <code>new</code> (rows that would be appended). With
-<code>dryrun = FALSE</code> only <code>new</code> is returned (so the caller can see which
-<code>point_xyz</code> values were chosen).</p>
+<code>dryrun = FALSE</code> it has <code>new</code> (the appended rows, so the caller can see the
+chosen <code>point_xyz</code>/<code>supervoxel_id</code>) and, when <code>group = TRUE</code>, <code>group</code> (the
+<code><a href="aedes_set_group.html">aedes_set_group()</a></code> preview).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -177,6 +195,18 @@ a warning naming the affected ids is issued.</p>
 <p>Auto-fill columns (<code>soma_xyz</code>, <code>nucleus_id</code>, <code>side</code>, <code>point_xyz</code>) never
 overwrite a non-NA value on an existing row. Values passed via <code>...</code>
 always win over the auto-fill and always overwrite on existing rows.</p>
+<p>Computing a new row's <code>supervoxel_id</code> needs a <code>point_xyz</code> (the auto key
+point, or one supplied by the caller). Any new id for which no key point
+could be computed and none was supplied is still added, but with a warning
+and a blank <code>supervoxel_id</code>/<code>point_xyz</code> (its <code>root_id</code> is written
+regardless).</p>
+<p>With <code>group = TRUE</code> and <code>dryrun = FALSE</code> the freshly-added neurons are
+passed to <code><a href="aedes_set_group.html">aedes_set_group()</a></code> after insertion, minting (or joining) a group
+for them in the same call – deferred because the group id is derived from
+the <code>serial_id</code>s FlyTable assigns on insert. Passing an explicit group id
+instead (<code>group = &lt;serial_id&gt;</code>) needs no such round trip: the id is written
+into the <code>group</code> column and uploaded with the rows, and so also shows up in
+a <code>dryrun = TRUE</code> preview.</p>
 <p><code>ids</code> may instead be a data.frame with a <code>root_id</code> column; its other
 columns are folded in as per-row metadata, exactly as if passed via <code>...</code>
 but with one value per id rather than a single recycled value. A column
@@ -220,6 +250,17 @@ the auto-fill helpers.</p></div>
 <span class="r-in"><span><span class="fu">aedes_add_neurons</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"648518347569414567"</span>, <span class="st">"648518347399768369"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  dryrun <span class="op">=</span> <span class="cn">FALSE</span>, superclass <span class="op">=</span> <span class="st">"KC"</span>, status <span class="op">=</span> <span class="st">"adequate"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Add the two neurons and immediately group them together (a fresh group is</span></span></span>
+<span class="r-in"><span><span class="co"># minted from the serial_ids FlyTable assigns on insert)</span></span></span>
+<span class="r-in"><span><span class="fu">aedes_add_neurons</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"648518347569414567"</span>, <span class="st">"648518347399768369"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  dryrun <span class="op">=</span> <span class="cn">FALSE</span>, superclass <span class="op">=</span> <span class="st">"KC"</span>, status <span class="op">=</span> <span class="st">"adequate"</span>, group <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Add them to an existing group by giving its serial_id-style id explicitly</span></span></span>
+<span class="r-in"><span><span class="fu">aedes_add_neurons</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"648518347569414567"</span>, <span class="st">"648518347399768369"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  dryrun <span class="op">=</span> <span class="cn">FALSE</span>, superclass <span class="op">=</span> <span class="st">"KC"</span>, status <span class="op">=</span> <span class="st">"adequate"</span>, group <span class="op">=</span> <span class="fl">12345</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Skip soma/side auto-fill (e.g. neurons with no soma in the volume)</span></span></span>
 <span class="r-in"><span><span class="fu">aedes_add_neurons</span><span class="op">(</span><span class="st">"648518347569414567"</span>,</span></span>

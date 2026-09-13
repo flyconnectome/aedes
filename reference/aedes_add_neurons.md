@@ -9,10 +9,13 @@ pure metadata edits on rows that are already present use
 [`aedes_set_group()`](aedes_set_group.md).
 
 Newly appended rows get an auto-computed `point_xyz` (via
-[`aedes_key_point()`](aedes_key_point.md)); `supervoxel_id` and
-`serial_id` are left blank and filled in server-side from `point_xyz`.
-The input `ids` and a fresh read of `aedes_main` are pinned to the same
-segmentation timestamp so that join-by-`root_id` is reliable.
+[`aedes_key_point()`](aedes_key_point.md)), and their `root_id` and
+`supervoxel_id` are written directly rather than left for the server to
+backfill – so a later add of the same neuron is recognised as an update
+rather than silently appended a second time (`serial_id` is assigned by
+FlyTable on insert). The input `ids` and a fresh read of `aedes_main`
+are pinned to the same segmentation timestamp so that join-by-`root_id`
+is reliable.
 
 ## Usage
 
@@ -28,7 +31,8 @@ aedes_add_neurons(
   initials = getOption("aedes.initials"),
   annotator = TRUE,
   proofreader = FALSE,
-  wipe = FALSE
+  wipe = FALSE,
+  group = FALSE
 )
 ```
 
@@ -103,12 +107,23 @@ aedes_add_neurons(
   tokens instead of merging with existing cell contents. Default `FALSE`
   (append).
 
+- group:
+
+  Grouping for the added neurons. `FALSE` (the default) leaves the
+  `group` column alone. `TRUE` groups the newly-added neurons via
+  [`aedes_set_group()`](aedes_set_group.md) immediately after insertion
+  (only when `dryrun = FALSE`). A single serial_id-style group id (a
+  positive whole number) is instead written directly into the `group`
+  column and uploaded with the rows, exactly as a per-row `group` column
+  of a data.frame `ids` would be.
+
 ## Value
 
 A list. With `dryrun = TRUE` it has elements `up` (rows that would be
 updated) and/or `new` (rows that would be appended). With
-`dryrun = FALSE` only `new` is returned (so the caller can see which
-`point_xyz` values were chosen).
+`dryrun = FALSE` it has `new` (the appended rows, so the caller can see
+the chosen `point_xyz`/`supervoxel_id`) and, when `group = TRUE`,
+`group` (the [`aedes_set_group()`](aedes_set_group.md) preview).
 
 ## Details
 
@@ -123,6 +138,21 @@ warning naming the affected ids is issued.
 Auto-fill columns (`soma_xyz`, `nucleus_id`, `side`, `point_xyz`) never
 overwrite a non-NA value on an existing row. Values passed via `...`
 always win over the auto-fill and always overwrite on existing rows.
+
+Computing a new row's `supervoxel_id` needs a `point_xyz` (the auto key
+point, or one supplied by the caller). Any new id for which no key point
+could be computed and none was supplied is still added, but with a
+warning and a blank `supervoxel_id`/`point_xyz` (its `root_id` is
+written regardless).
+
+With `group = TRUE` and `dryrun = FALSE` the freshly-added neurons are
+passed to [`aedes_set_group()`](aedes_set_group.md) after insertion,
+minting (or joining) a group for them in the same call – deferred
+because the group id is derived from the `serial_id`s FlyTable assigns
+on insert. Passing an explicit group id instead (`group = <serial_id>`)
+needs no such round trip: the id is written into the `group` column and
+uploaded with the rows, and so also shows up in a `dryrun = TRUE`
+preview.
 
 `ids` may instead be a data.frame with a `root_id` column; its other
 columns are folded in as per-row metadata, exactly as if passed via
@@ -171,6 +201,17 @@ aedes_add_neurons(
 aedes_add_neurons(
   c("648518347569414567", "648518347399768369"),
   dryrun = FALSE, superclass = "KC", status = "adequate")
+
+# Add the two neurons and immediately group them together (a fresh group is
+# minted from the serial_ids FlyTable assigns on insert)
+aedes_add_neurons(
+  c("648518347569414567", "648518347399768369"),
+  dryrun = FALSE, superclass = "KC", status = "adequate", group = TRUE)
+
+# Add them to an existing group by giving its serial_id-style id explicitly
+aedes_add_neurons(
+  c("648518347569414567", "648518347399768369"),
+  dryrun = FALSE, superclass = "KC", status = "adequate", group = 12345)
 
 # Skip soma/side auto-fill (e.g. neurons with no soma in the volume)
 aedes_add_neurons("648518347569414567",
