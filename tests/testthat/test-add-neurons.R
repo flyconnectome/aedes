@@ -38,12 +38,27 @@ test_that("aedes_add_neurons validates a data.frame `ids` up front", {
 
 test_that("aedes_add_neurons validates the `group` argument up front", {
   # `group` is checked before any service call, so this needs no live data.
+  # Accepted: a single TRUE/FALSE, or a single positive whole-number group id.
   expect_error(aedes_add_neurons("648518347399768369", group = "yes"),
-               "single TRUE/FALSE")
+               "TRUE/FALSE")
   expect_error(aedes_add_neurons("648518347399768369", group = NA),
-               "single TRUE/FALSE")
+               "TRUE/FALSE")
   expect_error(aedes_add_neurons("648518347399768369", group = c(TRUE, FALSE)),
-               "single TRUE/FALSE")
+               "TRUE/FALSE")
+  # A non-whole / non-positive number is not a valid serial_id-style id.
+  expect_error(aedes_add_neurons("648518347399768369", group = 1.5),
+               "group id")
+  expect_error(aedes_add_neurons("648518347399768369", group = -3),
+               "group id")
+  expect_error(aedes_add_neurons("648518347399768369", group = c(1, 2)),
+               "group id")
+
+  # An explicit numeric group id and a data.frame `group` column clash.
+  expect_error(
+    aedes_add_neurons(
+      data.frame(root_id = "648518347399768369", group = 100),
+      group = 200),
+    "both as an argument and as a data.frame column")
 })
 
 

@@ -34,7 +34,11 @@
 #'
 #'   With `group = TRUE` and `dryrun = FALSE` the freshly-added neurons are
 #'   passed to [aedes_set_group()] after insertion, minting (or joining) a group
-#'   for them in the same call.
+#'   for them in the same call -- deferred because the group id is derived from
+#'   the `serial_id`s FlyTable assigns on insert. Passing an explicit group id
+#'   instead (`group = <serial_id>`) needs no such round trip: the id is written
+#'   into the `group` column and uploaded with the rows, and so also shows up in
+#'   a `dryrun = TRUE` preview.
 #'
 #'   `ids` may instead be a data.frame with a `root_id` column; its other
 #'   columns are folded in as per-row metadata, exactly as if passed via `...`
@@ -90,9 +94,13 @@
 #' @param wipe If `TRUE`, replace the target multi-select column(s) with just
 #'   the new tokens instead of merging with existing cell contents. Default
 #'   `FALSE` (append).
-#' @param group If `TRUE`, group the newly-added neurons via [aedes_set_group()]
-#'   immediately after insertion. Only acts when `dryrun = FALSE`; defaults to
-#'   `FALSE`.
+#' @param group Grouping for the added neurons. `FALSE` (the default) leaves the
+#'   `group` column alone. `TRUE` groups the newly-added neurons via
+#'   [aedes_set_group()] immediately after insertion (only when
+#'   `dryrun = FALSE`). A single serial_id-style group id (a positive whole
+#'   number) is instead written directly into the `group` column and uploaded
+#'   with the rows, exactly as a per-row `group` column of a data.frame `ids`
+#'   would be.
 #' @return A list. With `dryrun = TRUE` it has elements `up` (rows that would
 #'   be updated) and/or `new` (rows that would be appended). With
 #'   `dryrun = FALSE` it has `new` (the appended rows, so the caller can see the
@@ -121,10 +129,16 @@
 #'   c("648518347569414567", "648518347399768369"),
 #'   dryrun = FALSE, superclass = "KC", status = "adequate")
 #'
-#' # Add the two neurons and immediately group them together
+#' # Add the two neurons and immediately group them together (a fresh group is
+#' # minted from the serial_ids FlyTable assigns on insert)
 #' aedes_add_neurons(
 #'   c("648518347569414567", "648518347399768369"),
 #'   dryrun = FALSE, superclass = "KC", status = "adequate", group = TRUE)
+#'
+#' # Add them to an existing group by giving its serial_id-style id explicitly
+#' aedes_add_neurons(
+#'   c("648518347569414567", "648518347399768369"),
+#'   dryrun = FALSE, superclass = "KC", status = "adequate", group = 12345)
 #'
 #' # Skip soma/side auto-fill (e.g. neurons with no soma in the volume)
 #' aedes_add_neurons("648518347569414567",
@@ -151,9 +165,24 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
                               wipe = FALSE, group = FALSE) {
   .aedes_reject_dry_run(...)
   extra <- list(...)
-  if (!is.logical(group) || length(group) != 1L || is.na(group))
-    stop("`group` must be a single TRUE/FALSE.", call. = FALSE)
-  if (group && dryrun)
+  # `group` is tri-modal: FALSE (the default) leaves grouping alone; TRUE groups
+  # the freshly-appended rows via aedes_set_group() *after* they are inserted
+  # (so it can mint a group from the server-assigned serial_ids); an explicit
+  # serial_id-style group id is written straight into the `group` column and
+  # uploaded with the rows, exactly as a user-supplied `group` column would be.
+  group_id <- NULL
+  if (is.logical(group) && length(group) == 1L && !is.na(group)) {
+    # FALSE / TRUE: handled at insertion time below.
+  } else if (length(group) == 1L && !is.na(group) &&
+             ((is.numeric(group) && group > 0 && group == round(group)) ||
+              (is.character(group) && grepl("^[1-9][0-9]*$", group)))) {
+    group_id <- format(group, scientific = FALSE, trim = TRUE)
+    group <- FALSE
+  } else {
+    stop("`group` must be a single TRUE/FALSE, or a single serial_id-style ",
+         "group id (a positive whole number).", call. = FALSE)
+  }
+  if (isTRUE(group) && dryrun)
     warning("group=TRUE has no effect under dryrun=TRUE; ",
             "re-run with dryrun=FALSE to add and group the neurons.",
             call. = FALSE)
@@ -173,6 +202,15 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
            paste(clash, collapse = ", "), ".", call. = FALSE)
     for (nm in dfcols) extra[[nm]] <- ids[[nm]]
     ids <- ids$root_id
+  }
+
+  # An explicit group id acts as a recycled `group` column; error if the
+  # data.frame already carries one (as with any doubly-supplied column).
+  if (!is.null(group_id)) {
+    if ("group" %in% names(extra))
+      stop("`group` supplied both as an argument and as a data.frame column.",
+           call. = FALSE)
+    extra[["group"]] <- group_id
   }
 
   ids <- as.character(ids)

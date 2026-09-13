@@ -67,9 +67,13 @@ alone).}
 the new tokens instead of merging with existing cell contents. Default
 \code{FALSE} (append).}
 
-\item{group}{If \code{TRUE}, group the newly-added neurons via \code{\link[=aedes_set_group]{aedes_set_group()}}
-immediately after insertion. Only acts when \code{dryrun = FALSE}; defaults to
-\code{FALSE}.}
+\item{group}{Grouping for the added neurons. \code{FALSE} (the default) leaves the
+\code{group} column alone. \code{TRUE} groups the newly-added neurons via
+\code{\link[=aedes_set_group]{aedes_set_group()}} immediately after insertion (only when
+\code{dryrun = FALSE}). A single serial_id-style group id (a positive whole
+number) is instead written directly into the \code{group} column and uploaded
+with the rows, exactly as a per-row \code{group} column of a data.frame \code{ids}
+would be.}
 }
 \value{
 A list. With \code{dryrun = TRUE} it has elements \code{up} (rows that would
@@ -114,7 +118,11 @@ regardless).
 
 With \code{group = TRUE} and \code{dryrun = FALSE} the freshly-added neurons are
 passed to \code{\link[=aedes_set_group]{aedes_set_group()}} after insertion, minting (or joining) a group
-for them in the same call.
+for them in the same call -- deferred because the group id is derived from
+the \code{serial_id}s FlyTable assigns on insert. Passing an explicit group id
+instead (\verb{group = <serial_id>}) needs no such round trip: the id is written
+into the \code{group} column and uploaded with the rows, and so also shows up in
+a \code{dryrun = TRUE} preview.
 
 \code{ids} may instead be a data.frame with a \code{root_id} column; its other
 columns are folded in as per-row metadata, exactly as if passed via \code{...}
@@ -152,10 +160,16 @@ aedes_add_neurons(
   c("648518347569414567", "648518347399768369"),
   dryrun = FALSE, superclass = "KC", status = "adequate")
 
-# Add the two neurons and immediately group them together
+# Add the two neurons and immediately group them together (a fresh group is
+# minted from the serial_ids FlyTable assigns on insert)
 aedes_add_neurons(
   c("648518347569414567", "648518347399768369"),
   dryrun = FALSE, superclass = "KC", status = "adequate", group = TRUE)
+
+# Add them to an existing group by giving its serial_id-style id explicitly
+aedes_add_neurons(
+  c("648518347569414567", "648518347399768369"),
+  dryrun = FALSE, superclass = "KC", status = "adequate", group = 12345)
 
 # Skip soma/side auto-fill (e.g. neurons with no soma in the volume)
 aedes_add_neurons("648518347569414567",
