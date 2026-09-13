@@ -15,7 +15,8 @@ aedes_add_neurons(
   initials = getOption("aedes.initials"),
   annotator = TRUE,
   proofreader = FALSE,
-  wipe = FALSE
+  wipe = FALSE,
+  group = FALSE
 )
 }
 \arguments{
@@ -65,12 +66,17 @@ alone).}
 \item{wipe}{If \code{TRUE}, replace the target multi-select column(s) with just
 the new tokens instead of merging with existing cell contents. Default
 \code{FALSE} (append).}
+
+\item{group}{If \code{TRUE}, group the newly-added neurons via \code{\link[=aedes_set_group]{aedes_set_group()}}
+immediately after insertion. Only acts when \code{dryrun = FALSE}; defaults to
+\code{FALSE}.}
 }
 \value{
 A list. With \code{dryrun = TRUE} it has elements \code{up} (rows that would
 be updated) and/or \code{new} (rows that would be appended). With
 \code{dryrun = FALSE} it has \code{new} (the appended rows, so the caller can see the
-chosen \code{point_xyz}/\code{supervoxel_id}).
+chosen \code{point_xyz}/\code{supervoxel_id}) and, when \code{group = TRUE}, \code{group} (the
+\code{\link[=aedes_set_group]{aedes_set_group()}} preview).
 }
 \description{
 Upserts rows in the \code{aedes_main} FlyTable: absent \code{root_id}s
@@ -105,6 +111,10 @@ point, or one supplied by the caller). Any new id for which no key point
 could be computed and none was supplied is still added, but with a warning
 and a blank \code{supervoxel_id}/\code{point_xyz} (its \code{root_id} is written
 regardless).
+
+With \code{group = TRUE} and \code{dryrun = FALSE} the freshly-added neurons are
+passed to \code{\link[=aedes_set_group]{aedes_set_group()}} after insertion, minting (or joining) a group
+for them in the same call.
 
 \code{ids} may instead be a data.frame with a \code{root_id} column; its other
 columns are folded in as per-row metadata, exactly as if passed via \code{...}
@@ -141,6 +151,11 @@ aedes_add_neurons(
 aedes_add_neurons(
   c("648518347569414567", "648518347399768369"),
   dryrun = FALSE, superclass = "KC", status = "adequate")
+
+# Add the two neurons and immediately group them together
+aedes_add_neurons(
+  c("648518347569414567", "648518347399768369"),
+  dryrun = FALSE, superclass = "KC", status = "adequate", group = TRUE)
 
 # Skip soma/side auto-fill (e.g. neurons with no soma in the volume)
 aedes_add_neurons("648518347569414567",
