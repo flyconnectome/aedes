@@ -5,6 +5,12 @@ flytable metadata (especially `aedes_add_neurons()`), which should now provide
 an efficient approach to add newrows including automatic definition of key 
 points on the neuron, soma location, side of brain etc.
 
+* coconatfly adapter (`cf_meta()`/`cf_partners()`): ungrouped neurons now reach
+  coconatfly as an `integer64` `NA` group, so `cf_cosine_plot(group="group")`
+  drops them instead of collapsing every ungrouped partner into one spurious
+  shared feature column. (An `NA` group already came out of `aedes_meta()`, but
+  coconatfly re-runs `fafbseg::flywire_ids()` on the group column, which
+  preserves an `integer64` `NA` yet maps a numeric/character `NA` to `"0"`.)
 * New `aedes_set_meta()` bulk-updates existing flytable rows. (#10)
 * New `aedes_set_group()` sets group to lowest serial_id (but maintains selected
   serial number if joining an existing group in the table). (#10)
