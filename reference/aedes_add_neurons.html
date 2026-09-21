@@ -111,7 +111,7 @@ returns the data frames that would have been used.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional columns to set on each row (e.g. <code>cell_class = "KC"</code>).
+<dd><p>Additional columns to set on each row (e.g. <code>class = "KC"</code>).
 Recycled across all input ids. Values here always win over the auto-fill
 below.</p></dd>
 
@@ -240,39 +240,44 @@ the auto-fill helpers.</p></div>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>aedes.initials <span class="op">=</span> <span class="st">"GJ"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Dry run first: see the frames that would be written. Two new neurons,</span></span></span>
-<span class="r-in"><span><span class="co"># both to be added as KC superclass. status is required; the shortlist</span></span></span>
-<span class="r-in"><span><span class="co"># in the signature gives tab-completion.</span></span></span>
+<span class="r-in"><span><span class="co"># both central brain intrinsic neurons of class KC. status is required;</span></span></span>
+<span class="r-in"><span><span class="co"># the shortlist in the signature gives tab-completion.</span></span></span>
 <span class="r-in"><span><span class="fu">aedes_add_neurons</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"648518347569414567"</span>, <span class="st">"648518347399768369"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  superclass <span class="op">=</span> <span class="st">"KC"</span>, status <span class="op">=</span> <span class="st">"adequate"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  superclass <span class="op">=</span> <span class="st">"cb_intrinsic"</span>, class <span class="op">=</span> <span class="st">"KC"</span>, status <span class="op">=</span> <span class="st">"adequate"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Commit for real</span></span></span>
 <span class="r-in"><span><span class="fu">aedes_add_neurons</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"648518347569414567"</span>, <span class="st">"648518347399768369"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  dryrun <span class="op">=</span> <span class="cn">FALSE</span>, superclass <span class="op">=</span> <span class="st">"KC"</span>, status <span class="op">=</span> <span class="st">"adequate"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  dryrun <span class="op">=</span> <span class="cn">FALSE</span>, superclass <span class="op">=</span> <span class="st">"cb_intrinsic"</span>, class <span class="op">=</span> <span class="st">"KC"</span>,</span></span>
+<span class="r-in"><span>  status <span class="op">=</span> <span class="st">"adequate"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Add the two neurons and immediately group them together (a fresh group is</span></span></span>
 <span class="r-in"><span><span class="co"># minted from the serial_ids FlyTable assigns on insert)</span></span></span>
 <span class="r-in"><span><span class="fu">aedes_add_neurons</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"648518347569414567"</span>, <span class="st">"648518347399768369"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  dryrun <span class="op">=</span> <span class="cn">FALSE</span>, superclass <span class="op">=</span> <span class="st">"KC"</span>, status <span class="op">=</span> <span class="st">"adequate"</span>, group <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  dryrun <span class="op">=</span> <span class="cn">FALSE</span>, superclass <span class="op">=</span> <span class="st">"cb_intrinsic"</span>, class <span class="op">=</span> <span class="st">"KC"</span>,</span></span>
+<span class="r-in"><span>  status <span class="op">=</span> <span class="st">"adequate"</span>, group <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Add them to an existing group by giving its serial_id-style id explicitly</span></span></span>
 <span class="r-in"><span><span class="fu">aedes_add_neurons</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"648518347569414567"</span>, <span class="st">"648518347399768369"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  dryrun <span class="op">=</span> <span class="cn">FALSE</span>, superclass <span class="op">=</span> <span class="st">"KC"</span>, status <span class="op">=</span> <span class="st">"adequate"</span>, group <span class="op">=</span> <span class="fl">12345</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  dryrun <span class="op">=</span> <span class="cn">FALSE</span>, superclass <span class="op">=</span> <span class="st">"cb_intrinsic"</span>, class <span class="op">=</span> <span class="st">"KC"</span>,</span></span>
+<span class="r-in"><span>  status <span class="op">=</span> <span class="st">"adequate"</span>, group <span class="op">=</span> <span class="fl">12345</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Skip soma/side auto-fill (e.g. neurons with no soma in the volume)</span></span></span>
 <span class="r-in"><span><span class="fu">aedes_add_neurons</span><span class="op">(</span><span class="st">"648518347569414567"</span>,</span></span>
-<span class="r-in"><span>                  superclass <span class="op">=</span> <span class="st">"KC"</span>, status <span class="op">=</span> <span class="st">"missing soma"</span>,</span></span>
+<span class="r-in"><span>                  superclass <span class="op">=</span> <span class="st">"cb_intrinsic"</span>, class <span class="op">=</span> <span class="st">"KC"</span>,</span></span>
+<span class="r-in"><span>                  status <span class="op">=</span> <span class="st">"missing soma"</span>,</span></span>
 <span class="r-in"><span>                  soma <span class="op">=</span> <span class="cn">FALSE</span>, side <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Per-row metadata via a data.frame: one `class`/`cell_type` per id.</span></span></span>
+<span class="r-in"><span><span class="co"># Per-row metadata via a data.frame: one `cell_type` per id.</span></span></span>
 <span class="r-in"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  root_id   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"648518347569414567"</span>, <span class="st">"648518347399768369"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  class     <span class="op">=</span> <span class="st">"KC"</span>,</span></span>
-<span class="r-in"><span>  cell_type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"KCa'b'"</span>, <span class="st">"KCg"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  status    <span class="op">=</span> <span class="st">"adequate"</span>,</span></span>
+<span class="r-in"><span>  root_id    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"648518347569414567"</span>, <span class="st">"648518347399768369"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  superclass <span class="op">=</span> <span class="st">"cb_intrinsic"</span>,</span></span>
+<span class="r-in"><span>  class      <span class="op">=</span> <span class="st">"KC"</span>,</span></span>
+<span class="r-in"><span>  cell_type  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"KCa'b'"</span>, <span class="st">"KCg"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  status     <span class="op">=</span> <span class="st">"adequate"</span>,</span></span>
 <span class="r-in"><span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">aedes_add_neurons</span><span class="op">(</span><span class="va">df</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
