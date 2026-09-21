@@ -12,7 +12,8 @@ test_that("aedes_add_neurons validates a data.frame `ids` up front", {
 
   # A data.frame must carry a root_id column.
   expect_error(
-    aedes_add_neurons(data.frame(superclass = "KC", status = "adequate")),
+    aedes_add_neurons(
+      data.frame(superclass = "cb_intrinsic", status = "adequate")),
     "root_id")
 
   # Invalid root_id values are caught by the same id check as the vector path.
@@ -23,8 +24,8 @@ test_that("aedes_add_neurons validates a data.frame `ids` up front", {
   # A column supplied via both the data.frame and `...` is ambiguous.
   expect_error(
     aedes_add_neurons(
-      data.frame(root_id = "648518347399768369", superclass = "KC"),
-      superclass = "PN"),
+      data.frame(root_id = "648518347399768369", superclass = "cb_intrinsic"),
+      superclass = "sensory"),
     "both the data.frame")
 
   # `status` from the data.frame and as an argument at once is an error.
