@@ -64,7 +64,7 @@
 #'   root id before matching.
 #' @param dryrun If `TRUE` (the default) no writes are performed; the function
 #'   returns the data frames that would have been used.
-#' @param ... Additional columns to set on each row (e.g. `cell_class = "KC"`).
+#' @param ... Additional columns to set on each row (e.g. `class = "KC"`).
 #'   Recycled across all input ids. Values here always win over the auto-fill
 #'   below.
 #' @param soma If `TRUE` (the default), auto-fill `soma_xyz` and `nucleus_id`
@@ -118,39 +118,44 @@
 #' options(aedes.initials = "GJ")
 #'
 #' # Dry run first: see the frames that would be written. Two new neurons,
-#' # both to be added as KC superclass. status is required; the shortlist
-#' # in the signature gives tab-completion.
+#' # both central brain intrinsic neurons of class KC. status is required;
+#' # the shortlist in the signature gives tab-completion.
 #' aedes_add_neurons(
 #'   c("648518347569414567", "648518347399768369"),
-#'   superclass = "KC", status = "adequate")
+#'   superclass = "cb_intrinsic", class = "KC", status = "adequate")
 #'
 #' # Commit for real
 #' aedes_add_neurons(
 #'   c("648518347569414567", "648518347399768369"),
-#'   dryrun = FALSE, superclass = "KC", status = "adequate")
+#'   dryrun = FALSE, superclass = "cb_intrinsic", class = "KC",
+#'   status = "adequate")
 #'
 #' # Add the two neurons and immediately group them together (a fresh group is
 #' # minted from the serial_ids FlyTable assigns on insert)
 #' aedes_add_neurons(
 #'   c("648518347569414567", "648518347399768369"),
-#'   dryrun = FALSE, superclass = "KC", status = "adequate", group = TRUE)
+#'   dryrun = FALSE, superclass = "cb_intrinsic", class = "KC",
+#'   status = "adequate", group = TRUE)
 #'
 #' # Add them to an existing group by giving its serial_id-style id explicitly
 #' aedes_add_neurons(
 #'   c("648518347569414567", "648518347399768369"),
-#'   dryrun = FALSE, superclass = "KC", status = "adequate", group = 12345)
+#'   dryrun = FALSE, superclass = "cb_intrinsic", class = "KC",
+#'   status = "adequate", group = 12345)
 #'
 #' # Skip soma/side auto-fill (e.g. neurons with no soma in the volume)
 #' aedes_add_neurons("648518347569414567",
-#'                   superclass = "KC", status = "missing soma",
+#'                   superclass = "cb_intrinsic", class = "KC",
+#'                   status = "missing soma",
 #'                   soma = FALSE, side = FALSE)
 #'
-#' # Per-row metadata via a data.frame: one `class`/`cell_type` per id.
+#' # Per-row metadata via a data.frame: one `cell_type` per id.
 #' df <- data.frame(
-#'   root_id   = c("648518347569414567", "648518347399768369"),
-#'   class     = "KC",
-#'   cell_type = c("KCa'b'", "KCg"),
-#'   status    = "adequate",
+#'   root_id    = c("648518347569414567", "648518347399768369"),
+#'   superclass = "cb_intrinsic",
+#'   class      = "KC",
+#'   cell_type  = c("KCa'b'", "KCg"),
+#'   status     = "adequate",
 #'   stringsAsFactors = FALSE)
 #' aedes_add_neurons(df)
 #' }
@@ -269,7 +274,7 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
     miss <- setdiff(required, names(extra))
     if (length(miss))
       stop("Missing required column(s): ", paste(miss, collapse = ", "),
-           ". Pass via `...`, e.g. `superclass = \"KC\"`",
+           ". Pass via `...`, e.g. `superclass = \"cb_intrinsic\"`",
            if ("initials" %in% miss)
              " -- for `initials` you can also set once with ",
              "options(aedes.initials = \"XY\")",
