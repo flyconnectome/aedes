@@ -173,14 +173,20 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
   group_id <- NULL
   if (is.logical(group) && length(group) == 1L && !is.na(group)) {
     # FALSE / TRUE: handled at insertion time below.
-  } else if (length(group) == 1L && !is.na(group) &&
-             ((is.numeric(group) && group > 0 && group == round(group)) ||
-              (is.character(group) && grepl("^[1-9][0-9]*$", group)))) {
-    group_id <- format(group, scientific = FALSE, trim = TRUE)
-    group <- FALSE
   } else {
-    stop("`group` must be a single TRUE/FALSE, or a single serial_id-style ",
-         "group id (a positive whole number).", call. = FALSE)
+    # Otherwise an explicit group id, under the same rule as aedes_set_group():
+    # a positive whole number that fits in an integer. Group ids are
+    # serial_id-style (5 digits at present) whereas a root_id (~6e17) never
+    # fits, so this stops a root_id being written out as a bogus group id --
+    # and, past 2^53, one whose digits a double has already mangled.
+    gid <- if (length(group) == 1L && !is.na(group) &&
+               (is.numeric(group) || grepl("^[0-9]+$", group)))
+      suppressWarnings(as.integer(as.numeric(group))) else NA_integer_
+    if (is.na(gid) || gid <= 0L || gid != as.numeric(group))
+      stop("`group` must be a single TRUE/FALSE, or a single serial_id-style ",
+           "group id (a positive whole number, not a root_id).", call. = FALSE)
+    group_id <- as.character(gid)
+    group <- FALSE
   }
   if (isTRUE(group) && dryrun)
     warning("group=TRUE has no effect under dryrun=TRUE; ",

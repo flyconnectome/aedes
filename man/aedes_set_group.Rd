@@ -19,10 +19,11 @@ aedes_set_group(
 \item{ids}{Neurons to group, in any form understood by \code{\link[=aedes_ids]{aedes_ids()}}
 (including a query string).}
 
-\item{group}{Optional explicit target. An integer forces that group id; \code{0}
-or \code{NA} ungroups; a query / ids joins the group of those neuron(s)
-("join-by-example"). When \code{NULL} (the default) the group id is derived (see
-Details).}
+\item{group}{Optional explicit target. A positive whole number forces that
+group id; \code{NA} ungroups; a query string joins the group of the neurons it
+matches ("join-by-example"). When \code{NULL} (the default) the group id is
+derived (see Details). Zero, negative and root_id-sized ids are an error:
+use \code{NA} to ungroup.}
 
 \item{join_existing}{Controls behaviour when selected neurons already belong
 to a group. \code{NA} (the default): refuse to guess -- warn (dry run) or error
@@ -51,8 +52,9 @@ the new tokens instead of merging with existing cell contents. Default
 }
 \value{
 A preview data.frame with one row per selected neuron: \code{root_id},
-\code{serial_id}, \code{group_old}, \code{group_new} and \code{changed}. Returned invisibly on a
-live write.
+\code{serial_id}, \code{group_old}, \code{group_new} and \code{changed}. \code{group_old} and
+\code{group_new} are \code{NA} for ungrouped neurons. Returned invisibly on a live
+write.
 }
 \description{
 Writes only the \code{group} column of the \code{aedes_main} FlyTable,
@@ -64,9 +66,15 @@ use \code{\link[=aedes_add_neurons]{aedes_add_neurons()}}.
 }
 \details{
 By convention a group is identified by an integer equal to the
-smallest \code{serial_id} among its founding members; \code{group = 0} (or \code{NA}) means
-ungrouped. When the selected neurons are all currently ungrouped a fresh
-group id is minted from \code{min(serial_id)}.
+smallest \code{serial_id} among its founding members; \code{NA} (an empty FlyTable
+cell) means ungrouped. When the selected neurons are all currently
+ungrouped a fresh group id is minted from \code{min(serial_id)}.
+
+An explicit \code{group} must be a positive whole number small enough to be a
+serial_id (5 digits at present), matching what \code{\link[=aedes_add_neurons]{aedes_add_neurons()}}
+accepts. A root_id (~6e17) is therefore rejected rather than written out
+as a group id; to join the group of particular neurons, name them with a
+query instead.
 
 When some selected neurons already belong to a group, \code{join_existing}
 decides what happens (see the argument). Reassigning neurons out of a group
@@ -90,12 +98,12 @@ aedes_set_group(ids, dryrun = FALSE)       # commit
 aedes_set_group(c(ids, "648518347123456789"),
                 join_existing = TRUE, dryrun = FALSE)
 
-# Join by example: use the group of a reference neuron
+# Join by example: adopt the group of the neurons a query matches.
 aedes_set_group("648518347999999999",
-                group = "648518347569414567", dryrun = FALSE)
+                group = "type:G59_SN", dryrun = FALSE)
 
-# Ungroup: group=0 or group=NA
-aedes_set_group(ids, group = 0, dryrun = FALSE)
+# Ungroup (clears the FlyTable cell)
+aedes_set_group(ids, group = NA, dryrun = FALSE)
 }
 }
 \seealso{
