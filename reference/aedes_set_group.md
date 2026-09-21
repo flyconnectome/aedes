@@ -31,10 +31,11 @@ aedes_set_group(
 
 - group:
 
-  Optional explicit target. An integer forces that group id; `0` or `NA`
-  ungroups; a query / ids joins the group of those neuron(s)
-  ("join-by-example"). When `NULL` (the default) the group id is derived
-  (see Details).
+  Optional explicit target. A positive whole number forces that group
+  id; `NA` ungroups; a query string joins the group of the neurons it
+  matches ("join-by-example"). When `NULL` (the default) the group id is
+  derived (see Details). Zero, negative and root_id-sized ids are an
+  error: use `NA` to ungroup.
 
 - join_existing:
 
@@ -77,15 +78,22 @@ aedes_set_group(
 ## Value
 
 A preview data.frame with one row per selected neuron: `root_id`,
-`serial_id`, `group_old`, `group_new` and `changed`. Returned invisibly
-on a live write.
+`serial_id`, `group_old`, `group_new` and `changed`. `group_old` and
+`group_new` are `NA` for ungrouped neurons. Returned invisibly on a live
+write.
 
 ## Details
 
 By convention a group is identified by an integer equal to the smallest
-`serial_id` among its founding members; `group = 0` (or `NA`) means
-ungrouped. When the selected neurons are all currently ungrouped a fresh
-group id is minted from `min(serial_id)`.
+`serial_id` among its founding members; `NA` (an empty FlyTable cell)
+means ungrouped. When the selected neurons are all currently ungrouped a
+fresh group id is minted from `min(serial_id)`.
+
+An explicit `group` must be a positive whole number small enough to be a
+serial_id (5 digits at present), matching what
+[`aedes_add_neurons()`](aedes_add_neurons.md) accepts. A root_id (~6e17)
+is therefore rejected rather than written out as a group id; to join the
+group of particular neurons, name them with a query instead.
 
 When some selected neurons already belong to a group, `join_existing`
 decides what happens (see the argument). Reassigning neurons out of a
@@ -118,11 +126,11 @@ aedes_set_group(ids, dryrun = FALSE)       # commit
 aedes_set_group(c(ids, "648518347123456789"),
                 join_existing = TRUE, dryrun = FALSE)
 
-# Join by example: use the group of a reference neuron
+# Join by example: adopt the group of the neurons a query matches.
 aedes_set_group("648518347999999999",
-                group = "648518347569414567", dryrun = FALSE)
+                group = "type:G59_SN", dryrun = FALSE)
 
-# Ungroup: group=0 or group=NA
-aedes_set_group(ids, group = 0, dryrun = FALSE)
+# Ungroup (clears the FlyTable cell)
+aedes_set_group(ids, group = NA, dryrun = FALSE)
 } # }
 ```

@@ -76,10 +76,11 @@ use <code><a href="aedes_add_neurons.html">aedes_add_neurons()</a></code>.</p>
 
 
 <dt id="arg-group">group<a class="anchor" aria-label="anchor" href="#arg-group"></a></dt>
-<dd><p>Optional explicit target. An integer forces that group id; <code>0</code>
-or <code>NA</code> ungroups; a query / ids joins the group of those neuron(s)
-("join-by-example"). When <code>NULL</code> (the default) the group id is derived (see
-Details).</p></dd>
+<dd><p>Optional explicit target. A positive whole number forces that
+group id; <code>NA</code> ungroups; a query string joins the group of the neurons it
+matches ("join-by-example"). When <code>NULL</code> (the default) the group id is
+derived (see Details). Zero, negative and root_id-sized ids are an error:
+use <code>NA</code> to ungroup.</p></dd>
 
 
 <dt id="arg-join-existing">join_existing<a class="anchor" aria-label="anchor" href="#arg-join-existing"></a></dt>
@@ -122,15 +123,21 @@ the new tokens instead of merging with existing cell contents. Default
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A preview data.frame with one row per selected neuron: <code>root_id</code>,
-<code>serial_id</code>, <code>group_old</code>, <code>group_new</code> and <code>changed</code>. Returned invisibly on a
-live write.</p>
+<code>serial_id</code>, <code>group_old</code>, <code>group_new</code> and <code>changed</code>. <code>group_old</code> and
+<code>group_new</code> are <code>NA</code> for ungrouped neurons. Returned invisibly on a live
+write.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>By convention a group is identified by an integer equal to the
-smallest <code>serial_id</code> among its founding members; <code>group = 0</code> (or <code>NA</code>) means
-ungrouped. When the selected neurons are all currently ungrouped a fresh
-group id is minted from <code>min(serial_id)</code>.</p>
+smallest <code>serial_id</code> among its founding members; <code>NA</code> (an empty FlyTable
+cell) means ungrouped. When the selected neurons are all currently
+ungrouped a fresh group id is minted from <code>min(serial_id)</code>.</p>
+<p>An explicit <code>group</code> must be a positive whole number small enough to be a
+serial_id (5 digits at present), matching what <code><a href="aedes_add_neurons.html">aedes_add_neurons()</a></code>
+accepts. A root_id (~6e17) is therefore rejected rather than written out
+as a group id; to join the group of particular neurons, name them with a
+query instead.</p>
 <p>When some selected neurons already belong to a group, <code>join_existing</code>
 decides what happens (see the argument). Reassigning neurons out of a group
 whose other members were not supplied emits a warning, since it splits that
@@ -161,12 +168,12 @@ the returned preview matches what is written.</p>
 <span class="r-in"><span><span class="fu">aedes_set_group</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">ids</span>, <span class="st">"648518347123456789"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                join_existing <span class="op">=</span> <span class="cn">TRUE</span>, dryrun <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Join by example: use the group of a reference neuron</span></span></span>
+<span class="r-in"><span><span class="co"># Join by example: adopt the group of the neurons a query matches.</span></span></span>
 <span class="r-in"><span><span class="fu">aedes_set_group</span><span class="op">(</span><span class="st">"648518347999999999"</span>,</span></span>
-<span class="r-in"><span>                group <span class="op">=</span> <span class="st">"648518347569414567"</span>, dryrun <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-in"><span>                group <span class="op">=</span> <span class="st">"type:G59_SN"</span>, dryrun <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Ungroup: group=0 or group=NA</span></span></span>
-<span class="r-in"><span><span class="fu">aedes_set_group</span><span class="op">(</span><span class="va">ids</span>, group <span class="op">=</span> <span class="fl">0</span>, dryrun <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Ungroup (clears the FlyTable cell)</span></span></span>
+<span class="r-in"><span><span class="fu">aedes_set_group</span><span class="op">(</span><span class="va">ids</span>, group <span class="op">=</span> <span class="cn">NA</span>, dryrun <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
