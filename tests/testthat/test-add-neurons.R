@@ -52,6 +52,16 @@ test_that("aedes_add_neurons validates the `group` argument up front", {
                "group id")
   expect_error(aedes_add_neurons("648518347399768369", group = c(1, 2)),
                "group id")
+  expect_error(aedes_add_neurons("648518347399768369", group = 0),
+               "group id")
+  # A root_id is not a group id in either form (the same rule as
+  # aedes_set_group), and as a bare number its digits are already mangled.
+  expect_error(aedes_add_neurons("648518347399768369",
+                                 group = "648518347569414567"),
+               "not a root_id")
+  expect_error(aedes_add_neurons("648518347399768369",
+                                 group = 648518347569414567),
+               "not a root_id")
 
   # An explicit numeric group id and a data.frame `group` column clash.
   expect_error(
