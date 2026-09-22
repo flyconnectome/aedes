@@ -1,6 +1,9 @@
 #' Return metadata about Aedes neurons from FlyTable
 #'
-#' @param ids Root IDs (character/int64) or a query string like `"class:ALPN"`.
+#' @param ids Root IDs (character/int64), a query string like `"class:ALPN"`, a
+#'   single string of comma/space-separated ids (`"id1, id2, id3"`) or a
+#'   neuroglancer URL (including shortened state URLs), from which the visible
+#'   segments are used.
 #' @param ignore.case For query strings, whether to ignore case.
 #' @param fixed For query strings, whether to treat queries as fixed strings
 #'   rather than regular expressions (default FALSE).
