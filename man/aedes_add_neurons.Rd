@@ -37,7 +37,9 @@ from \code{\link[=aedes_soma_position]{aedes_soma_position()}}.}
 
 \item{side}{If \code{TRUE} (the default), auto-fill \code{side} from
 \code{\link[=aedes_point_side]{aedes_point_side()}} applied to the soma; falls back to the L2 key point
-(with a warning) for ids where the soma cascade returns nothing.}
+(with a warning) for ids where the soma cascade returns nothing. A
+character value (e.g. \code{side = "L"}) is instead written to the \code{side}
+column directly, as if passed via \code{...}.}
 
 \item{status}{FlyTable status. A shortlist of the common values is exposed
 in the signature for tab-completion. Any other value is live-checked

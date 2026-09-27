@@ -71,7 +71,9 @@
 #'   from [aedes_soma_position()].
 #' @param side If `TRUE` (the default), auto-fill `side` from
 #'   [aedes_point_side()] applied to the soma; falls back to the L2 key point
-#'   (with a warning) for ids where the soma cascade returns nothing.
+#'   (with a warning) for ids where the soma cascade returns nothing. A
+#'   character value (e.g. `side = "L"`) is instead written to the `side`
+#'   column directly, as if passed via `...`.
 #' @param status FlyTable status. A shortlist of the common values is exposed
 #'   in the signature for tab-completion. Any other value is live-checked
 #'   against the vocabulary already present in `aedes_main`; unknown values
@@ -175,6 +177,16 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
   # (so it can mint a group from the server-assigned serial_ids); an explicit
   # serial_id-style group id is written straight into the `group` column and
   # uploaded with the rows, exactly as a user-supplied `group` column would be.
+  # `side` is likewise dual-mode: TRUE/FALSE toggles auto-fill, whereas a
+  # character value (e.g. side = "L") is the column value itself, exactly as
+  # if it had been passed via `...` (and so suppresses the auto-fill).
+  if (is.character(side)) {
+    extra$side <- side
+    side <- FALSE
+  } else if (!(is.logical(side) && length(side) == 1L && !is.na(side))) {
+    stop("`side` must be a single TRUE/FALSE, or a character side value ",
+         "(e.g. \"L\").", call. = FALSE)
+  }
   group_id <- NULL
   if (is.logical(group) && length(group) == 1L && !is.na(group)) {
     # FALSE / TRUE: handled at insertion time below.
