@@ -35,7 +35,10 @@ aedes_ids(
 
 - ids:
 
-  Root IDs (character/int64) or a query string like `"class:ALPN"`.
+  Root IDs (character/int64), a query string like `"class:ALPN"`, a
+  single string of comma/space-separated ids (`"id1, id2, id3"`) or a
+  neuroglancer URL (including shortened state URLs), from which the
+  visible segments are used.
 
 - ignore.case:
 

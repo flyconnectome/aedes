@@ -9,6 +9,16 @@ should now provide an efficient approach to add newrows including
 automatic definition of key points on the neuron, soma location, side of
 brain etc.
 
+- coconatfly adapter
+  ([`cf_meta()`](https://natverse.org/coconatfly/reference/cf_meta.html)/[`cf_partners()`](https://natverse.org/coconatfly/reference/cf_partners.html)):
+  ungrouped neurons now reach coconatfly as an `integer64` `NA` group,
+  so `cf_cosine_plot(group="group")` drops them instead of collapsing
+  every ungrouped partner into one spurious shared feature column. (An
+  `NA` group already came out of
+  [`aedes_meta()`](../reference/aedes_meta.md), but coconatfly re-runs
+  [`fafbseg::flywire_ids()`](https://rdrr.io/pkg/fafbseg/man/flywire_ids.html)
+  on the group column, which preserves an `integer64` `NA` yet maps a
+  numeric/character `NA` to `"0"`.)
 - New [`aedes_set_meta()`](../reference/aedes_set_meta.md) bulk-updates
   existing flytable rows.
   ([\#10](https://github.com/flyconnectome/aedes/issues/10))

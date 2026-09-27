@@ -65,6 +65,8 @@ Summarise synaptic partners.
 
 - [`aedes_partner_summary()`](aedes_partner_summary.md) : Summarise the
   synaptic partners of one or more Aedes neurons
+- [`aedes_predict_group()`](aedes_predict_group.md) : Predict the group
+  of aedes neurons using type or group information
 
 ## Low level CAVE access
 
