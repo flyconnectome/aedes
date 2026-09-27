@@ -31,7 +31,10 @@ aedes_ids(
 )
 }
 \arguments{
-\item{ids}{Root IDs (character/int64) or a query string like \code{"class:ALPN"}.}
+\item{ids}{Root IDs (character/int64), a query string like \code{"class:ALPN"}, a
+single string of comma/space-separated ids (\code{"id1, id2, id3"}) or a
+neuroglancer URL (including shortened state URLs), from which the visible
+segments are used.}
 
 \item{ignore.case}{For query strings, whether to ignore case.}
 
