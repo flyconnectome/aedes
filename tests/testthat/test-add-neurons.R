@@ -37,6 +37,18 @@ test_that("aedes_add_neurons validates a data.frame `ids` up front", {
 })
 
 
+test_that("aedes_add_neurons validates the `side` argument up front", {
+  # These fail before any service call, so they need no live data.
+  expect_error(aedes_add_neurons("648518347399768369", side = NA), "`side`")
+  expect_error(aedes_add_neurons("648518347399768369", side = 1), "`side`")
+  # A character side is a column value, so it clashes with a data.frame column.
+  expect_error(
+    aedes_add_neurons(data.frame(root_id = "648518347399768369", side = "R"),
+                      side = "L"),
+    "both the data.frame")
+})
+
+
 test_that("aedes_add_neurons validates the `group` argument up front", {
   # `group` is checked before any service call, so this needs no live data.
   # Accepted: a single TRUE/FALSE, or a single positive whole-number group id.
