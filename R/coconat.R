@@ -67,6 +67,14 @@ aedes_cfmeta <- function(ids = NULL, ignore.case = FALSE, fixed = FALSE,
     dplyr::rename(id = "root_id", lineage = "hemilineage") %>%
     dplyr::mutate(subsubclass = .data$subclass, subclass = .data$class, class = .data$superclass) %>%
     dplyr::select(-dplyr::any_of("superclass")) %>%
+    # Ungrouped neurons must reach coconatfly as NA group so that
+    # cf_cosine_plot(group="group") drops them; otherwise every ungrouped
+    # partner collapses into a single spurious shared feature. We return an
+    # integer64 NA (matching the other datasets): coconatfly's cf_meta() re-runs
+    # fafbseg::flywire_ids() on the group column, which preserves an integer64
+    # NA but silently maps a character/numeric NA to "0" (an apparent group).
+    dplyr::mutate(group = bit64::as.integer64(
+      dplyr::na_if(suppressWarnings(as.numeric(.data$group)), 0))) %>%
     dplyr::mutate(instance = dplyr::case_when(
       is.na(.data$instance) ~ paste0(.data$type, "_", ifelse(is.na(.data$side), "", .data$side)),
       TRUE ~ .data$instance
