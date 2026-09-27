@@ -124,7 +124,9 @@ from <code><a href="aedes_soma_position.html">aedes_soma_position()</a></code>.<
 <dt id="arg-side">side<a class="anchor" aria-label="anchor" href="#arg-side"></a></dt>
 <dd><p>If <code>TRUE</code> (the default), auto-fill <code>side</code> from
 <code><a href="aedes_point_side.html">aedes_point_side()</a></code> applied to the soma; falls back to the L2 key point
-(with a warning) for ids where the soma cascade returns nothing.</p></dd>
+(with a warning) for ids where the soma cascade returns nothing. A
+character value (e.g. <code>side = "L"</code>) is instead written to the <code>side</code>
+column directly, as if passed via <code>...</code>.</p></dd>
 
 
 <dt id="arg-status">status<a class="anchor" aria-label="anchor" href="#arg-status"></a></dt>

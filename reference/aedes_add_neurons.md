@@ -65,7 +65,8 @@ aedes_add_neurons(
   If `TRUE` (the default), auto-fill `side` from
   [`aedes_point_side()`](aedes_point_side.md) applied to the soma; falls
   back to the L2 key point (with a warning) for ids where the soma
-  cascade returns nothing.
+  cascade returns nothing. A character value (e.g. `side = "L"`) is
+  instead written to the `side` column directly, as if passed via `...`.
 
 - status:
 
