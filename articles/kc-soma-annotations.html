@@ -31,6 +31,13 @@
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../index.html"><span class="fa fas fa-home fa-lg"></span></a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="active nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="../articles/connectivity-clustering.html">Connectivity Clustering with Predicted Groups</a></li>
+    <li><a class="dropdown-item" href="../articles/kc-soma-annotations.html">KC Soma Annotations in Neuroglancer</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -69,9 +76,6 @@ leave the default <code>chunksize = 20L</code> so L2 attributes are
 fetched in batches.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/flyconnectome/aedes" class="external-link">aedes</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning in rgl.init(initValue, onlyNULL): RGL: unable to open X11 display</span></span>
-<span><span class="co">#&gt; Warning: 'rgl.init' failed, will use the null device.</span></span>
-<span><span class="co">#&gt; See '?rgl.useNULL' for ways to avoid this warning.</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/natverse/fafbseg" class="external-link">fafbseg</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">

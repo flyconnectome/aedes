@@ -19,6 +19,11 @@ coconatfly."></head><body>
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../index.html"><span class="fa fas fa-home fa-lg"></span></a></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/connectivity-clustering.html">Connectivity Clustering with Predicted Groups</a></li>
+    <li><a class="dropdown-item" href="../articles/kc-soma-annotations.html">KC Soma Annotations in Neuroglancer</a></li>
+  </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="external-link nav-link" href="https://github.com/flyconnectome/aedes/"><span class="fa fab fa-github fa-lg"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://natverse.org">natverse</a></li>
@@ -65,6 +70,10 @@ to handle this.</p><ol><li><p>use a specific numeric version (aka materialisatio
 <li><p>map ids to the current time (<code>version='now'</code>)</p></li>
 </ol><p>Option 2 is the default since this can make queries somewhat faster and
 stable but note that 'latest' can be several days old.</p>
+<p>Metadata returned for aedes neurons includes a <code>pgroup</code> column from
+<code><a href="aedes_predict_group.html">aedes_predict_group()</a></code>, which can be used to group partner neurons when
+clustering by connectivity, e.g. <code>cf_cosine_plot(ids, group = "pgroup")</code>.
+See <code><a href="../articles/connectivity-clustering.html">vignette("connectivity-clustering")</a></code> for a worked example.</p>
     </div>
 
     <div class="section level2">
@@ -74,6 +83,15 @@ stable but note that 'latest' can be several days old.</p>
 <span class="r-in"><span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_meta.html" class="external-link">cf_meta</a></span><span class="op">(</span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_ids.html" class="external-link">cf_ids</a></span><span class="op">(</span>aedes<span class="op">=</span><span class="st">"/class:MBON.*"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="aedes_set_version.html">aedes_set_version</a></span><span class="op">(</span><span class="st">'now'</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_meta.html" class="external-link">cf_meta</a></span><span class="op">(</span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_ids.html" class="external-link">cf_ids</a></span><span class="op">(</span>aedes<span class="op">=</span><span class="st">"/class:MBON.*"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># cluster a group of neurons by connectivity, grouping partner neurons by</span></span></span>
+<span class="r-in"><span><span class="co"># their curated group (partners without one are dropped) ...</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_ids.html" class="external-link">cf_ids</a></span><span class="op">(</span>aedes <span class="op">=</span> <span class="st">"group:36155"</span><span class="op">)</span>, group <span class="op">=</span> <span class="st">"group"</span>,</span></span>
+<span class="r-in"><span>  labRow <span class="op">=</span> <span class="st">"{side}_{serial_id}"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># ... or by predicted group (type, then group, then nblast cluster), so that</span></span></span>
+<span class="r-in"><span><span class="co"># far fewer partners are lost</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_ids.html" class="external-link">cf_ids</a></span><span class="op">(</span>aedes <span class="op">=</span> <span class="st">"group:36155"</span><span class="op">)</span>, group <span class="op">=</span> <span class="st">"pgroup"</span>,</span></span>
+<span class="r-in"><span>  labRow <span class="op">=</span> <span class="st">"{side}_{serial_id}"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
