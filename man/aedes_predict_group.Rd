@@ -7,7 +7,8 @@
 aedes_predict_group(x, badtypes = c(NA, "", "undefined", "KCx", "LHN"))
 }
 \arguments{
-\item{x}{A data.frame with \code{type}, \code{group} and \code{serial_id} columns, such as
+\item{x}{A data.frame with \code{type}, \code{group}, \code{nblast_group} and \code{serial_id}
+columns, such as
 returned by \code{\link[=aedes_meta]{aedes_meta()}} or a partner table from
 \code{\link[coconatfly:cf_partners]{coconatfly::cf_partners()}} / \code{\link[coconatfly:multi_connection_table]{coconatfly::multi_connection_table()}}
 (where these columns describe the partner neurons). Alternatively neuron
@@ -21,7 +22,8 @@ A numeric vector of group ids with one element per row of \code{x}.
 }
 \description{
 Returns a numeric group id for each neuron, preferring its cell
-type, then its curated \code{group}, and finally its own \code{serial_id}. This is
+type, then its curated \code{group}, then its NBLAST cluster, and finally its
+own \code{serial_id}. This is
 intended for grouping partner neurons in connectivity clustering, e.g. with
 \code{\link[coconatfly:cf_cosine_plot]{coconatfly::cf_cosine_plot()}}.
 }
@@ -36,8 +38,17 @@ Types listed in \code{badtypes} are ignored.
 \item untyped neurons use their \code{group} column (itself the smallest
 \code{serial_id} of the group's founding members, see \code{\link[=aedes_set_group]{aedes_set_group()}}).
 A \code{group} of \code{0} is treated as ungrouped.
-\item neurons with neither fall back to their own \code{serial_id}.
+\item neurons with no type or group use their \code{nblast_group} cluster when this
+has the form \code{CNNNNN} (where \code{NNNNN} is the smallest \code{serial_id} in the
+cluster); the leading \code{C} is dropped. All other \code{nblast_group} values are
+ignored, so a cluster can be struck out by prefixing it with \code{X} (e.g.
+\code{XC12345}) without deleting it.
+\item neurons with none of these fall back to their own \code{serial_id}.
 }
+
+Once \code{\link[=register_aedes_coconat]{register_aedes_coconat()}} has been called, coconatfly metadata for
+aedes neurons includes the result as a \code{pgroup} column, so you can use
+\code{group = "pgroup"} directly in coconatfly functions (see examples).
 }
 \examples{
 \dontrun{
@@ -46,6 +57,9 @@ x <- multi_connection_table(cf_ids(aedes = "/type:MBON.+"),
   partners = c("in", "out"), threshold = 5, group = FALSE)
 x$pgroup <- aedes_predict_group(x)
 cf_cosine_plot(x, group = "pgroup")
+
+# coconatfly metadata for aedes neurons already includes a pgroup column
+cf_cosine_plot(cf_ids(aedes = "/type:MBON.+"), group = "pgroup")
 }
 }
 \seealso{
