@@ -17,10 +17,11 @@
 #'   `serial_id` of the group's founding members, see [aedes_set_group()]).
 #'   A `group` of `0` is treated as ungrouped.
 #'   * neurons with no type or group use their `nblast_group` cluster when this
-#'   has the form `CNNNNN` (where `NNNNN` is the smallest `serial_id` in the
-#'   cluster); the leading `C` is dropped. All other `nblast_group` values are
-#'   ignored, so a cluster can be struck out by prefixing it with `X` (e.g.
-#'   `XC12345`) without deleting it.
+#'   has the form `CNNNNN` or `NNNNN` (where `NNNNN` is the smallest
+#'   `serial_id` in the cluster); any leading `C` is dropped. Surrounding
+#'   whitespace and a trailing `?` are ignored, so `" C12345?"` is read as
+#'   `12345`. All other `nblast_group` values are ignored, so a cluster can be
+#'   struck out by prefixing it with `X` (e.g. `XC12345`) without deleting it.
 #'   * neurons with none of these fall back to their own `serial_id`.
 #'
 #'   Once [register_aedes_coconat()] has been called, coconatfly metadata for
@@ -64,11 +65,7 @@ aedes_predict_group <- function(x,
            # 0 is not a valid group id; coconatfly partner tables can report
            # ungrouped neurons as "0" rather than NA
            .grp = dplyr::na_if(as.numeric(.data$group), 0),
-           # only CNNNNN clusters count; anything else (e.g. X-prefixed
-           # struck-out clusters or legacy plain ids) is ignored
-           .nblast = as.numeric(ifelse(grepl("^C[0-9]+$", .data$nblast_group),
-                                       sub("^C", "", .data$nblast_group),
-                                       NA_character_)),
+           .nblast = parse_nblast_group(.data$nblast_group),
            .type = sub("\\?$", "", .data$type),
            .type = ifelse(.data$.type %in% badtypes, NA_character_, .data$.type)) %>%
     dplyr::group_by(.data$.type) %>%
@@ -77,4 +74,14 @@ aedes_predict_group <- function(x,
     mutate(.pg = dplyr::coalesce(.data$.tgroup, .data$.grp, .data$.nblast,
                                  .data$.sid)) %>%
     dplyr::pull(.data$.pg)
+}
+
+# Parse nblast_group values of the form CNNNNN or NNNNN (NNNNN being a
+# serial_id) into numbers. Surrounding whitespace and a trailing ? are removed
+# first. Anything else (e.g. X-prefixed struck-out clusters) becomes NA.
+parse_nblast_group <- function(x) {
+  x <- sub("\\?$", "", trimws(as.character(x)))
+  x <- trimws(x)
+  ok <- grepl("^C?[0-9]+$", x)
+  as.numeric(ifelse(ok, sub("^C", "", x), NA_character_))
 }

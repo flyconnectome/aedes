@@ -137,10 +137,11 @@ namespace, taking the first of these that is available:
 1. **type**: the smallest `serial_id` among neurons of that type (a trailing
    `?` is ignored, as are uninformative types listed in `badtypes`).
 2. **group**: the curated `group`.
-3. **nblast_group**: clusters of the form `CNNNNN`, where `NNNNN` is the
-   smallest `serial_id` in the cluster. Any other value is ignored, so a bad
-   cluster can be struck out by prefixing it with `X` (e.g. `XC12345`) without
-   deleting the information.
+3. **nblast_group**: clusters of the form `CNNNNN` or `NNNNN`, where `NNNNN`
+   is the smallest `serial_id` in the cluster (surrounding whitespace and a
+   trailing `?` are ignored). Any other value is ignored, so a bad cluster can
+   be struck out by prefixing it with `X` (e.g. `XC12345`) without deleting
+   the information.
 4. **serial_id**: the neuron itself, i.e. a singleton group.
 
 Step 4 means that every partner in FlyTable keeps its connectivity as a

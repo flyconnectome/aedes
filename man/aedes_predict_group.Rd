@@ -39,10 +39,11 @@ Types listed in \code{badtypes} are ignored.
 \code{serial_id} of the group's founding members, see \code{\link[=aedes_set_group]{aedes_set_group()}}).
 A \code{group} of \code{0} is treated as ungrouped.
 \item neurons with no type or group use their \code{nblast_group} cluster when this
-has the form \code{CNNNNN} (where \code{NNNNN} is the smallest \code{serial_id} in the
-cluster); the leading \code{C} is dropped. All other \code{nblast_group} values are
-ignored, so a cluster can be struck out by prefixing it with \code{X} (e.g.
-\code{XC12345}) without deleting it.
+has the form \code{CNNNNN} or \code{NNNNN} (where \code{NNNNN} is the smallest
+\code{serial_id} in the cluster); any leading \code{C} is dropped. Surrounding
+whitespace and a trailing \code{?} are ignored, so \code{" C12345?"} is read as
+\code{12345}. All other \code{nblast_group} values are ignored, so a cluster can be
+struck out by prefixing it with \code{X} (e.g. \code{XC12345}) without deleting it.
 \item neurons with none of these fall back to their own \code{serial_id}.
 }
 
