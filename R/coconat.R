@@ -20,6 +20,7 @@
 #' Metadata returned for aedes neurons includes a `pgroup` column from
 #' [aedes_predict_group()], which can be used to group partner neurons when
 #' clustering by connectivity, e.g. `cf_cosine_plot(ids, group = "pgroup")`.
+#' See `vignette("connectivity-clustering")` for a worked example.
 #' @export
 #'
 #' @examples

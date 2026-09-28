@@ -31,6 +31,7 @@ stable but note that 'latest' can be several days old.
 Metadata returned for aedes neurons includes a \code{pgroup} column from
 \code{\link[=aedes_predict_group]{aedes_predict_group()}}, which can be used to group partner neurons when
 clustering by connectivity, e.g. \code{cf_cosine_plot(ids, group = "pgroup")}.
+See \code{vignette("connectivity-clustering")} for a worked example.
 }
 \examples{
 \dontrun{
