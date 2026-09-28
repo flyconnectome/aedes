@@ -15,8 +15,8 @@ aedes neurons do not yet have a type, so we compare two alternatives:
   [`aedes_set_group()`](../reference/aedes_set_group.md)).
 - `pgroup`: the predicted group from
   [`aedes_predict_group()`](../reference/aedes_predict_group.md), which
-  uses the first available of cell type, curated `group`, NBLAST cluster
-  and finally the neuron’s own `serial_id`.
+  uses the first available of cell type, curated `group` and NBLAST
+  cluster.
 
 The chunks below need FlyTable and CAVE access. They are evaluated when
 the pkgdown website is built; elsewhere saved results are shown instead
@@ -88,15 +88,14 @@ cov <- x %>%
   as.data.frame()
 cov
 #>   partners  type group pgroup
-#> 1   inputs 0.001 0.126  0.163
-#> 2  outputs 0.008 0.324  0.756
+#> 1   inputs 0.001 0.126  0.161
+#> 2  outputs 0.008 0.324  0.632
 ```
 
 Cell types cover under 1% of partner synapses, so `group = "type"` is
 not useful here. Using `pgroup` rather than `group` raises coverage of
-output synapses from 32% to 76%. Input coverage stays low because most
-of the input partners are not yet in FlyTable at all and so have no
-`serial_id` to fall back on.
+output synapses from 32% to 63%. Input coverage stays low because most
+of the input partners are not yet in FlyTable at all.
 
 ## Cluster by curated group
 
@@ -119,10 +118,10 @@ cf_cosine_plot(x, group = "group", labRow = "{side}_{serial_id}")
 
 cf_cosine_plot(x, group = "pgroup", labRow = "{side}_{serial_id}")
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =
-#> "pre_key", : Dropping: 830/1715 neurons representing 7217/29629 synapses due to
-#> missing ids!
+#> "pre_key", : Dropping: 1068/1715 neurons representing 10916/29629 synapses due
+#> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
-#> groupcol, : Dropping: 4244/4477 neurons representing 49765/59464 synapses due
+#> groupcol, : Dropping: 4261/4477 neurons representing 49905/59464 synapses due
 #> to missing ids!
 ```
 
@@ -144,14 +143,19 @@ these that is available:
     trailing `?` is ignored, as are uninformative types listed in
     `badtypes`).
 2.  **group**: the curated `group`.
-3.  **nblast_group**: clusters of the form `CNNNNN`, where `NNNNN` is
-    the smallest `serial_id` in the cluster. Any other value is ignored,
-    so a bad cluster can be struck out by prefixing it with `X`
+3.  **nblast_group**: clusters of the form `CNNNNN` or `NNNNN`, where
+    `NNNNN` is the smallest `serial_id` in the cluster (surrounding
+    whitespace and a trailing `?` are ignored). Any other value is
+    ignored, so a bad cluster can be struck out by prefixing it with `X`
     (e.g. `XC12345`) without deleting the information.
-4.  **serial_id**: the neuron itself, i.e. a singleton group.
 
-Step 4 means that every partner in FlyTable keeps its connectivity as a
-feature, behaving like `group = FALSE` for that neuron.
+Neurons with none of these get `NA` and are dropped as partners. With
+`singletons = TRUE` they instead fall back to their own `serial_id`,
+i.e. a group of one, so that every partner in FlyTable keeps its
+connectivity as a feature, behaving like `group = FALSE` for that
+neuron. This is off by default because a singleton partner can only be
+shared by neurons on the same side of the brain, which tends to pull
+left/right homologues apart.
 
 Because type-derived ids use the smallest `serial_id` among the rows
 supplied, they can depend on which neurons are in the table. Within one
@@ -167,10 +171,10 @@ You can also compute predicted groups yourself, e.g. to use a custom
 x$pgroup2 <- aedes_predict_group(x, badtypes = c(NA, "", "undefined"))
 cf_cosine_plot(x, group = "pgroup2", labRow = "{side}_{serial_id}")
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =
-#> "pre_key", : Dropping: 830/1715 neurons representing 7217/29629 synapses due to
-#> missing ids!
+#> "pre_key", : Dropping: 1068/1715 neurons representing 10916/29629 synapses due
+#> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
-#> groupcol, : Dropping: 4244/4477 neurons representing 49765/59464 synapses due
+#> groupcol, : Dropping: 4261/4477 neurons representing 49905/59464 synapses due
 #> to missing ids!
 ```
 

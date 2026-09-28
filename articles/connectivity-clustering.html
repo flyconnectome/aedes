@@ -81,8 +81,7 @@ compare two alternatives:</p>
 <li>
 <code>pgroup</code>: the predicted group from
 <code><a href="../reference/aedes_predict_group.html">aedes_predict_group()</a></code>, which uses the first available of
-cell type, curated <code>group</code>, NBLAST cluster and finally the
-neuron’s own <code>serial_id</code>.</li>
+cell type, curated <code>group</code> and NBLAST cluster.</li>
 </ul>
 <p>The chunks below need FlyTable and CAVE access. They are evaluated
 when the pkgdown website is built; elsewhere saved results are shown
@@ -143,14 +142,13 @@ partner synapses each column covers:</p>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">cov</span></span>
 <span><span class="co">#&gt;   partners  type group pgroup</span></span>
-<span><span class="co">#&gt; 1   inputs 0.001 0.126  0.163</span></span>
-<span><span class="co">#&gt; 2  outputs 0.008 0.324  0.756</span></span></code></pre></div>
+<span><span class="co">#&gt; 1   inputs 0.001 0.126  0.161</span></span>
+<span><span class="co">#&gt; 2  outputs 0.008 0.324  0.632</span></span></code></pre></div>
 <p>Cell types cover under 1% of partner synapses, so
 <code>group = "type"</code> is not useful here. Using
 <code>pgroup</code> rather than <code>group</code> raises coverage of
-output synapses from 32% to 76%. Input coverage stays low because most
-of the input partners are not yet in FlyTable at all and so have no
-<code>serial_id</code> to fall back on.</p>
+output synapses from 32% to 63%. Input coverage stays low because most
+of the input partners are not yet in FlyTable at all.</p>
 </div>
 <div class="section level2">
 <h2 id="cluster-by-curated-group">Cluster by curated group<a class="anchor" aria-label="anchor" href="#cluster-by-curated-group"></a>
@@ -171,10 +169,10 @@ of the input partners are not yet in FlyTable at all and so have no
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span><span class="va">x</span>, group <span class="op">=</span> <span class="st">"pgroup"</span>, labRow <span class="op">=</span> <span class="st">"{side}_{serial_id}"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =</span></span>
-<span><span class="co">#&gt; "pre_key", : Dropping: 830/1715 neurons representing 7217/29629 synapses due to</span></span>
-<span><span class="co">#&gt; missing ids!</span></span>
+<span><span class="co">#&gt; "pre_key", : Dropping: 1068/1715 neurons representing 10916/29629 synapses due</span></span>
+<span><span class="co">#&gt; to missing ids!</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =</span></span>
-<span><span class="co">#&gt; groupcol, : Dropping: 4244/4477 neurons representing 49765/59464 synapses due</span></span>
+<span><span class="co">#&gt; groupcol, : Dropping: 4261/4477 neurons representing 49905/59464 synapses due</span></span>
 <span><span class="co">#&gt; to missing ids!</span></span></code></pre></div>
 <p><img src="connectivity-clustering_files/figure-html/cluster-pgroup-1.png" class="r-plt" alt="" width="700"></p>
 <p>At the time of writing (September 2026) both groupings split the 12
@@ -198,16 +196,20 @@ uninformative types listed in <code>badtypes</code>).</li>
 <strong>group</strong>: the curated <code>group</code>.</li>
 <li>
 <strong>nblast_group</strong>: clusters of the form
-<code>CNNNNN</code>, where <code>NNNNN</code> is the smallest
-<code>serial_id</code> in the cluster. Any other value is ignored, so a
-bad cluster can be struck out by prefixing it with <code>X</code>
-(e.g. <code>XC12345</code>) without deleting the information.</li>
-<li>
-<strong>serial_id</strong>: the neuron itself, i.e. a singleton
-group.</li>
+<code>CNNNNN</code> or <code>NNNNN</code>, where <code>NNNNN</code> is
+the smallest <code>serial_id</code> in the cluster (surrounding
+whitespace and a trailing <code>?</code> are ignored). Any other value
+is ignored, so a bad cluster can be struck out by prefixing it with
+<code>X</code> (e.g. <code>XC12345</code>) without deleting the
+information.</li>
 </ol>
-<p>Step 4 means that every partner in FlyTable keeps its connectivity as
-a feature, behaving like <code>group = FALSE</code> for that neuron.</p>
+<p>Neurons with none of these get <code>NA</code> and are dropped as
+partners. With <code>singletons = TRUE</code> they instead fall back to
+their own <code>serial_id</code>, i.e. a group of one, so that every
+partner in FlyTable keeps its connectivity as a feature, behaving like
+<code>group = FALSE</code> for that neuron. This is off by default
+because a singleton partner can only be shared by neurons on the same
+side of the brain, which tends to pull left/right homologues apart.</p>
 <p>Because type-derived ids use the smallest <code>serial_id</code>
 among the rows supplied, they can depend on which neurons are in the
 table. Within one <code><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot()</a></code> call the partner
@@ -219,10 +221,10 @@ consistent where it matters.</p>
 <code class="sourceCode R"><span><span class="va">x</span><span class="op">$</span><span class="va">pgroup2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/aedes_predict_group.html">aedes_predict_group</a></span><span class="op">(</span><span class="va">x</span>, badtypes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">NA</span>, <span class="st">""</span>, <span class="st">"undefined"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span><span class="va">x</span>, group <span class="op">=</span> <span class="st">"pgroup2"</span>, labRow <span class="op">=</span> <span class="st">"{side}_{serial_id}"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =</span></span>
-<span><span class="co">#&gt; "pre_key", : Dropping: 830/1715 neurons representing 7217/29629 synapses due to</span></span>
-<span><span class="co">#&gt; missing ids!</span></span>
+<span><span class="co">#&gt; "pre_key", : Dropping: 1068/1715 neurons representing 10916/29629 synapses due</span></span>
+<span><span class="co">#&gt; to missing ids!</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =</span></span>
-<span><span class="co">#&gt; groupcol, : Dropping: 4244/4477 neurons representing 49765/59464 synapses due</span></span>
+<span><span class="co">#&gt; groupcol, : Dropping: 4261/4477 neurons representing 49905/59464 synapses due</span></span>
 <span><span class="co">#&gt; to missing ids!</span></span></code></pre></div>
 <p><img src="connectivity-clustering_files/figure-html/custom-1.png" class="r-plt" alt="" width="700"></p>
 </div>
