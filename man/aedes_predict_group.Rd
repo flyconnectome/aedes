@@ -45,6 +45,10 @@ ignored, so a cluster can be struck out by prefixing it with \code{X} (e.g.
 \code{XC12345}) without deleting it.
 \item neurons with none of these fall back to their own \code{serial_id}.
 }
+
+Once \code{\link[=register_aedes_coconat]{register_aedes_coconat()}} has been called, coconatfly metadata for
+aedes neurons includes the result as a \code{pgroup} column, so you can use
+\code{group = "pgroup"} directly in coconatfly functions (see examples).
 }
 \examples{
 \dontrun{
@@ -53,6 +57,9 @@ x <- multi_connection_table(cf_ids(aedes = "/type:MBON.+"),
   partners = c("in", "out"), threshold = 5, group = FALSE)
 x$pgroup <- aedes_predict_group(x)
 cf_cosine_plot(x, group = "pgroup")
+
+# coconatfly metadata for aedes neurons already includes a pgroup column
+cf_cosine_plot(cf_ids(aedes = "/type:MBON.+"), group = "pgroup")
 }
 }
 \seealso{

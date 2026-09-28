@@ -23,6 +23,10 @@
 #'   `XC12345`) without deleting it.
 #'   * neurons with none of these fall back to their own `serial_id`.
 #'
+#'   Once [register_aedes_coconat()] has been called, coconatfly metadata for
+#'   aedes neurons includes the result as a `pgroup` column, so you can use
+#'   `group = "pgroup"` directly in coconatfly functions (see examples).
+#'
 #' @param x A data.frame with `type`, `group`, `nblast_group` and `serial_id`
 #'   columns, such as
 #'   returned by [aedes_meta()] or a partner table from
@@ -42,6 +46,9 @@
 #'   partners = c("in", "out"), threshold = 5, group = FALSE)
 #' x$pgroup <- aedes_predict_group(x)
 #' cf_cosine_plot(x, group = "pgroup")
+#'
+#' # coconatfly metadata for aedes neurons already includes a pgroup column
+#' cf_cosine_plot(cf_ids(aedes = "/type:MBON.+"), group = "pgroup")
 #' }
 aedes_predict_group <- function(x,
                                 badtypes = c(NA, "", "undefined", "KCx", "LHN")) {

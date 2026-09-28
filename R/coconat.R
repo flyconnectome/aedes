@@ -16,6 +16,10 @@
 #'
 #' Option 2 is the default since this can make queries somewhat faster and
 #' stable but note that 'latest' can be several days old.
+#'
+#' Metadata returned for aedes neurons includes a `pgroup` column from
+#' [aedes_predict_group()], which can be used to group partner neurons when
+#' clustering by connectivity, e.g. `cf_cosine_plot(ids, group = "pgroup")`.
 #' @export
 #'
 #' @examples
@@ -24,6 +28,15 @@
 #' cf_meta(cf_ids(aedes="/class:MBON.*"))
 #' aedes_set_version('now')
 #' cf_meta(cf_ids(aedes="/class:MBON.*"))
+#'
+#' # cluster a group of neurons by connectivity, grouping partner neurons by
+#' # their curated group (partners without one are dropped) ...
+#' cf_cosine_plot(cf_ids(aedes = "group:36155"), group = "group",
+#'   labRow = "{side}_{serial_id}")
+#' # ... or by predicted group (type, then group, then nblast cluster), so that
+#' # far fewer partners are lost
+#' cf_cosine_plot(cf_ids(aedes = "group:36155"), group = "pgroup",
+#'   labRow = "{side}_{serial_id}")
 #' }
 register_aedes_coconat <- function(showerror = TRUE) {
   if (!requireNamespace("coconatfly", quietly = !showerror)) {
@@ -62,6 +75,8 @@ aedes_cfmeta <- function(ids = NULL, ignore.case = FALSE, fixed = FALSE,
   vi = aedes_get_version(which, timestamp = timestamp, version = version)
   df = aedes_meta(ids, ignore.case = ignore.case, fixed = fixed, unique = unique,
                   version = vi$version, timestamp = vi$timestamp, ...)
+  # predicted group for partner clustering, e.g. cf_cosine_plot(group="pgroup")
+  df$pgroup <- aedes_predict_group(df)
   df %>%
     dplyr::select(-dplyr::any_of("subsubclass")) %>%
     dplyr::rename(id = "root_id", lineage = "hemilineage") %>%
