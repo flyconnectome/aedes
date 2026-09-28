@@ -34,8 +34,7 @@ neurons do not yet have a type, so we compare two alternatives:
 
 * `group`: the curated group (see `aedes_set_group()`).
 * `pgroup`: the predicted group from `aedes_predict_group()`, which uses the
-  first available of cell type, curated `group`, NBLAST cluster and finally the
-  neuron's own `serial_id`.
+  first available of cell type, curated `group` and NBLAST cluster.
 
 The chunks below need FlyTable and CAVE access. They are evaluated when the
 pkgdown website is built; elsewhere saved results are shown instead (see
@@ -100,8 +99,7 @@ Cell types cover under 1% of partner synapses, so `group = "type"` is not
 useful here. Using `pgroup` rather than `group` raises coverage of output
 synapses from `r round(100*cov$group[cov$partners == "outputs"])`% to
 `r round(100*cov$pgroup[cov$partners == "outputs"])`%. Input coverage stays low because most of the input
-partners are not yet in FlyTable at all and so have no `serial_id` to fall
-back on.
+partners are not yet in FlyTable at all.
 
 ## Cluster by curated group
 
@@ -137,14 +135,18 @@ namespace, taking the first of these that is available:
 1. **type**: the smallest `serial_id` among neurons of that type (a trailing
    `?` is ignored, as are uninformative types listed in `badtypes`).
 2. **group**: the curated `group`.
-3. **nblast_group**: clusters of the form `CNNNNN`, where `NNNNN` is the
-   smallest `serial_id` in the cluster. Any other value is ignored, so a bad
-   cluster can be struck out by prefixing it with `X` (e.g. `XC12345`) without
-   deleting the information.
-4. **serial_id**: the neuron itself, i.e. a singleton group.
+3. **nblast_group**: clusters of the form `CNNNNN` or `NNNNN`, where `NNNNN`
+   is the smallest `serial_id` in the cluster (surrounding whitespace and a
+   trailing `?` are ignored). Any other value is ignored, so a bad cluster can
+   be struck out by prefixing it with `X` (e.g. `XC12345`) without deleting
+   the information.
 
-Step 4 means that every partner in FlyTable keeps its connectivity as a
-feature, behaving like `group = FALSE` for that neuron.
+Neurons with none of these get `NA` and are dropped as partners. With
+`singletons = TRUE` they instead fall back to their own `serial_id`, i.e. a
+group of one, so that every partner in FlyTable keeps its connectivity as a
+feature, behaving like `group = FALSE` for that neuron. This is off by default
+because a singleton partner can only be shared by neurons on the same side of
+the brain, which tends to pull left/right homologues apart.
 
 Because type-derived ids use the smallest `serial_id` among the rows supplied,
 they can depend on which neurons are in the table. Within one

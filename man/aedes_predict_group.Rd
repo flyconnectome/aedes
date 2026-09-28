@@ -4,7 +4,11 @@
 \alias{aedes_predict_group}
 \title{Predict the group of aedes neurons using type or group information}
 \usage{
-aedes_predict_group(x, badtypes = c(NA, "", "undefined", "KCx", "LHN"))
+aedes_predict_group(
+  x,
+  badtypes = c(NA, "", "undefined", "KCx", "LHN"),
+  singletons = FALSE
+)
 }
 \arguments{
 \item{x}{A data.frame with \code{type}, \code{group}, \code{nblast_group} and \code{serial_id}
@@ -16,13 +20,20 @@ ids in any form understood by \code{\link[=aedes_meta]{aedes_meta()}}.}
 
 \item{badtypes}{Values of the type column (after removing any trailing \verb{?})
 that are too broad or uninformative to define a group.}
+
+\item{singletons}{Whether neurons without a type, group or NBLAST cluster
+should fall back to their own \code{serial_id} (default \code{FALSE}, returning
+\code{NA}). Singleton groups keep connectivity to individual partner neurons
+(like \code{group = FALSE}) but can never match across hemispheres, so they
+tend to pull left/right homologues apart.}
 }
 \value{
-A numeric vector of group ids with one element per row of \code{x}.
+A numeric vector of group ids with one element per row of \code{x}
+(\code{NA} for ungroupable neurons unless \code{singletons = TRUE}).
 }
 \description{
 Returns a numeric group id for each neuron, preferring its cell
-type, then its curated \code{group}, then its NBLAST cluster, and finally its
+type, then its curated \code{group}, then its NBLAST cluster and optionally its
 own \code{serial_id}. This is
 intended for grouping partner neurons in connectivity clustering, e.g. with
 \code{\link[coconatfly:cf_cosine_plot]{coconatfly::cf_cosine_plot()}}.
@@ -39,11 +50,15 @@ Types listed in \code{badtypes} are ignored.
 \code{serial_id} of the group's founding members, see \code{\link[=aedes_set_group]{aedes_set_group()}}).
 A \code{group} of \code{0} is treated as ungrouped.
 \item neurons with no type or group use their \code{nblast_group} cluster when this
-has the form \code{CNNNNN} (where \code{NNNNN} is the smallest \code{serial_id} in the
-cluster); the leading \code{C} is dropped. All other \code{nblast_group} values are
-ignored, so a cluster can be struck out by prefixing it with \code{X} (e.g.
-\code{XC12345}) without deleting it.
-\item neurons with none of these fall back to their own \code{serial_id}.
+has the form \code{CNNNNN} or \code{NNNNN} (where \code{NNNNN} is the smallest
+\code{serial_id} in the cluster); any leading \code{C} is dropped. Surrounding
+whitespace and a trailing \code{?} are ignored, so \code{" C12345?"} is read as
+\code{12345}. All other \code{nblast_group} values are ignored, so a cluster can be
+struck out by prefixing it with \code{X} (e.g. \code{XC12345}) without deleting it.
+\item neurons with none of these get \code{NA}, so that coconatfly drops them as
+partners, just as it does for \code{group = "group"}. When \code{singletons = TRUE}
+they instead fall back to their own \code{serial_id}, i.e. each becomes a
+group of one.
 }
 
 Once \code{\link[=register_aedes_coconat]{register_aedes_coconat()}} has been called, coconatfly metadata for
