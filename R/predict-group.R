@@ -1,7 +1,7 @@
 #' Predict the group of aedes neurons using type or group information
 #'
 #' @description Returns a numeric group id for each neuron, preferring its cell
-#'   type, then its curated `group`, then its NBLAST cluster, and finally its
+#'   type, then its curated `group`, then its NBLAST cluster and optionally its
 #'   own `serial_id`. This is
 #'   intended for grouping partner neurons in connectivity clustering, e.g. with
 #'   [coconatfly::cf_cosine_plot()].
@@ -22,7 +22,10 @@
 #'   whitespace and a trailing `?` are ignored, so `" C12345?"` is read as
 #'   `12345`. All other `nblast_group` values are ignored, so a cluster can be
 #'   struck out by prefixing it with `X` (e.g. `XC12345`) without deleting it.
-#'   * neurons with none of these fall back to their own `serial_id`.
+#'   * neurons with none of these get `NA`, so that coconatfly drops them as
+#'   partners, just as it does for `group = "group"`. When `singletons = TRUE`
+#'   they instead fall back to their own `serial_id`, i.e. each becomes a
+#'   group of one.
 #'
 #'   Once [register_aedes_coconat()] has been called, coconatfly metadata for
 #'   aedes neurons includes the result as a `pgroup` column, so you can use
@@ -36,8 +39,14 @@
 #'   ids in any form understood by [aedes_meta()].
 #' @param badtypes Values of the type column (after removing any trailing `?`)
 #'   that are too broad or uninformative to define a group.
+#' @param singletons Whether neurons without a type, group or NBLAST cluster
+#'   should fall back to their own `serial_id` (default `FALSE`, returning
+#'   `NA`). Singleton groups keep connectivity to individual partner neurons
+#'   (like `group = FALSE`) but can never match across hemispheres, so they
+#'   tend to pull left/right homologues apart.
 #'
-#' @returns A numeric vector of group ids with one element per row of `x`.
+#' @returns A numeric vector of group ids with one element per row of `x`
+#'   (`NA` for ungroupable neurons unless `singletons = TRUE`).
 #' @seealso [aedes_set_group()], [aedes_meta()]
 #' @export
 #' @examples
@@ -52,7 +61,8 @@
 #' cf_cosine_plot(cf_ids(aedes = "/type:MBON.+"), group = "pgroup")
 #' }
 aedes_predict_group <- function(x,
-                                badtypes = c(NA, "", "undefined", "KCx", "LHN")) {
+                                badtypes = c(NA, "", "undefined", "KCx", "LHN"),
+                                singletons = FALSE) {
   if (!is.data.frame(x))
     x <- aedes_meta(x)
   missing_cols <- setdiff(c("type", "group", "nblast_group", "serial_id"),
@@ -72,7 +82,8 @@ aedes_predict_group <- function(x,
     mutate(.tgroup = if (is.na(.data$.type[1])) NA_real_ else min(.data$.sid)) %>%
     dplyr::ungroup() %>%
     mutate(.pg = dplyr::coalesce(.data$.tgroup, .data$.grp, .data$.nblast,
-                                 .data$.sid)) %>%
+                                 if (isTRUE(singletons)) .data$.sid
+                                 else NA_real_)) %>%
     dplyr::pull(.data$.pg)
 }
 

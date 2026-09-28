@@ -1,4 +1,4 @@
-test_that("aedes_predict_group prefers type, group, nblast cluster, serial_id", {
+test_that("aedes_predict_group prefers type, group, nblast cluster", {
   df <- data.frame(
     serial_id = c("10005", "10002", "10009", "10003", "10004", "10007",
                   "10008", "10010", "10011", "10012"),
@@ -10,12 +10,17 @@ test_that("aedes_predict_group prefers type, group, nblast cluster, serial_id", 
   )
   expect_equal(aedes_predict_group(df),
                c(10002, 10002, 10002, 10003, 10003, 10007, 10003, 10007,
+                 NA, NA))
+
+  # optionally fall back to serial_id (singleton groups)
+  expect_equal(aedes_predict_group(df, singletons = TRUE),
+               c(10002, 10002, 10002, 10003, 10003, 10007, 10003, 10007,
                  10011, 10012))
 
   # custom badtypes: KC4 no longer defines a group
   expect_equal(aedes_predict_group(df, badtypes = c(NA, "", "KC4")),
-               c(10009, 10002, 10009, 10003, 10003, 10007, 10003, 10007,
-                 10011, 10012))
+               c(10009, NA, 10009, 10003, 10003, 10007, 10003, 10007,
+                 NA, NA))
 
   # character group column with "0" for ungrouped (as in coconatfly partners)
   df2 <- df
