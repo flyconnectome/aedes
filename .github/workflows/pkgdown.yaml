@@ -21,6 +21,7 @@ jobs:
       group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      RGL_USE_NULL: TRUE
       RETICULATE_MINICONDA_PYTHON_VERSION: "3.10.14"
       CHUNKEDGRAPH_SECRET: ${{ secrets.CHUNKEDGRAPH_SECRET }}
       FLYTABLE_TOKEN: ${{ secrets.FLYTABLE_TOKEN }}
