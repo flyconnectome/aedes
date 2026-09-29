@@ -32,6 +32,10 @@ Imports:
     rlang,
     withr
 Suggests:
+    DBI,
+    dbplyr,
+    duckdb,
+    jsonlite,
     Morpho,
     gifski,
     knitr,
