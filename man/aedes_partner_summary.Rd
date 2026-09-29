@@ -11,6 +11,7 @@ aedes_partner_summary(
   version = NULL,
   timestamp = NULL,
   synapse_table = getOption("coconatfly.aedes.synapses", default = "synapses_v2"),
+  method = c("auto", "cave", "local"),
   ...
 )
 }
@@ -32,10 +33,15 @@ run against that materialisation. Give at most one of the two.}
 \item{synapse_table}{CAVE synapse table to query. Defaults to the
 \code{coconatfly.aedes.synapses} option (\code{"synapses_v2"}).}
 
+\item{method}{Whether to query CAVE (\code{"cave"}), a local synapse snapshot
+(\code{"local"}, see \code{\link[=aedes_synapse_snapshot]{aedes_synapse_snapshot()}}) or choose automatically
+(\code{"auto"}, the default; see details).}
+
 \item{...}{Additional arguments passed on to
 \code{\link[fafbseg:flywire_partner_summary]{fafbseg::flywire_partner_summary()}}. Power-user options include
 \code{remove_autapses} (set \code{FALSE} to keep self-connections; see examples)
-and \code{cleft.threshold}.}
+and \code{cleft.threshold}. Only \code{remove_autapses} is supported by the local
+method.}
 }
 \value{
 A \code{data.frame} with one row per partner neuron. \code{query} holds the
@@ -50,7 +56,21 @@ chosen CAVE materialisation, returning one row per partner with the number
 of connecting synapses. This is a thin Aedes-aware wrapper around
 \code{\link[fafbseg:flywire_partner_summary]{fafbseg::flywire_partner_summary()}}: it resolves the input via
 \code{\link[=aedes_ids]{aedes_ids()}}, points fafbseg at the Aedes segmentation, and updates root
-ids to the requested \code{version}/\code{timestamp} before querying.
+ids to the requested \code{version}/\code{timestamp} before querying. When a local
+synapse snapshot has been selected with \code{\link[=aedes_synapse_snapshot]{aedes_synapse_snapshot()}} the
+query is instead answered from that snapshot, at the snapshot's time.
+}
+\details{
+With \code{method = "auto"} (the default) the local snapshot is used
+when one is selected, no \code{version} is given, \code{timestamp} is missing or
+matches the snapshot time, and \code{...} contains nothing other than
+\code{remove_autapses}; otherwise CAVE is queried. Note that without a
+\code{timestamp} a local query gives partners at the snapshot time, while a
+CAVE query gives them now. \code{method = "local"} gives an error rather than
+falling back to CAVE. The local and CAVE results should agree, apart from
+CAVE's default cleft score filtering and any root 0 (unassigned) partners,
+which the local method drops. The local result has \code{snapshot} and
+\code{timestamp} attributes.
 }
 \examples{
 \dontrun{
@@ -69,8 +89,14 @@ aedes_partner_summary("720575940...", timestamp = "2024-01-01")
 # remove_autapses = FALSE (the fafbseg default drops these).
 mbon11 <- aedes_ids("cell_type:MBON11")
 aedes_partner_summary(mbon11, remove_autapses = FALSE)
+
+# answer from a local synapse snapshot
+options(aedes.synapse_snapshot_root = "~/data/aedes/syn_snapshot")
+aedes_synapse_snapshot()
+aedes_partner_summary(mbon11, method = "local")
 }
 }
 \seealso{
-\code{\link[fafbseg:flywire_partner_summary]{fafbseg::flywire_partner_summary()}}, \code{\link[=aedes_ids]{aedes_ids()}}
+\code{\link[fafbseg:flywire_partner_summary]{fafbseg::flywire_partner_summary()}}, \code{\link[=aedes_ids]{aedes_ids()}},
+\code{\link[=aedes_synapse_snapshot]{aedes_synapse_snapshot()}}
 }
