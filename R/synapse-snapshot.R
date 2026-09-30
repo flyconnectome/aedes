@@ -18,6 +18,9 @@
 #'   Selecting a snapshot with `set = TRUE` also sets the `aedes.version`
 #'   option to the snapshot's timestamp (see [aedes_set_version()]), so that
 #'   metadata and root ids from other aedes functions match the synapse data.
+#'   [aedes_partner_summary()] can still answer queries for later times,
+#'   including `timestamp = "now"`, by fetching the edits made since the
+#'   snapshot from CAVE (see its details).
 #'
 #' @param snapshot The snapshot tag, or `"latest"` (the default) for the most
 #'   recent snapshot in `root`.
@@ -99,4 +102,38 @@ aedes_synapse_data <- function(side = NULL, static = FALSE,
   if (!is.null(side)) side <- match.arg(side, c("pre", "post"))
   if (identical(snapshot, "latest")) snapshot <- synsnap_latest(root)
   synsnap_tbl(snapshot, root, side = side, static = static)
+}
+
+# CAVE access for synsnap_query_at() (see R/synsnap-live.R)
+aedes_synsnap_ctx <- function() {
+  list(
+    delta_roots = function(past, future) with_aedes(cave_delta_roots(past, future)),
+    rootid = function(sv, timestamp) {
+      ch <- split(sv, ceiling(seq_along(sv) / 1e5))
+      r <- lapply(ch, function(s) with_aedes(fafbseg::flywire_rootid(
+        as.character(s), timestamp = timestamp, integer64 = TRUE)))
+      do.call(c, unname(r))
+    },
+    # leaves of a root id never change, so caching is safe
+    leaves = function(root) with_aedes(fafbseg::flywire_leaves(
+      as.character(root), integer64 = TRUE, cache = TRUE)),
+    is_latest = function(roots, timestamp) with_aedes(fafbseg::flywire_islatest(
+      as.character(roots), timestamp = timestamp)),
+    latest_id = function(roots, timestamp) bit64::as.integer64(with_aedes(
+      fafbseg::flywire_latestid(as.character(roots), timestamp = timestamp))),
+    now = Sys.time)
+}
+
+# roots expired (old) and created (new) between two times. Unlike
+# fafbseg:::cave_get_delta_roots this fails loudly, since an empty result would
+# silently leave stale rows.
+cave_delta_roots <- function(past, future) {
+  fcc <- fafbseg::flywire_cave_client()
+  res <- reticulate::py_call(fcc$chunkedgraph$get_delta_roots,
+                             timestamp_past = fafbseg:::ts2pydatetime(past),
+                             timestamp_future = fafbseg:::ts2pydatetime(future))
+  pyslice <- fafbseg:::pyslice()$pyslice
+  ids <- function(i) bit64::as.integer64(fafbseg:::pyids2bit64(
+    reticulate::py_call(pyslice, res, i)))
+  list(old = ids(0L), new = ids(1L))
 }

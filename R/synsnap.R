@@ -17,6 +17,7 @@
 # folder and `tag` explicitly.
 
 .synsnap <- new.env(parent = emptyenv())
+.synsnap$states <- list()
 
 synsnap_check <- function() {
   pkgs <- c("duckdb", "DBI", "dbplyr", "jsonlite")
@@ -166,17 +167,25 @@ synsnap_tbl <- function(tag, root, side = NULL, static = FALSE) {
 
 # Partner summary in the fafbseg::flywire_partner_summary format: columns
 # query, post_id (outputs) or pre_id (inputs), weight; character ids.
+# With a timestamp (POSIXct or "now") and ctx, answers at that time (see
+# synsnap_query_at, which gets `...`); otherwise at the snapshot time.
 synsnap_partner_summary <- function(roots, partners = c("outputs", "inputs"),
                                     tag, root, threshold = 0,
-                                    remove_autapses = TRUE) {
+                                    remove_autapses = TRUE,
+                                    timestamp = NULL, ctx = NULL, ...) {
   partners <- match.arg(partners)
   roots <- bit64::as.integer64(roots)
   roots <- roots[!is.na(roots) & roots != 0]
   side <- if (partners == "outputs") "pre" else "post"
   other <- if (partners == "outputs") "post" else "pre"
-  res <- if (length(roots)) synsnap_query(roots, side = side, tag = tag, root = root)
+  res <- if (!is.null(timestamp))
+    synsnap_query_at(roots, side = side, tag = tag, root = root,
+                     timestamp = timestamp, ctx = ctx, ...)
+  else if (length(roots)) synsnap_query(roots, side = side, tag = tag, root = root)
   else dplyr::tibble(pre_root = bit64::integer64(), post_root = bit64::integer64(),
                       weight = integer())
+  ts <- attr(res, "timestamp")
+  method <- attr(res, "method")
   q <- res[[paste0(side, "_root")]]
   p <- res[[paste0(other, "_root")]]
   keep <- p != 0 & res$weight > threshold
@@ -187,6 +196,7 @@ synsnap_partner_summary <- function(roots, partners = c("outputs", "inputs"),
   colnames(res)[2] <- paste0(other, "_id")
   res <- dplyr::arrange(res, dplyr::desc(.data$weight))
   attr(res, "snapshot") <- tag
-  attr(res, "timestamp") <- synsnap_meta(tag, root)$timestamp
+  attr(res, "timestamp") <- if (is.null(ts)) synsnap_meta(tag, root)$timestamp else ts
+  if (!is.null(method)) attr(res, "method") <- method
   res
 }

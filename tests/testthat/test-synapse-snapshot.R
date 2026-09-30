@@ -1,53 +1,3 @@
-# Offline tests on a small synthetic snapshot: full tag "s1" and delta "s2".
-# layout "one" (by_pre only) and "both" (plus by_post) are made by the build
-# functions; "old" also has ids.parquet, as written before those existed.
-make_snapshot <- function(root, layout = c("one", "both", "old")) {
-  layout <- match.arg(layout)
-  con <- synsnap_con()
-  i64 <- bit64::as.integer64
-  dir.create(file.path(root, "s2"), recursive = TRUE)
-  # roots 10, 20, 30; 0 = no root
-  ids <- data.frame(
-    id = 1:10,
-    pre_root = i64(c(10, 10, 10, 10, 20, 20, 30, 10, 0, 30)),
-    post_root = i64(c(20, 20, 20, 30, 10, 10, 10, 10, 10, 0)))
-  static <- data.frame(id = ids$id, pre_sv = i64(ids$id + 100),
-                       post_sv = i64(ids$id + 200), size = 5L)
-  # at s2 root 30 was split: synapses 4 and 7 now on root 40
-  delta <- data.frame(id = c(4L, 7L), pre_root = i64(c(10, 40)),
-                      post_root = i64(c(40, 10)))
-  write_pq <- function(df, f, order) {
-    duckdb::duckdb_register(con, "tmpdf", df)
-    on.exit(duckdb::duckdb_unregister(con, "tmpdf"))
-    DBI::dbExecute(con, sprintf("COPY (SELECT * FROM tmpdf ORDER BY %s) TO '%s' (FORMAT parquet)",
-                                order, file.path(root, f)))
-  }
-  t1 <- "2026-01-01 00:00:00 UTC"
-  if (layout == "old") {
-    dir.create(file.path(root, "s1"))
-    write_pq(static, "static.parquet", "id")
-    write_pq(ids, "s1/ids.parquet", "id")
-    write_pq(ids[c("pre_root", "post_root", "id")], "s1/by_pre.parquet", "pre_root, id")
-    write_pq(ids[c("post_root", "pre_root", "id")], "s1/by_post.parquet", "post_root, id")
-    jsonlite::write_json(list(tag = "s1", timestamp = t1),
-                         file.path(root, "s1", "meta.json"), auto_unbox = TRUE)
-  } else {
-    synsnap_build_static(static, root, columns = setNames(names(static), names(static)))
-    svmap <- data.frame(sv = c(static$pre_sv, static$post_sv),
-                        root_id = c(ids$pre_root, ids$post_root))
-    synsnap_build("s1", svmap, t1, root, by_post = layout == "both")
-  }
-  write_pq(delta, "s2/delta.parquet", "id")
-  jsonlite::write_json(list(tag = "s2", timestamp = "2026-01-02 12:00:00.5 UTC",
-                            base = "s1", parent = "s1"),
-                       file.path(root, "s2", "meta.json"), auto_unbox = TRUE)
-  root
-}
-
-skip_if_no_duckdb <- function() {
-  for (p in c("duckdb", "DBI", "dbplyr", "jsonlite")) skip_if_not_installed(p)
-}
-
 test_that("snapshot metadata", {
   skip_if_no_duckdb()
   root <- make_snapshot(withr::local_tempdir())
@@ -150,30 +100,42 @@ test_that("choosing between local and CAVE", {
   skip_if_no_duckdb()
   root <- make_snapshot(withr::local_tempdir())
   snap <- aedes_synapse_snapshot("s2", root = root, set = FALSE)
-  expect_null(partner_summary_local_problem(snap))
-  expect_null(partner_summary_local_problem(snap, remove_autapses = FALSE))
-  expect_null(partner_summary_local_problem(snap, timestamp = snap$timestamp))
-  expect_match(partner_summary_local_problem(snap, version = 1), "version")
-  expect_match(partner_summary_local_problem(snap, cleft.threshold = 50),
+
+  withr::local_options(aedes.version = "latest")
+  expect_equal(partner_summary_local_time(), "now")
+  expect_equal(partner_summary_local_time(timestamp = "now"), "now")
+  withr::local_options(aedes.version = "2026-01-02 12:00:00.5 UTC")
+  expect_equal(partner_summary_local_time(), snap$timestamp)
+  expect_equal(partner_summary_local_time(timestamp = "2026-01-03 UTC"),
+               as.POSIXct("2026-01-03", tz = "UTC"))
+
+  expect_null(partner_summary_local_problem(snap, "now"))
+  expect_null(partner_summary_local_problem(snap, "now", remove_autapses = FALSE))
+  expect_null(partner_summary_local_problem(snap, snap$timestamp))
+  expect_match(partner_summary_local_problem(snap, "now", cleft.threshold = 50),
                "cleft.threshold")
-  expect_match(partner_summary_local_problem(snap, timestamp = "2026-01-01 00:00:00 UTC"),
-               "differs")
+  expect_match(partner_summary_local_problem(snap, as.POSIXct("2026-01-01", tz = "UTC")),
+               "before snapshot")
 
   withr::local_options(aedes.synapse_snapshot_root = NULL,
                        aedes.synapse_snapshot = NULL)
   expect_error(aedes_partner_summary(10, method = "local"), "No local synapse")
 
   withr::local_options(aedes.synapse_snapshot_root = root,
-                       aedes.synapse_snapshot = "s2")
-  expect_error(aedes_partner_summary(10, method = "local", version = 1),
+                       aedes.synapse_snapshot = "s1", aedes.version = "latest")
+  expect_error(aedes_partner_summary(10, method = "local", timestamp = "2025-01-01 UTC"),
                "Cannot use the local")
-  # id resolution needs CAVE, so mock it
-  local_mocked_bindings(aedes_ids = function(ids, ...) as.character(ids))
-  local_mocked_bindings(flywire_latestid = function(rootid, ...) rootid,
-                        .package = "fafbseg")
+  # CAVE access through the fake world (edits after s1, now = +3h)
+  w <- fake_world()
+  withr::defer(synsnap_state_reset())
+  local_mocked_bindings(aedes_synsnap_ctx = function() w$ctx)
   res <- aedes_partner_summary(10)
-  expect_equal(res$post_id, c("20", "40"))
-  expect_equal(attr(res, "snapshot"), "s2")
+  expect_equal(res$post_id, "50")
+  expect_equal(res$weight, 4L)
+  expect_equal(attr(res, "snapshot"), "s1")
+  expect_equal(attr(res, "timestamp"), w$now)
+  res0 <- aedes_partner_summary("10", timestamp = "2026-01-01 00:00:00 UTC")
+  expect_equal(res0$post_id, c("20", "30"))
 })
 
 test_that("old, one-file and two-file layouts give the same answers", {

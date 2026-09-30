@@ -27,6 +27,7 @@ export(read_aedes_neurons)
 export(register_aedes_coconat)
 export(with_aedes)
 import(fafbseg)
+importFrom(bit64,"%in%")
 importFrom(dplyr,
   add_count,
   arrange,

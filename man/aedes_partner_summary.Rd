@@ -58,19 +58,34 @@ of connecting synapses. This is a thin Aedes-aware wrapper around
 \code{\link[=aedes_ids]{aedes_ids()}}, points fafbseg at the Aedes segmentation, and updates root
 ids to the requested \code{version}/\code{timestamp} before querying. When a local
 synapse snapshot has been selected with \code{\link[=aedes_synapse_snapshot]{aedes_synapse_snapshot()}} the
-query is instead answered from that snapshot, at the snapshot's time.
+query is instead answered from that snapshot, updated to the requested time.
 }
 \details{
 With \code{method = "auto"} (the default) the local snapshot is used
-when one is selected, no \code{version} is given, \code{timestamp} is missing or
-matches the snapshot time, and \code{...} contains nothing other than
-\code{remove_autapses}; otherwise CAVE is queried. Note that without a
-\code{timestamp} a local query gives partners at the snapshot time, while a
-CAVE query gives them now. \code{method = "local"} gives an error rather than
-falling back to CAVE. The local and CAVE results should agree, apart from
-CAVE's default cleft score filtering and any root 0 (unassigned) partners,
-which the local method drops. The local result has \code{snapshot} and
-\code{timestamp} attributes.
+when one is selected, the requested time is not before the snapshot, and
+\code{...} contains nothing other than \code{remove_autapses}; otherwise CAVE is
+queried. \code{method = "local"} gives an error rather than falling back to
+CAVE.
+
+The time of a local query is \code{timestamp} (or the time of \code{version}) when
+given. Otherwise it is the \code{aedes.version} option when that is a
+timestamp, as set by \code{\link[=aedes_synapse_snapshot]{aedes_synapse_snapshot()}}, so that results match the
+snapshot and other aedes metadata; and otherwise now.
+
+Local queries after the snapshot time fetch only the changes made since
+then from CAVE and look up the new root ids of the affected synapses'
+supervoxels. These updates are kept for the rest of the R session, so the
+first query after a long gap may take a while (seconds to a few minutes)
+but later ones are quick. A query for \code{"now"} reuses the last update if it
+is less than \code{getOption("aedes.synapse_max_age", 60)} seconds old. Small
+queries may instead update just their own synapses when that is cheaper
+(tuned by the \code{aedes.synapse_head_ratio} and \code{aedes.synapse_head_min_sv}
+options).
+
+The local and CAVE results should agree, apart from CAVE's default cleft
+score filtering and any root 0 (unassigned) partners, which the local
+method drops. The local result has \code{snapshot}, \code{timestamp} (the time it is
+valid for) and \code{method} attributes.
 }
 \examples{
 \dontrun{
