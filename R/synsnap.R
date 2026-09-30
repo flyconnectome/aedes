@@ -41,8 +41,10 @@ synsnap_con <- function() {
   synsnap_check()
   con <- .synsnap$con
   if (is.null(con) || !DBI::dbIsValid(con)) {
-    con <- DBI::dbConnect(duckdb::duckdb(shared_home = FALSE),
-                          bigint = "integer64")
+    # shared_home (duckdb >= 1.5.5) avoids a prompt about extension storage
+    drv <- if ("shared_home" %in% names(formals(duckdb::duckdb)))
+      duckdb::duckdb(shared_home = FALSE) else duckdb::duckdb()
+    con <- DBI::dbConnect(drv, bigint = "integer64")
     tmp <- file.path(tempdir(), "synsnap_duckdb")
     dir.create(tmp, showWarnings = FALSE)
     DBI::dbExecute(con, sprintf("SET temp_directory = '%s'", tmp))
