@@ -330,3 +330,34 @@ test_that("fetching the source file", {
   expect_match(err, "Download failed")
   expect_false(grepl(src, err, fixed = TRUE))
 })
+
+test_that("verifying a snapshot against CAVE", {
+  skip_if_no_duckdb()
+  root <- make_snapshot(withr::local_tempdir())
+  w <- fake_world()
+  s1 <- dplyr::collect(synsnap_tbl("s1", root))
+  cave <- data.frame(id = s1$id, pre_pt_root_id = s1$pre_root,
+                     post_pt_root_id = s1$post_root)
+  local_mocked_bindings(aedes_cave_query = function(table, filter_in_dict, ...) {
+    col <- names(filter_in_dict)
+    cave[as.character(cave[[col]]) %in% filter_in_dict[[col]], ]
+  })
+  expect_true(suppressMessages(aedes_synsnap_verify("s1", root, 1, ctx = w$ctx)))
+  # a stale root in CAVE is fine if the chunkedgraph agrees with the snapshot
+  cave$post_pt_root_id[cave$id == 1] <- bit64::as.integer64(99)
+  expect_match(capture_messages(aedes_synsnap_verify("s1", root, 1, ctx = w$ctx)),
+               "1 synapses with stale", all = FALSE)
+  # but not if it disagrees
+  ctx <- w$ctx
+  ctx$rootid <- function(x, timestamp) {
+    r <- w$ctx$rootid(x, timestamp)
+    r[x == 201] <- bit64::as.integer64(99)
+    r
+  }
+  expect_error(suppressMessages(aedes_synsnap_verify("s1", root, 1, ctx = ctx)),
+               "1 synapses have root ids")
+  # and synapses missing from CAVE are always an error
+  cave <- cave[cave$id != 2, ]
+  expect_error(suppressMessages(aedes_synsnap_verify("s1", root, 1, ctx = w$ctx)),
+               "synapse ids differ")
+})
