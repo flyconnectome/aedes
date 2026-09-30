@@ -250,3 +250,27 @@ test_that("snapshots are built in a staging folder", {
   synsnap_build("s4", svmap, "2026-01-04 00:00:00", root)
   expect_true(file.exists(file.path(root, "s4", "by_pre.parquet")))
 })
+
+test_that("static.parquet from a csv edgelist", {
+  skip_if_no_duckdb()
+  root <- withr::local_tempdir()
+  csv <- file.path(root, "edges.df")
+  big <- c("73959615070926589", "73959615070926590")
+  writeLines(c("cleft_segid,presyn_basin,postsyn_basin,presyn_x,presyn_y,presyn_z,postsyn_x,postsyn_y,postsyn_z,size,extra",
+               sprintf("2.0,%s,%s,1,2,3,4,5,6,14.0,0.5", big[1], big[2]),
+               sprintf("1.0,%s,%s,1,2,3,4,5,6,7.0,0.5", big[2], big[1])), csv)
+  synsnap_build_static(csv, root, format = "csv", meta = list(source_md5 = "abc"))
+  st <- arrow::read_parquet(file.path(root, "static.parquet"))
+  expect_equal(st$id, 1:2)
+  expect_equal(as.character(st$pre_sv), rev(big))
+  expect_equal(st$size, c(7L, 14L))
+  expect_true(is.integer(st$pre_x))
+  js <- jsonlite::read_json(file.path(root, "static.json"))
+  expect_equal(js$rows, 2)
+  expect_equal(js$source_md5, "abc")
+
+  writeLines(c("cleft_segid,presyn_basin,postsyn_basin,presyn_x,presyn_y,presyn_z,postsyn_x,postsyn_y,postsyn_z,size",
+               "1.5,1,2,1,2,3,4,5,6,7.0"), csv)
+  expect_error(synsnap_build_static(csv, root, format = "csv", overwrite = TRUE),
+               "id is not a whole number")
+})
