@@ -4,25 +4,29 @@
 
 # Download `url` (gs://bucket/object or https://...) to `dest` and check its
 # md5 (hex, or base64 as GCS reports it). Uses `gcloud storage cp` (parallel
-# sliced download, resumable) when `gcloud` is available, otherwise the curl
-# command line tool, resuming a partial download. The url is never printed and
-# the tools run silently, since it may point at data that should not be
-# advertised.
+# sliced download, resumable) when `gcloud` is available and works, otherwise
+# the curl command line tool, resuming a partial download. The url is never
+# printed and the tools run silently, since it may point at data that should
+# not be advertised.
 synsnap_fetch_source <- function(url, dest, md5,
                                  method = c("auto", "gcloud", "curl"),
                                  gcloud = Sys.which("gcloud")) {
   method <- match.arg(method)
-  if (method == "auto") method <- if (nzchar(gcloud)) "gcloud" else "curl"
   if (file.exists(dest) && synsnap_md5_ok(dest, md5)) return(invisible(dest))
   part <- paste0(dest, ".part")
-  status <- if (method == "gcloud")
-    system2(gcloud, c("storage", "cp", shQuote(url), shQuote(part)),
-            stdout = FALSE, stderr = FALSE)
-  else system2("curl", c("-fsSL", "-C", "-", "-o", shQuote(part),
-                         shQuote(synsnap_https_url(url))),
-               stdout = FALSE, stderr = FALSE)
-  if (!identical(as.integer(status), 0L))
-    stop("Download failed (", method, " exit status ", status, ")", call. = FALSE)
+  get <- function(method) {
+    status <- if (method == "gcloud")
+      system2(gcloud, c("storage", "cp", shQuote(url), shQuote(part)),
+              stdout = FALSE, stderr = FALSE)
+    else system2("curl", c("-fsSL", "-C", "-", "-o", shQuote(part),
+                           shQuote(synsnap_https_url(url))),
+                 stdout = FALSE, stderr = FALSE)
+    identical(as.integer(status), 0L)
+  }
+  # auto: gcloud if it is installed and works, otherwise curl
+  ok <- if (method == "auto") (nzchar(gcloud) && get("gcloud")) || get("curl")
+  else get(method)
+  if (!ok) stop("Download failed", call. = FALSE)
   if (!synsnap_md5_ok(part, md5)) {
     unlink(part)
     stop("Downloaded file has the wrong md5", call. = FALSE)
@@ -43,14 +47,20 @@ synsnap_md5_ok <- function(f, md5) {
 # md5 (base64) of a GCS object: from the x-goog-hash header, which needs no
 # credentials for a public object, otherwise via gcloud
 synsnap_gcs_md5 <- function(url, gcloud = Sys.which("gcloud")) {
-  res <- try(httr::HEAD(synsnap_https_url(url)), silent = TRUE)
-  if (!inherits(res, "try-error") && httr::status_code(res) == 200) {
-    h <- strsplit(httr::headers(res)[["x-goog-hash"]], ",\\s*")[[1]]
+  res <- tryCatch(httr::HEAD(synsnap_https_url(url)), error = function(e) e)
+  why <- if (inherits(res, "error"))
+    gsub(sub("^gs://", "", url), "<source>", conditionMessage(res), fixed = TRUE)
+  else if (httr::status_code(res) != 200) paste("HTTP status", httr::status_code(res))
+  else {
+    # one header with crc32c and md5, or (HTTP/1.1) a header for each
+    h <- httr::headers(res)
+    h <- unlist(strsplit(unlist(h[tolower(names(h)) == "x-goog-hash"]), ",\\s*"))
     md5 <- sub("^md5=", "", grep("^md5=", h, value = TRUE))
     if (length(md5) == 1) return(md5)
+    "no md5 in x-goog-hash header"
   }
   if (!nzchar(gcloud))
-    stop("Could not read the md5 of the source file", call. = FALSE)
+    stop("Could not read the md5 of the source file (", why, ")", call. = FALSE)
   md5 <- suppressWarnings(system2(gcloud, c("storage", "objects", "describe",
                                             shQuote(url), "--format='value(md5_hash)'"),
                                   stdout = TRUE, stderr = FALSE))
