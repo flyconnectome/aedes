@@ -45,6 +45,7 @@ reference:
   - aedes_partner_summary
   - aedes_predict_group
   - aedes_synapse_snapshot
+  - aedes_synapse_snapshot_update
   - aedes_synapse_data
 
 - title: Low level CAVE access

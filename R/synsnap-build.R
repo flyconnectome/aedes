@@ -131,3 +131,50 @@ synsnap_rebase <- function(tag, root, by_post = FALSE) {
   file.remove(synsnap_path(root, tag, "delta.parquet"))
   invisible(tag)
 }
+
+# Delta snapshot `tag` at `timestamp` from snapshot `from`, using CAVE access
+# in `ctx` (see R/synsnap-live.R). Only synapses on roots that expired since
+# `from` are looked up. The delta is always against a full snapshot: `from`, or
+# `from`'s base when `from` is itself a delta. Rows that are the same as the
+# base are dropped, so edits that are later undone do not grow the delta.
+synsnap_update <- function(from, tag, timestamp, root, ctx) {
+  if (file.exists(file.path(synsnap_path(root), tag, "meta.json")))
+    stop("Synapse snapshot '", tag, "' already exists", call. = FALSE)
+  m <- synsnap_meta(from, root)
+  base <- if (is.na(m$base)) from else m$base
+  T <- as.POSIXct(timestamp, tz = "UTC")
+  if (T < m$timestamp)
+    stop("timestamp is before snapshot '", from, "'", call. = FALSE)
+  con <- synsnap_con()
+  # a private head state for `from`, so session states are left alone
+  st <- new.env(parent = emptyenv())
+  st$tag <- from
+  st$root <- root
+  st$t0 <- st$t <- st$log_t <- m$timestamp
+  st$table <- NULL
+  st$log <- list()
+  on.exit(if (!is.null(st$table))
+    DBI::dbExecute(con, paste("DROP TABLE IF EXISTS", st$table)), add = TRUE)
+  lg <- synsnap_log_range(st, m$timestamp, T, ctx)
+  synsnap_advance(st, synsnap_changed(st, lg$old, con), T, ctx, con)
+
+  # rows of `from` that differ from the base, updated by the head rows
+  rows <- if (is.null(st$table)) {
+    if (is.na(m$base)) sprintf("SELECT id, pre_root, post_root FROM %s WHERE false",
+                               synsnap_sql_str(synsnap_ids_file(root, base)))
+    else sprintf("SELECT id, pre_root, post_root FROM %s",
+                 synsnap_sql_str(synsnap_path(root, from, "delta.parquet")))
+  } else if (is.na(m$base)) sprintf("SELECT id, pre_root, post_root FROM %s", st$table)
+  else sprintf("SELECT id, pre_root, post_root FROM %s WHERE id NOT IN (SELECT id FROM %s)
+    UNION ALL SELECT id, pre_root, post_root FROM %s",
+    synsnap_sql_str(synsnap_path(root, from, "delta.parquet")), st$table, st$table)
+  sql <- sprintf("SELECT d.id, d.pre_root, d.post_root FROM (%s) d
+    ANTI JOIN %s b ON d.id = b.id AND d.pre_root = b.pre_root
+      AND d.post_root = b.post_root
+    ORDER BY d.id", rows, synsnap_sql_str(synsnap_ids_file(root, base)))
+  dir.create(file.path(synsnap_path(root), tag), showWarnings = FALSE)
+  synsnap_write(con, sql, synsnap_path(root, tag, "delta.parquet"))
+  synsnap_write_meta(root, tag, list(tag = tag, timestamp = T, base = base,
+                                     parent = from))
+  invisible(tag)
+}
