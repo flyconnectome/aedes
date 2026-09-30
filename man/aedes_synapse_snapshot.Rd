@@ -44,6 +44,9 @@ read the parts of the parquet files that they need.
 Selecting a snapshot with \code{set = TRUE} also sets the \code{aedes.version}
 option to the snapshot's timestamp (see \code{\link[=aedes_set_version]{aedes_set_version()}}), so that
 metadata and root ids from other aedes functions match the synapse data.
+\code{\link[=aedes_partner_summary]{aedes_partner_summary()}} can still answer queries for later times,
+including \code{timestamp = "now"}, by fetching the edits made since the
+snapshot from CAVE (see its details).
 }
 \examples{
 \dontrun{

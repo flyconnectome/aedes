@@ -7,18 +7,33 @@
 #' [aedes_ids()], points fafbseg at the Aedes segmentation, and updates root
 #' ids to the requested `version`/`timestamp` before querying. When a local
 #' synapse snapshot has been selected with [aedes_synapse_snapshot()] the
-#' query is instead answered from that snapshot, at the snapshot's time.
+#' query is instead answered from that snapshot, updated to the requested time.
 #'
 #' @details With `method = "auto"` (the default) the local snapshot is used
-#'   when one is selected, no `version` is given, `timestamp` is missing or
-#'   matches the snapshot time, and `...` contains nothing other than
-#'   `remove_autapses`; otherwise CAVE is queried. Note that without a
-#'   `timestamp` a local query gives partners at the snapshot time, while a
-#'   CAVE query gives them now. `method = "local"` gives an error rather than
-#'   falling back to CAVE. The local and CAVE results should agree, apart from
-#'   CAVE's default cleft score filtering and any root 0 (unassigned) partners,
-#'   which the local method drops. The local result has `snapshot` and
-#'   `timestamp` attributes.
+#'   when one is selected, the requested time is not before the snapshot, and
+#'   `...` contains nothing other than `remove_autapses`; otherwise CAVE is
+#'   queried. `method = "local"` gives an error rather than falling back to
+#'   CAVE.
+#'
+#'   The time of a local query is `timestamp` (or the time of `version`) when
+#'   given. Otherwise it is the `aedes.version` option when that is a
+#'   timestamp, as set by [aedes_synapse_snapshot()], so that results match the
+#'   snapshot and other aedes metadata; and otherwise now.
+#'
+#'   Local queries after the snapshot time fetch only the changes made since
+#'   then from CAVE and look up the new root ids of the affected synapses'
+#'   supervoxels. These updates are kept for the rest of the R session, so the
+#'   first query after a long gap may take a while (seconds to a few minutes)
+#'   but later ones are quick. A query for `"now"` reuses the last update if it
+#'   is less than `getOption("aedes.synapse_max_age", 60)` seconds old. Small
+#'   queries may instead update just their own synapses when that is cheaper
+#'   (tuned by the `aedes.synapse_head_ratio` and `aedes.synapse_head_min_sv`
+#'   options).
+#'
+#'   The local and CAVE results should agree, apart from CAVE's default cleft
+#'   score filtering and any root 0 (unassigned) partners, which the local
+#'   method drops. The local result has `snapshot`, `timestamp` (the time it is
+#'   valid for) and `method` attributes.
 #'
 #' @param rootids Query neurons in any form accepted by [aedes_ids()] (root
 #'   ids or a FlyTable query string).
@@ -86,20 +101,26 @@ aedes_partner_summary <- function(rootids,
   if (method == "local" && is.null(snap))
     stop("No local synapse snapshot selected. See ?aedes_synapse_snapshot")
   if (!is.null(snap)) {
-    why = partner_summary_local_problem(snap, version, timestamp, ...)
+    when = partner_summary_local_time(version, timestamp)
+    why = partner_summary_local_problem(snap, when, ...)
     if (method == "local" && !is.null(why))
       stop("Cannot use the local synapse snapshot: ", why)
     if (is.null(why)) method = "local"
   }
   if (method == "local") {
-    rootids = aedes_ids(rootids, timestamp = snap$timestamp)
-    rootids = with_aedes(fafbseg::flywire_latestid(rootids, timestamp = snap$timestamp))
+    # plain ids are checked against the snapshot's root log, which is cheaper
+    # than updating them through FlyTable/CAVE
+    if (!all(fafbseg:::valid_id(rootids, na.ok = FALSE)))
+      rootids = aedes_ids(rootids, timestamp = when)
     dots = list(...)
     remove_autapses = if (is.null(dots$remove_autapses)) TRUE else dots$remove_autapses
-    return(synsnap_partner_summary(rootids, partners = partners,
-                                   tag = snap$tag, root = snap$root,
-                                   threshold = threshold,
-                                   remove_autapses = remove_autapses))
+    return(synsnap_partner_summary(
+      rootids, partners = partners, tag = snap$tag, root = snap$root,
+      threshold = threshold, remove_autapses = remove_autapses,
+      timestamp = when, ctx = aedes_synsnap_ctx(),
+      max_age = getOption("aedes.synapse_max_age", 60),
+      f = getOption("aedes.synapse_head_ratio", 0.3),
+      min_sv = getOption("aedes.synapse_head_min_sv", 5e4)))
   }
   rootids = aedes_ids(rootids, version = version, timestamp = timestamp)
   withr::with_options(choose_aedes(set = FALSE), {
@@ -124,22 +145,31 @@ aedes_partner_summary <- function(rootids,
   })
 }
 
-# NULL if a partner query can be answered from snapshot `snap`, otherwise a
-# string saying why not
-partner_summary_local_problem <- function(snap, version = NULL, timestamp = NULL,
-                                          ...) {
+# The time a local query should use: an explicit timestamp or version, else
+# the aedes.version option when it is pinned to a timestamp (as by
+# aedes_synapse_snapshot()), else "now"
+partner_summary_local_time <- function(version = NULL, timestamp = NULL) {
+  if (identical(timestamp, "now")) return("now")
+  if (!is.null(timestamp) || !is.null(version))
+    return(with_aedes(fafbseg::flywire_timestamp(version = version,
+                                                 timestamp = timestamp)))
+  opt = getOption("aedes.version")
+  if (is.character(opt) && length(opt) == 1 && !opt %in% c("latest", "now"))
+    return(with_aedes(fafbseg::flywire_timestamp(timestamp = opt)))
+  "now"
+}
+
+# NULL if a partner query can be answered from snapshot `snap` at `when`,
+# otherwise a string saying why not
+partner_summary_local_problem <- function(snap, when, ...) {
   dots = list(...)
   bad = setdiff(names(dots), "remove_autapses")
   if (length(bad))
     return(paste("argument(s)", paste(bad, collapse = ", "),
                  "are only supported for CAVE queries"))
-  if (!is.null(version))
-    return("a materialisation version was requested; use timestamp instead")
-  if (is.null(timestamp)) return(NULL)
-  ts = with_aedes(fafbseg::flywire_timestamp(timestamp = timestamp))
-  if (abs(as.numeric(ts) - as.numeric(snap$timestamp)) > 1)
-    return(sprintf("requested time %s differs from snapshot '%s' time %s",
-                   format(ts, tz = "UTC", usetz = TRUE), snap$tag,
+  if (!identical(when, "now") && as.numeric(when) < as.numeric(snap$timestamp) - 1)
+    return(sprintf("requested time %s is before snapshot '%s' time %s",
+                   format(when, tz = "UTC", usetz = TRUE), snap$tag,
                    format(snap$timestamp, tz = "UTC", usetz = TRUE)))
   NULL
 }
