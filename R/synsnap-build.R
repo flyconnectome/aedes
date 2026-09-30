@@ -85,34 +85,70 @@ synsnap_write_ids <- function(con, sql, root, tag, by_post = FALSE,
       synsnap_sql_str(by_pre)), synsnap_path(root, tag, "by_post.parquet"))
 }
 
-# Full snapshot `tag` at `timestamp` from a supervoxel -> root map (a
-# data.frame or feather file(s) with columns sv, root_id) that covers every
-# pre_sv and post_sv in static.parquet.
-synsnap_build <- function(tag, svmap, timestamp, root, by_post = FALSE) {
-  if (file.exists(file.path(synsnap_path(root), tag, "meta.json")))
+# Build snapshot `tag` in <root>/.staging/<tag> and only then move it into
+# place, so a tag folder only ever holds a finished snapshot. `build` is called
+# with the staging tag (".staging/<tag>", which the other synsnap functions
+# accept as a tag) and writes its files and meta.json there. `verify`, if
+# given, is then called with the staging tag and should stop() if the snapshot
+# is bad: its files move to <root>/.failed for inspection.
+synsnap_stage <- function(root, tag, build, verify = NULL) {
+  final <- file.path(synsnap_path(root), tag)
+  if (file.exists(file.path(final, "meta.json")))
     stop("Synapse snapshot '", tag, "' already exists", call. = FALSE)
-  dir.create(file.path(synsnap_path(root), tag), showWarnings = FALSE)
-  con <- synsnap_con()
-  src <- synsnap_source(con, svmap)
-  DBI::dbExecute(con, sprintf(
-    "CREATE OR REPLACE TEMP TABLE synsnap_svmap AS SELECT DISTINCT sv, root_id FROM %s",
-    src))
-  on.exit(DBI::dbExecute(con, "DROP TABLE IF EXISTS synsnap_svmap"), add = TRUE)
-  dup <- DBI::dbGetQuery(con,
-    "SELECT count(*) - count(DISTINCT sv) AS n FROM synsnap_svmap")$n
-  if (dup > 0) stop(dup, " supervoxels map to more than one root", call. = FALSE)
-  sql <- sprintf("SELECT p.root_id AS pre_root, q.root_id AS post_root, s.id
-    FROM %s s LEFT JOIN synsnap_svmap p ON s.pre_sv = p.sv
-    LEFT JOIN synsnap_svmap q ON s.post_sv = q.sv",
-    synsnap_sql_str(synsnap_path(root, file = "static.parquet")))
-  synsnap_write_ids(con, sql, root, tag, by_post = by_post, check = function(written) {
-    n <- DBI::dbGetQuery(con, sprintf("SELECT count(*) AS n FROM %s
-      WHERE pre_root IS NULL OR post_root IS NULL", written))$n
-    if (n > 0)
-      stop(n, " synapses have a supervoxel missing from svmap", call. = FALSE)
+  stage <- file.path(".staging", tag)
+  dir <- file.path(synsnap_path(root), stage)
+  unlink(dir, recursive = TRUE)
+  dir.create(dir, recursive = TRUE)
+  build(stage)
+  if (!is.null(verify)) tryCatch(verify(stage), error = function(e) {
+    synsnap_fail(root, tag)
+    stop(e)
   })
-  synsnap_write_meta(root, tag, list(tag = tag, timestamp = timestamp, parent = NULL))
+  unlink(final, recursive = TRUE)
+  if (!file.rename(dir, final))
+    stop("Could not move synapse snapshot '", tag, "' into place", call. = FALSE)
   invisible(tag)
+}
+
+# Move the staging files of `tag` (including a supervoxel lookup cache) to
+# <root>/.failed/<tag>-<time>
+synsnap_fail <- function(root, tag) {
+  dest <- file.path(synsnap_path(root), ".failed",
+                    paste0(tag, format(Sys.time(), "-%Y%m%dT%H%M%S", tz = "UTC")))
+  dir.create(dest, recursive = TRUE)
+  src <- file.path(synsnap_path(root), ".staging", paste0(tag, c("", ".svmap")))
+  for (f in src[file.exists(src)]) file.rename(f, file.path(dest, basename(f)))
+  invisible(dest)
+}
+
+# Full snapshot `tag` at `timestamp` from a supervoxel -> root map (a
+# data.frame or feather file(s) with columns sv, root_id) that
+# covers every pre_sv and post_sv in static.parquet. See synsnap_stage() for
+# `verify`.
+synsnap_build <- function(tag, svmap, timestamp, root, by_post = FALSE,
+                          verify = NULL) {
+  synsnap_stage(root, tag, verify = verify, build = function(stage) {
+    con <- synsnap_con()
+    src <- synsnap_source(con, svmap)
+    DBI::dbExecute(con, sprintf(
+      "CREATE OR REPLACE TEMP TABLE synsnap_svmap AS SELECT DISTINCT sv, root_id FROM %s",
+      src))
+    on.exit(DBI::dbExecute(con, "DROP TABLE IF EXISTS synsnap_svmap"), add = TRUE)
+    dup <- DBI::dbGetQuery(con,
+      "SELECT count(*) - count(DISTINCT sv) AS n FROM synsnap_svmap")$n
+    if (dup > 0) stop(dup, " supervoxels map to more than one root", call. = FALSE)
+    sql <- sprintf("SELECT p.root_id AS pre_root, q.root_id AS post_root, s.id
+      FROM %s s LEFT JOIN synsnap_svmap p ON s.pre_sv = p.sv
+      LEFT JOIN synsnap_svmap q ON s.post_sv = q.sv",
+      synsnap_sql_str(synsnap_path(root, file = "static.parquet")))
+    synsnap_write_ids(con, sql, root, stage, by_post = by_post, check = function(written) {
+      n <- DBI::dbGetQuery(con, sprintf("SELECT count(*) AS n FROM %s
+        WHERE pre_root IS NULL OR post_root IS NULL", written))$n
+      if (n > 0)
+        stop(n, " synapses have a supervoxel missing from svmap", call. = FALSE)
+    })
+    synsnap_write_meta(root, stage, list(tag = tag, timestamp = timestamp, parent = NULL))
+  })
 }
 
 # Turn delta snapshot `tag` into a full one, to base later deltas on
@@ -136,6 +172,11 @@ synsnap_rebase <- function(tag, root, by_post = FALSE) {
 synsnap_update <- function(from, tag, timestamp, root, ctx) {
   if (file.exists(file.path(synsnap_path(root), tag, "meta.json")))
     stop("Synapse snapshot '", tag, "' already exists", call. = FALSE)
+  synsnap_stage(root, tag, function(stage)
+    synsnap_update_write(from, tag, stage, timestamp, root, ctx))
+}
+
+synsnap_update_write <- function(from, tag, stage, timestamp, root, ctx) {
   m <- synsnap_meta(from, root)
   base <- if (is.na(m$base)) from else m$base
   T <- as.POSIXct(timestamp, tz = "UTC")
@@ -168,9 +209,7 @@ synsnap_update <- function(from, tag, timestamp, root, ctx) {
     ANTI JOIN %s b ON d.id = b.id AND d.pre_root = b.pre_root
       AND d.post_root = b.post_root
     ORDER BY d.id", rows, synsnap_sql_str(synsnap_ids_file(root, base)))
-  dir.create(file.path(synsnap_path(root), tag), showWarnings = FALSE)
-  synsnap_write(con, sql, synsnap_path(root, tag, "delta.parquet"))
-  synsnap_write_meta(root, tag, list(tag = tag, timestamp = T, base = base,
-                                     parent = from))
-  invisible(tag)
+  synsnap_write(con, sql, synsnap_path(root, stage, "delta.parquet"))
+  synsnap_write_meta(root, stage, list(tag = tag, timestamp = T, base = base,
+                                       parent = from))
 }

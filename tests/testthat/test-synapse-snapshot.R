@@ -221,3 +221,32 @@ test_that("aedes_synapse_snapshot_root", {
   file.create(file.path(proj, "static.parquet"))
   expect_equal(normalizePath(aedes_synapse_snapshot_root()), normalizePath(proj))
 })
+
+test_that("snapshots are built in a staging folder", {
+  skip_if_no_duckdb()
+  root <- make_snapshot(withr::local_tempdir())
+  static <- dplyr::collect(synsnap_tbl("s1", root, static = TRUE))
+  svmap <- data.frame(sv = c(static$pre_sv, static$post_sv),
+                      root_id = c(static$pre_root, static$post_root))
+  seen <- NULL
+  synsnap_build("s3", svmap, "2026-01-03 00:00:00", root, verify = function(stage) {
+    seen <<- stage
+    expect_false(dir.exists(file.path(root, "s3")))
+    expect_equal(nrow(dplyr::collect(synsnap_tbl(stage, root))), 10)
+  })
+  expect_equal(seen, file.path(".staging", "s3"))
+  expect_equal(synsnap_meta("s3", root)$tag, "s3")
+  expect_false(dir.exists(file.path(root, ".staging", "s3")))
+  expect_equal(synsnap_tags(root)$tag, c("s1", "s2", "s3"))
+
+  # failed verification: no tag, files kept in .failed
+  expect_error(synsnap_build("s4", svmap, "2026-01-04 00:00:00", root,
+                             verify = function(stage) stop("mismatch")), "mismatch")
+  expect_false(dir.exists(file.path(root, "s4")))
+  failed <- list.files(file.path(root, ".failed"), full.names = TRUE)
+  expect_match(basename(failed), "^s4-")
+  expect_true(file.exists(file.path(failed, "s4", "meta.json")))
+  # and a later build of the same tag works
+  synsnap_build("s4", svmap, "2026-01-04 00:00:00", root)
+  expect_true(file.exists(file.path(root, "s4", "by_pre.parquet")))
+})
