@@ -58,3 +58,85 @@ synsnap_gcs_md5 <- function(url, gcloud = Sys.which("gcloud")) {
     stop("Could not read the md5 of the source file", call. = FALSE)
   md5
 }
+
+# Call f(), retrying after errors with increasing waits (seconds)
+synsnap_retry <- function(f, wait = c(30, 120, 600)) {
+  for (i in seq_len(length(wait) + 1)) {
+    res <- tryCatch(f(), error = function(e) e)
+    if (!inherits(res, "error")) return(res)
+    if (i > length(wait)) stop(res)
+    message("Retrying in ", wait[i], " s after error: ", conditionMessage(res))
+    Sys.sleep(wait[i])
+  }
+}
+
+# Supervoxel -> root map at `timestamp` for every pre_sv and post_sv in
+# static.parquet, looked up with ctx$rootid in chunks of `chunksize`
+# supervoxels. Each chunk is saved to <cache>/chunk-NNNNN.parquet as soon as it
+# is done, so an interrupted lookup resumes where it stopped. Returns the chunk
+# files (columns sv, root_id).
+synsnap_lookup_svmap <- function(root, timestamp, ctx, cache, chunksize = 1e6,
+                                 wait = c(30, 120, 600)) {
+  timestamp <- format(synsnap_parse_time(timestamp), "%Y-%m-%d %H:%M:%OS6 UTC",
+                      tz = "UTC")
+  dir.create(cache, recursive = TRUE, showWarnings = FALSE)
+  info <- list(timestamp = timestamp, chunksize = chunksize)
+  fi <- file.path(cache, "lookup.json")
+  if (file.exists(fi)) {
+    old <- jsonlite::read_json(fi, simplifyVector = TRUE)
+    if (!identical(old$timestamp, info$timestamp) || old$chunksize != chunksize)
+      stop("Supervoxel lookup in ", cache, " is for a different timestamp or chunksize",
+           call. = FALSE)
+  } else jsonlite::write_json(info, fi, auto_unbox = TRUE, digits = NA)
+
+  con <- synsnap_con()
+  svs <- file.path(cache, "svs.parquet")
+  if (!file.exists(svs)) {
+    st <- synsnap_sql_str(synsnap_path(root, file = "static.parquet"))
+    synsnap_write(con, sprintf(
+      "SELECT sv, ((row_number() OVER (ORDER BY sv) - 1) // %d)::INTEGER AS chunk
+       FROM (SELECT pre_sv AS sv FROM %s UNION SELECT post_sv FROM %s) ORDER BY sv",
+      as.integer(chunksize), st, st), svs)
+  }
+  svs <- synsnap_sql_str(svs)
+  n <- DBI::dbGetQuery(con, sprintf(
+    "SELECT count(*) AS n, max(chunk) + 1 AS chunks FROM %s", svs))
+  files <- file.path(cache, sprintf("chunk-%05d.parquet", seq_len(n$chunks) - 1L))
+  todo <- which(!file.exists(files))
+  if (length(todo))
+    message("Looking up roots for ", format(n$n, big.mark = ","), " supervoxels: ",
+            length(todo), " of ", n$chunks, " chunks to do")
+  T <- synsnap_parse_time(timestamp)
+  for (i in todo) {
+    t0 <- Sys.time()
+    sv <- DBI::dbGetQuery(con, sprintf(
+      "SELECT sv FROM %s WHERE chunk = %d ORDER BY sv", svs, i - 1L))$sv
+    r <- synsnap_retry(function() ctx$rootid(sv, T), wait = wait)
+    if (length(r) != length(sv))
+      stop("Root lookup returned ", length(r), " ids for ", length(sv),
+           " supervoxels", call. = FALSE)
+    local({
+      nm <- synsnap_register(con, data.frame(sv = sv, root_id = bit64::as.integer64(r)))
+      synsnap_write(con, paste("SELECT sv, root_id FROM", nm), files[i])
+    })
+    message(format(Sys.time(), "%H:%M:%S"), " chunk ", i, "/", n$chunks, ": ",
+            round(as.numeric(difftime(Sys.time(), t0, units = "secs"))), " s")
+  }
+  files
+}
+
+# Full snapshot `tag` at `timestamp`, built from scratch by looking up the
+# root of every supervoxel in static.parquet (see synsnap_lookup_svmap()). The
+# lookup is cached in <root>/.staging/<tag>.svmap until the snapshot is in
+# place, so rerunning after a failure only repeats unfinished chunks. See
+# synsnap_stage() for `verify`.
+synsnap_build_from_lookup <- function(tag, timestamp, root, ctx, verify = NULL,
+                                      chunksize = 1e6, by_post = FALSE, ...) {
+  if (file.exists(file.path(synsnap_path(root), tag, "meta.json")))
+    stop("Synapse snapshot '", tag, "' already exists", call. = FALSE)
+  cache <- file.path(synsnap_path(root), ".staging", paste0(tag, ".svmap"))
+  files <- synsnap_lookup_svmap(root, timestamp, ctx, cache, chunksize = chunksize, ...)
+  synsnap_build(tag, files, timestamp, root, by_post = by_post, verify = verify)
+  unlink(cache, recursive = TRUE)
+  invisible(tag)
+}

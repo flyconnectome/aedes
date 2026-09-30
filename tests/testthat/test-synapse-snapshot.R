@@ -275,6 +275,39 @@ test_that("static.parquet from a csv edgelist", {
                "id is not a whole number")
 })
 
+test_that("full snapshot from a resumable supervoxel lookup", {
+  skip_if_no_duckdb()
+  root <- make_snapshot(withr::local_tempdir())
+  w <- fake_world()
+  t3 <- "2026-01-01 03:00:00"
+  # the lookup fails after the first chunk has been saved
+  ctx <- w$ctx
+  n <- 0L
+  ctx$rootid <- function(x, timestamp) {
+    n <<- n + 1L
+    if (n == 2L) stop("server down")
+    w$ctx$rootid(x, timestamp)
+  }
+  expect_error(suppressMessages(synsnap_build_from_lookup(
+    "s3", t3, root, ctx, chunksize = 8, wait = numeric())), "server down")
+  cache <- file.path(root, ".staging", "s3.svmap")
+  expect_equal(basename(list.files(cache, "^chunk")), "chunk-00000.parquet")
+  expect_false(dir.exists(file.path(root, "s3")))
+  # a different timestamp can't reuse the cache
+  expect_error(synsnap_build_from_lookup("s3", "2026-01-01 04:00:00", root, ctx,
+                                         chunksize = 8), "different timestamp")
+  # resume: only the two missing chunks are looked up
+  w$calls$rootid <- 0L
+  suppressMessages(synsnap_build_from_lookup("s3", t3, root, w$ctx, chunksize = 8))
+  expect_equal(w$calls$rootid, 2L)
+  expect_false(dir.exists(cache))
+  got <- dplyr::arrange(dplyr::collect(synsnap_tbl("s3", root)), .data$id)
+  T <- synsnap_parse_time(t3)
+  i64 <- bit64::as.integer64
+  expect_equal(got$pre_root, w$ctx$rootid(i64(got$id + 100), T))
+  expect_equal(got$post_root, w$ctx$rootid(i64(got$id + 200), T))
+})
+
 test_that("fetching the source file", {
   src <- withr::local_tempfile(fileext = ".csv")
   writeLines(c("a,b", "1,2"), src)
