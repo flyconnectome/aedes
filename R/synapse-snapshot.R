@@ -55,6 +55,54 @@ aedes_synapse_snapshot <- function(snapshot = "latest",
     aedes.version = format(m$timestamp, "%Y-%m-%d %H:%M:%OS6 UTC", tz = "UTC")))
 }
 
+#' Bring a local Aedes synapse snapshot up to date
+#'
+#' Saves a new snapshot of the Aedes synapse table at a later time, by applying
+#' the edits made since an existing snapshot. Queries at or near the new
+#' snapshot time are then fast, since they need few or no CAVE lookups.
+#'
+#' @details Only synapses on neurons that were edited since `from` are looked
+#'   up in CAVE, so updating a day-old snapshot typically takes seconds to
+#'   minutes. The new snapshot is saved as a small `delta.parquet` file of the
+#'   synapses that differ from the full snapshot it is based on. Each delta
+#'   holds all changes since that full snapshot, so deltas grow over time; use
+#'   `rebase = TRUE` to save a full snapshot (about 0.6 GB) that later deltas
+#'   start from.
+#'
+#' @param timestamp The time for the new snapshot: a POSIXct or a string
+#'   accepted by [as.POSIXct()], or `"now"` (the default).
+#' @param from The snapshot to start from, or `"latest"` (the default) for the
+#'   most recent snapshot in `root`.
+#' @param tag The name of the new snapshot. Defaults to the timestamp, e.g.
+#'   `"20261001T120000"`.
+#' @param rebase Whether to save a full snapshot rather than a delta.
+#' @inheritParams aedes_synapse_snapshot
+#' @return The result of [aedes_synapse_snapshot()] for the new snapshot.
+#' @seealso [aedes_synapse_snapshot()]
+#' @export
+#' @examples
+#' \dontrun{
+#' options(aedes.synapse_snapshot_root = "~/data/aedes/syn_snapshot")
+#' aedes_synapse_snapshot_update()
+#' aedes_partner_summary("cell_class:DNa", timestamp = "now")
+#' }
+aedes_synapse_snapshot_update <- function(timestamp = "now", from = "latest",
+                                          tag = NULL,
+                                          root = getOption("aedes.synapse_snapshot_root"),
+                                          rebase = FALSE, set = TRUE) {
+  if (identical(from, "latest"))
+    from <- synsnap_latest(root)
+  ctx <- aedes_synsnap_ctx()
+  timestamp <- if (identical(timestamp, "now")) ctx$now()
+  else as.POSIXct(timestamp, tz = "UTC")
+  if (is.null(tag))
+    tag <- format(timestamp, "%Y%m%dT%H%M%S", tz = "UTC")
+  synsnap_update(from, tag, timestamp, root = root, ctx = ctx)
+  if (rebase)
+    synsnap_rebase(tag, root)
+  aedes_synapse_snapshot(tag, root = root, set = set)
+}
+
 # the active snapshot: list(tag, timestamp, root) or NULL if none configured
 aedes_synapse_snapshot_active <- function(snapshot = getOption("aedes.synapse_snapshot"),
                                           root = getOption("aedes.synapse_snapshot_root")) {
