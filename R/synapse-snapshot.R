@@ -8,9 +8,10 @@
 #' @details A snapshot folder contains `static.parquet` (one row per synapse,
 #'   with its supervoxels, positions and size) and one sub-folder per snapshot
 #'   tag. A tag folder has a `meta.json` with the snapshot `timestamp` and
-#'   either the full root id tables (`ids.parquet`, `by_pre.parquet`,
-#'   `by_post.parquet`) or, for a delta snapshot, a `delta.parquet` with the
-#'   rows that differ from its full `base` snapshot. Queries use DuckDB (from
+#'   either the full root id table (`by_pre.parquet`, sorted by presynaptic
+#'   root, plus an optional `by_post.parquet` sorted by postsynaptic root) or,
+#'   for a delta snapshot, a `delta.parquet` with the rows that differ from its
+#'   full `base` snapshot. Queries use DuckDB (from
 #'   the suggested packages \pkg{duckdb}, \pkg{DBI} and \pkg{dbplyr}) and only
 #'   read the parts of the parquet files that they need.
 #'
@@ -70,12 +71,14 @@ aedes_synapse_snapshot_active <- function(snapshot = getOption("aedes.synapse_sn
 #'   coordinates of the pre and postsynaptic points), `centroid_x`...
 #'   `centroid_z` and `size`.
 #'
-#'   Filtering on `pre_root` or `post_root` is fastest when `side` matches,
-#'   since the snapshot keeps a copy sorted by each and DuckDB can then skip
-#'   most of the file. Use [bit64::as.integer64()] for root ids in filters.
+#'   Rows are sorted by `pre_root`, so filtering on a few `pre_root` values
+#'   lets DuckDB skip most of the file. Snapshots with a `by_post.parquet`
+#'   also keep a copy sorted by `post_root`, which `side = "post"` reads. Use
+#'   [bit64::as.integer64()] for root ids in filters.
 #'
-#' @param side `"pre"` or `"post"` to read the copy sorted by that root, or
-#'   `NULL` (the default) for the copy sorted by synapse `id`.
+#' @param side `"post"` to read the copy sorted by `post_root` when the
+#'   snapshot has one. `NULL` (the default) and `"pre"` read the copy sorted by
+#'   `pre_root`.
 #' @param static Whether to add supervoxel, position and size columns.
 #' @inheritParams aedes_synapse_snapshot
 #' @return A lazy `tbl`.

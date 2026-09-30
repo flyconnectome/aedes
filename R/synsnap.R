@@ -3,10 +3,15 @@
 # Layout (see aedes_synapse_snapshot() for the user-facing description):
 #   <root>/static.parquet      id, pre_sv, post_sv, xyz, size; sorted by id
 #   <root>/<tag>/meta.json     tag, timestamp, base (NULL for a full snapshot)
-#   <root>/<tag>/ids.parquet   full: id, pre_root, post_root; sorted by id
-#   <root>/<tag>/by_pre.parquet, by_post.parquet
-#                              full: the same rows sorted by pre/post root
+#   <root>/<tag>/by_pre.parquet
+#                              full: pre_root, post_root, id; sorted by
+#                              pre_root, id
+#   <root>/<tag>/by_post.parquet
+#                              optional: the same rows sorted by post_root, id.
+#                              Only speeds up small input queries.
 #   <root>/<tag>/delta.parquet delta: rows that differ from full snapshot `base`
+#
+# Older snapshots also have <tag>/ids.parquet (sorted by id); it is not read.
 #
 # Nothing here knows about aedes: every function takes the snapshot `root`
 # folder and `tag` explicitly.
@@ -91,20 +96,30 @@ synsnap_sql_str <- function(x) paste0("'", gsub("'", "''", x), "'")
 synsnap_sql_ids <- function(x)
   paste(as.character(bit64::as.integer64(x)), collapse = ",")
 
-# SQL giving id, pre_root, post_root for a snapshot. With `side`, reads the
-# copy sorted by that root so that a `where` on it prunes row groups.
+# root id file of a full snapshot to read for `side`: by_post.parquet for
+# "post" when the snapshot has one, otherwise by_pre.parquet
+synsnap_ids_file <- function(root, tag, side = NULL) {
+  if (identical(side, "post")) {
+    f <- synsnap_path(root, tag, "by_post.parquet")
+    if (file.exists(f)) return(f)
+  }
+  synsnap_path(root, tag, "by_pre.parquet")
+}
+
+# SQL giving id, pre_root, post_root for a snapshot. With `side`, reads a copy
+# sorted by that root if there is one, so that a `where` on it prunes row
+# groups.
 synsnap_rows_sql <- function(tag, root, side = NULL, where = NULL) {
-  f <- if (is.null(side)) "ids.parquet" else sprintf("by_%s.parquet", side)
   w <- if (is.null(where)) "" else paste(" WHERE", where)
   cols <- "id, pre_root, post_root"
   m <- synsnap_meta(tag, root)
   if (is.na(m$base))
     return(sprintf("SELECT %s FROM %s%s", cols,
-                   synsnap_sql_str(synsnap_path(root, tag, f)), w))
+                   synsnap_sql_str(synsnap_ids_file(root, tag, side)), w))
   d <- synsnap_sql_str(synsnap_path(root, tag, "delta.parquet"))
   sprintf("SELECT %s FROM %s%s%s id NOT IN (SELECT id FROM %s)
     UNION ALL SELECT %s FROM %s%s",
-    cols, synsnap_sql_str(synsnap_path(root, m$base, f)), w,
+    cols, synsnap_sql_str(synsnap_ids_file(root, m$base, side)), w,
     if (is.null(where)) " WHERE" else " AND", d, cols, d, w)
 }
 
