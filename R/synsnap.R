@@ -30,6 +30,8 @@ synsnap_check <- function() {
 synsnap_path <- function(root, tag = NULL, file = NULL) {
   if (is.null(root) || !nzchar(root))
     stop("No synapse snapshot folder specified", call. = FALSE)
+  if (!dir.exists(root))
+    stop("No synapse snapshot folder at ", root, call. = FALSE)
   do.call(file.path, as.list(c(normalizePath(root, mustWork = TRUE), tag, file)))
 }
 

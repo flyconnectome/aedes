@@ -202,3 +202,22 @@ test_that("building snapshots", {
   expect_false(file.exists(file.path(root, "s2", "delta.parquet")))
   expect_equal(rows(), before)
 })
+
+test_that("aedes_synapse_snapshot_root", {
+  tmp <- withr::local_tempdir()
+  withr::local_options(aedes.synapse_snapshot_root = file.path(tmp, "a", "b"))
+  expect_equal(aedes_synapse_snapshot_root(), file.path(tmp, "a", "b"))
+  expect_false(dir.exists(file.path(tmp, "a")))
+  expect_error(synsnap_tags(aedes_synapse_snapshot_root()), "No synapse snapshot folder")
+  # parents are created too
+  expect_true(dir.exists(aedes_synapse_snapshot_root(create = TRUE)))
+
+  withr::local_options(aedes.synapse_snapshot_root = NULL)
+  withr::local_envvar(HOME = tmp, XDG_DATA_HOME = file.path(tmp, "xdg"))
+  expect_match(aedes_synapse_snapshot_root(), "rpkg-aedes.syn_snapshot$")
+  proj <- file.path(tmp, "projects", "2025aedes", "data", "syn_snapshot")
+  dir.create(proj, recursive = TRUE)
+  expect_match(aedes_synapse_snapshot_root(), "rpkg-aedes")
+  file.create(file.path(proj, "static.parquet"))
+  expect_equal(normalizePath(aedes_synapse_snapshot_root()), normalizePath(proj))
+})

@@ -24,8 +24,8 @@
 #'
 #' @param snapshot The snapshot tag, or `"latest"` (the default) for the most
 #'   recent snapshot in `root`.
-#' @param root The snapshot folder. Defaults to the
-#'   `aedes.synapse_snapshot_root` option.
+#' @param root The snapshot folder. Defaults to
+#'   [aedes_synapse_snapshot_root()].
 #' @param set Whether to make this the default snapshot for the session.
 #'
 #' @return When `set = TRUE`, the previous option values (invisibly, suitable
@@ -41,7 +41,7 @@
 #' aedes_partner_summary("cell_class:DNa")
 #' }
 aedes_synapse_snapshot <- function(snapshot = "latest",
-                                   root = getOption("aedes.synapse_snapshot_root"),
+                                   root = aedes_synapse_snapshot_root(),
                                    set = TRUE) {
   if (identical(snapshot, "latest"))
     snapshot <- synsnap_latest(root)
@@ -53,6 +53,39 @@ aedes_synapse_snapshot <- function(snapshot = "latest",
     aedes.synapse_snapshot_root = root,
     aedes.synapse_snapshot = snapshot,
     aedes.version = format(m$timestamp, "%Y-%m-%d %H:%M:%OS6 UTC", tz = "UTC")))
+}
+
+#' Folder for local Aedes synapse snapshots
+#'
+#' Returns the folder that the synapse snapshot functions use when no `root` is
+#' given.
+#'
+#' @details The folder is the first of:
+#'
+#'   1. the `aedes.synapse_snapshot_root` option, if set;
+#'   2. `~/projects/2025aedes/data/syn_snapshot`, if it holds a snapshot
+#'   (`static.parquet`);
+#'   3. `syn_snapshot` in the user data folder for the package (see
+#'   [rappdirs::user_data_dir()]).
+#'
+#' @param create Whether to create the folder (and any missing parent folders)
+#'   if it does not exist yet.
+#' @return The path to the folder, with `~` expanded.
+#' @seealso [aedes_synapse_snapshot()]
+#' @export
+#' @examples
+#' aedes_synapse_snapshot_root()
+aedes_synapse_snapshot_root <- function(create = FALSE) {
+  root <- getOption("aedes.synapse_snapshot_root")
+  if (is.null(root)) {
+    proj <- "~/projects/2025aedes/data/syn_snapshot"
+    root <- if (file.exists(file.path(proj, "static.parquet"))) proj
+    else file.path(rappdirs::user_data_dir("rpkg-aedes"), "syn_snapshot")
+  }
+  root <- path.expand(root)
+  if (create && !dir.exists(root) && !dir.create(root, recursive = TRUE))
+    stop("Could not create synapse snapshot folder ", root, call. = FALSE)
+  root
 }
 
 #' Bring a local Aedes synapse snapshot up to date
@@ -88,7 +121,7 @@ aedes_synapse_snapshot <- function(snapshot = "latest",
 #' }
 aedes_synapse_snapshot_update <- function(timestamp = "now", from = "latest",
                                           tag = NULL,
-                                          root = getOption("aedes.synapse_snapshot_root"),
+                                          root = aedes_synapse_snapshot_root(),
                                           rebase = FALSE, set = TRUE) {
   if (identical(from, "latest"))
     from <- synsnap_latest(root)
@@ -147,7 +180,7 @@ aedes_synapse_snapshot_active <- function(snapshot = getOption("aedes.synapse_sn
 #' }
 aedes_synapse_data <- function(side = NULL, static = FALSE,
                                snapshot = getOption("aedes.synapse_snapshot", "latest"),
-                               root = getOption("aedes.synapse_snapshot_root")) {
+                               root = aedes_synapse_snapshot_root()) {
   if (!is.null(side)) side <- match.arg(side, c("pre", "post"))
   if (identical(snapshot, "latest")) snapshot <- synsnap_latest(root)
   synsnap_tbl(snapshot, root, side = side, static = static)

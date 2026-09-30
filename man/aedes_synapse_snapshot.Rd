@@ -6,7 +6,7 @@
 \usage{
 aedes_synapse_snapshot(
   snapshot = "latest",
-  root = getOption("aedes.synapse_snapshot_root"),
+  root = aedes_synapse_snapshot_root(),
   set = TRUE
 )
 }
@@ -14,8 +14,8 @@ aedes_synapse_snapshot(
 \item{snapshot}{The snapshot tag, or \code{"latest"} (the default) for the most
 recent snapshot in \code{root}.}
 
-\item{root}{The snapshot folder. Defaults to the
-\code{aedes.synapse_snapshot_root} option.}
+\item{root}{The snapshot folder. Defaults to
+\code{\link[=aedes_synapse_snapshot_root]{aedes_synapse_snapshot_root()}}.}
 
 \item{set}{Whether to make this the default snapshot for the session.}
 }
