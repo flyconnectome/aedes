@@ -89,12 +89,12 @@ cov <- x %>%
 cov
 #>   partners  type group pgroup
 #> 1   inputs 0.001 0.126  0.161
-#> 2  outputs 0.008 0.324  0.632
+#> 2  outputs 0.008 0.326  0.632
 ```
 
 Cell types cover under 1% of partner synapses, so `group = "type"` is
 not useful here. Using `pgroup` rather than `group` raises coverage of
-output synapses from 32% to 63%. Input coverage stays low because most
+output synapses from 33% to 63%. Input coverage stays low because most
 of the input partners are not yet in FlyTable at all.
 
 ## Cluster by curated group
@@ -103,7 +103,7 @@ of the input partners are not yet in FlyTable at all.
 
 cf_cosine_plot(x, group = "group", labRow = "{side}_{serial_id}")
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =
-#> "pre_key", : Dropping: 1451/1715 neurons representing 20029/29629 synapses due
+#> "pre_key", : Dropping: 1445/1715 neurons representing 19956/29629 synapses due
 #> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
 #> groupcol, : Dropping: 4335/4477 neurons representing 51965/59464 synapses due

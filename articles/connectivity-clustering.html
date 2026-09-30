@@ -143,11 +143,11 @@ partner synapses each column covers:</p>
 <span><span class="va">cov</span></span>
 <span><span class="co">#&gt;   partners  type group pgroup</span></span>
 <span><span class="co">#&gt; 1   inputs 0.001 0.126  0.161</span></span>
-<span><span class="co">#&gt; 2  outputs 0.008 0.324  0.632</span></span></code></pre></div>
+<span><span class="co">#&gt; 2  outputs 0.008 0.326  0.632</span></span></code></pre></div>
 <p>Cell types cover under 1% of partner synapses, so
 <code>group = "type"</code> is not useful here. Using
 <code>pgroup</code> rather than <code>group</code> raises coverage of
-output synapses from 32% to 63%. Input coverage stays low because most
+output synapses from 33% to 63%. Input coverage stays low because most
 of the input partners are not yet in FlyTable at all.</p>
 </div>
 <div class="section level2">
@@ -156,7 +156,7 @@ of the input partners are not yet in FlyTable at all.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span><span class="va">x</span>, group <span class="op">=</span> <span class="st">"group"</span>, labRow <span class="op">=</span> <span class="st">"{side}_{serial_id}"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =</span></span>
-<span><span class="co">#&gt; "pre_key", : Dropping: 1451/1715 neurons representing 20029/29629 synapses due</span></span>
+<span><span class="co">#&gt; "pre_key", : Dropping: 1445/1715 neurons representing 19956/29629 synapses due</span></span>
 <span><span class="co">#&gt; to missing ids!</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =</span></span>
 <span><span class="co">#&gt; groupcol, : Dropping: 4335/4477 neurons representing 51965/59464 synapses due</span></span>

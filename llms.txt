@@ -264,6 +264,10 @@ Summarise synaptic partners.
   synaptic partners of one or more Aedes neurons
 - [`aedes_predict_group()`](aedes_predict_group.md) : Predict the group
   of aedes neurons using type or group information
+- [`aedes_synapse_snapshot()`](aedes_synapse_snapshot.md) : Use a local
+  snapshot of the Aedes synapse table
+- [`aedes_synapse_data()`](aedes_synapse_data.md) : Lazy access to all
+  synapses in a local snapshot
 
 ## Low level CAVE access
 

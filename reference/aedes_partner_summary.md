@@ -6,7 +6,10 @@ number of connecting synapses. This is a thin Aedes-aware wrapper around
 [`fafbseg::flywire_partner_summary()`](https://rdrr.io/pkg/fafbseg/man/flywire_partners.html):
 it resolves the input via [`aedes_ids()`](aedes_meta.md), points fafbseg
 at the Aedes segmentation, and updates root ids to the requested
-`version`/`timestamp` before querying.
+`version`/`timestamp` before querying. When a local synapse snapshot has
+been selected with
+[`aedes_synapse_snapshot()`](aedes_synapse_snapshot.md) the query is
+instead answered from that snapshot, at the snapshot's time.
 
 ## Usage
 
@@ -18,6 +21,7 @@ aedes_partner_summary(
   version = NULL,
   timestamp = NULL,
   synapse_table = getOption("coconatfly.aedes.synapses", default = "synapses_v2"),
+  method = c("auto", "cave", "local"),
   ...
 )
 ```
@@ -52,12 +56,19 @@ aedes_partner_summary(
   CAVE synapse table to query. Defaults to the
   `coconatfly.aedes.synapses` option (`"synapses_v2"`).
 
+- method:
+
+  Whether to query CAVE (`"cave"`), a local synapse snapshot (`"local"`,
+  see [`aedes_synapse_snapshot()`](aedes_synapse_snapshot.md)) or choose
+  automatically (`"auto"`, the default; see details).
+
 - ...:
 
   Additional arguments passed on to
   [`fafbseg::flywire_partner_summary()`](https://rdrr.io/pkg/fafbseg/man/flywire_partners.html).
   Power-user options include `remove_autapses` (set `FALSE` to keep
-  self-connections; see examples) and `cleft.threshold`.
+  self-connections; see examples) and `cleft.threshold`. Only
+  `remove_autapses` is supported by the local method.
 
 ## Value
 
@@ -68,10 +79,24 @@ neuron root id and `weight` the synapse count; the partner root id is in
 [`fafbseg::flywire_partner_summary()`](https://rdrr.io/pkg/fafbseg/man/flywire_partners.html)
 for the full column description.
 
+## Details
+
+With `method = "auto"` (the default) the local snapshot is used when one
+is selected, no `version` is given, `timestamp` is missing or matches
+the snapshot time, and `...` contains nothing other than
+`remove_autapses`; otherwise CAVE is queried. Note that without a
+`timestamp` a local query gives partners at the snapshot time, while a
+CAVE query gives them now. `method = "local"` gives an error rather than
+falling back to CAVE. The local and CAVE results should agree, apart
+from CAVE's default cleft score filtering and any root 0 (unassigned)
+partners, which the local method drops. The local result has `snapshot`
+and `timestamp` attributes.
+
 ## See also
 
 [`fafbseg::flywire_partner_summary()`](https://rdrr.io/pkg/fafbseg/man/flywire_partners.html),
-[`aedes_ids()`](aedes_meta.md)
+[`aedes_ids()`](aedes_meta.md),
+[`aedes_synapse_snapshot()`](aedes_synapse_snapshot.md)
 
 ## Examples
 
@@ -92,5 +117,10 @@ aedes_partner_summary("720575940...", timestamp = "2024-01-01")
 # remove_autapses = FALSE (the fafbseg default drops these).
 mbon11 <- aedes_ids("cell_type:MBON11")
 aedes_partner_summary(mbon11, remove_autapses = FALSE)
+
+# answer from a local synapse snapshot
+options(aedes.synapse_snapshot_root = "~/data/aedes/syn_snapshot")
+aedes_synapse_snapshot()
+aedes_partner_summary(mbon11, method = "local")
 } # }
 ```
