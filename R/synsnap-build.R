@@ -42,11 +42,7 @@ synsnap_edgelist_cols <- function() c(
   id = "cleft_segid", pre_sv = "presyn_basin", post_sv = "postsyn_basin",
   pre_x = "presyn_x", pre_y = "presyn_y", pre_z = "presyn_z",
   post_x = "postsyn_x", post_y = "postsyn_y", post_z = "postsyn_z",
-  centroid_x = "centroid_x", centroid_y = "centroid_y",
-  centroid_z = "centroid_z", size = "size")
-
-# TODO: consider dropping centroid_x/y/z. They are ~750 MB of the 2.9 GB
-#   static.parquet (double) and add little over the pre/post xyz points.
+  size = "size")
 
 # Write <root>/static.parquet (sorted by id) from a synapse edgelist: a
 # data.frame or feather file(s), with `columns` mapping output to input names.
