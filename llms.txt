@@ -266,6 +266,8 @@ Summarise synaptic partners.
   of aedes neurons using type or group information
 - [`aedes_synapse_snapshot()`](aedes_synapse_snapshot.md) : Use a local
   snapshot of the Aedes synapse table
+- [`aedes_synapse_snapshot_update()`](aedes_synapse_snapshot_update.md)
+  : Bring a local Aedes synapse snapshot up to date
 - [`aedes_synapse_data()`](aedes_synapse_data.md) : Lazy access to all
   synapses in a local snapshot
 

@@ -89,7 +89,7 @@ cov <- x %>%
 cov
 #>   partners  type group pgroup
 #> 1   inputs 0.001 0.126  0.161
-#> 2  outputs 0.008 0.326  0.632
+#> 2  outputs 0.008 0.327  0.631
 ```
 
 Cell types cover under 1% of partner synapses, so `group = "type"` is
@@ -103,7 +103,7 @@ of the input partners are not yet in FlyTable at all.
 
 cf_cosine_plot(x, group = "group", labRow = "{side}_{serial_id}")
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =
-#> "pre_key", : Dropping: 1445/1715 neurons representing 19956/29629 synapses due
+#> "pre_key", : Dropping: 1441/1715 neurons representing 19931/29629 synapses due
 #> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
 #> groupcol, : Dropping: 4335/4477 neurons representing 51965/59464 synapses due
@@ -118,7 +118,7 @@ cf_cosine_plot(x, group = "group", labRow = "{side}_{serial_id}")
 
 cf_cosine_plot(x, group = "pgroup", labRow = "{side}_{serial_id}")
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =
-#> "pre_key", : Dropping: 1068/1715 neurons representing 10916/29629 synapses due
+#> "pre_key", : Dropping: 1069/1715 neurons representing 10921/29629 synapses due
 #> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
 #> groupcol, : Dropping: 4261/4477 neurons representing 49905/59464 synapses due
@@ -171,7 +171,7 @@ You can also compute predicted groups yourself, e.g. to use a custom
 x$pgroup2 <- aedes_predict_group(x, badtypes = c(NA, "", "undefined"))
 cf_cosine_plot(x, group = "pgroup2", labRow = "{side}_{serial_id}")
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =
-#> "pre_key", : Dropping: 1068/1715 neurons representing 10916/29629 synapses due
+#> "pre_key", : Dropping: 1069/1715 neurons representing 10921/29629 synapses due
 #> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
 #> groupcol, : Dropping: 4261/4477 neurons representing 49905/59464 synapses due
