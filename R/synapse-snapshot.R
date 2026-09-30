@@ -119,8 +119,9 @@ aedes_synapse_snapshot_active <- function(snapshot = getOption("aedes.synapse_sn
 #' @details The table has columns `id`, `pre_root` and `post_root` (as
 #'   `integer64`). With `static = TRUE` it also has the columns of
 #'   `static.parquet`: `pre_sv`, `post_sv`, `pre_x`...`post_z` (raw voxel
-#'   coordinates of the pre and postsynaptic points), `centroid_x`...
-#'   `centroid_z` and `size`.
+#'   coordinates of the pre and postsynaptic points) and `size`. Use the
+#'   midpoint of the pre and post points where you need one location per
+#'   synapse.
 #'
 #'   Rows are sorted by `pre_root`, so filtering on a few `pre_root` values
 #'   lets DuckDB skip most of the file. Snapshots with a `by_post.parquet`

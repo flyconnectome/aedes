@@ -36,8 +36,9 @@ until you \code{\link[dplyr:collect]{dplyr::collect()}} the result.
 The table has columns \code{id}, \code{pre_root} and \code{post_root} (as
 \code{integer64}). With \code{static = TRUE} it also has the columns of
 \code{static.parquet}: \code{pre_sv}, \code{post_sv}, \code{pre_x}...\code{post_z} (raw voxel
-coordinates of the pre and postsynaptic points), \code{centroid_x}...
-\code{centroid_z} and \code{size}.
+coordinates of the pre and postsynaptic points) and \code{size}. Use the
+midpoint of the pre and post points where you need one location per
+synapse.
 
 Rows are sorted by \code{pre_root}, so filtering on a few \code{pre_root} values
 lets DuckDB skip most of the file. Snapshots with a \code{by_post.parquet}
