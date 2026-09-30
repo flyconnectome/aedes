@@ -34,9 +34,10 @@ root id of both partners of every synapse at one moment in time.
 A snapshot folder contains \code{static.parquet} (one row per synapse,
 with its supervoxels, positions and size) and one sub-folder per snapshot
 tag. A tag folder has a \code{meta.json} with the snapshot \code{timestamp} and
-either the full root id tables (\code{ids.parquet}, \code{by_pre.parquet},
-\code{by_post.parquet}) or, for a delta snapshot, a \code{delta.parquet} with the
-rows that differ from its full \code{base} snapshot. Queries use DuckDB (from
+either the full root id table (\code{by_pre.parquet}, sorted by presynaptic
+root, plus an optional \code{by_post.parquet} sorted by postsynaptic root) or,
+for a delta snapshot, a \code{delta.parquet} with the rows that differ from its
+full \code{base} snapshot. Queries use DuckDB (from
 the suggested packages \pkg{duckdb}, \pkg{DBI} and \pkg{dbplyr}) and only
 read the parts of the parquet files that they need.
 

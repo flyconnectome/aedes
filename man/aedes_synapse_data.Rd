@@ -12,8 +12,9 @@ aedes_synapse_data(
 )
 }
 \arguments{
-\item{side}{\code{"pre"} or \code{"post"} to read the copy sorted by that root, or
-\code{NULL} (the default) for the copy sorted by synapse \code{id}.}
+\item{side}{\code{"post"} to read the copy sorted by \code{post_root} when the
+snapshot has one. \code{NULL} (the default) and \code{"pre"} read the copy sorted by
+\code{pre_root}.}
 
 \item{static}{Whether to add supervoxel, position and size columns.}
 
@@ -38,9 +39,10 @@ The table has columns \code{id}, \code{pre_root} and \code{post_root} (as
 coordinates of the pre and postsynaptic points), \code{centroid_x}...
 \code{centroid_z} and \code{size}.
 
-Filtering on \code{pre_root} or \code{post_root} is fastest when \code{side} matches,
-since the snapshot keeps a copy sorted by each and DuckDB can then skip
-most of the file. Use \code{\link[bit64:as.integer64]{bit64::as.integer64()}} for root ids in filters.
+Rows are sorted by \code{pre_root}, so filtering on a few \code{pre_root} values
+lets DuckDB skip most of the file. Snapshots with a \code{by_post.parquet}
+also keep a copy sorted by \code{post_root}, which \code{side = "post"} reads. Use
+\code{\link[bit64:as.integer64]{bit64::as.integer64()}} for root ids in filters.
 }
 \examples{
 \dontrun{
