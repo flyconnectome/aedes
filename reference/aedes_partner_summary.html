@@ -6,14 +6,14 @@ fafbseg::flywire_partner_summary(): it resolves the input via
 aedes_ids(), points fafbseg at the Aedes segmentation, and updates root
 ids to the requested version/timestamp before querying. When a local
 synapse snapshot has been selected with aedes_synapse_snapshot() the
-query is instead answered from that snapshot, at the snapshot's time."><meta property="og:description" content="Tabulates the up- or downstream partners of a set of query neurons at a
+query is instead answered from that snapshot, updated to the requested time."><meta property="og:description" content="Tabulates the up- or downstream partners of a set of query neurons at a
 chosen CAVE materialisation, returning one row per partner with the number
 of connecting synapses. This is a thin Aedes-aware wrapper around
 fafbseg::flywire_partner_summary(): it resolves the input via
 aedes_ids(), points fafbseg at the Aedes segmentation, and updates root
 ids to the requested version/timestamp before querying. When a local
 synapse snapshot has been selected with aedes_synapse_snapshot() the
-query is instead answered from that snapshot, at the snapshot's time."></head><body>
+query is instead answered from that snapshot, updated to the requested time."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -60,7 +60,7 @@ of connecting synapses. This is a thin Aedes-aware wrapper around
 <code><a href="aedes_meta.html">aedes_ids()</a></code>, points fafbseg at the Aedes segmentation, and updates root
 ids to the requested <code>version</code>/<code>timestamp</code> before querying. When a local
 synapse snapshot has been selected with <code><a href="aedes_synapse_snapshot.html">aedes_synapse_snapshot()</a></code> the
-query is instead answered from that snapshot, at the snapshot's time.</p>
+query is instead answered from that snapshot, updated to the requested time.</p>
     </div>
 
     <div class="section level2">
@@ -133,15 +133,27 @@ full column description.</p>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>With <code>method = "auto"</code> (the default) the local snapshot is used
-when one is selected, no <code>version</code> is given, <code>timestamp</code> is missing or
-matches the snapshot time, and <code>...</code> contains nothing other than
-<code>remove_autapses</code>; otherwise CAVE is queried. Note that without a
-<code>timestamp</code> a local query gives partners at the snapshot time, while a
-CAVE query gives them now. <code>method = "local"</code> gives an error rather than
-falling back to CAVE. The local and CAVE results should agree, apart from
-CAVE's default cleft score filtering and any root 0 (unassigned) partners,
-which the local method drops. The local result has <code>snapshot</code> and
-<code>timestamp</code> attributes.</p>
+when one is selected, the requested time is not before the snapshot, and
+<code>...</code> contains nothing other than <code>remove_autapses</code>; otherwise CAVE is
+queried. <code>method = "local"</code> gives an error rather than falling back to
+CAVE.</p>
+<p>The time of a local query is <code>timestamp</code> (or the time of <code>version</code>) when
+given. Otherwise it is the <code>aedes.version</code> option when that is a
+timestamp, as set by <code><a href="aedes_synapse_snapshot.html">aedes_synapse_snapshot()</a></code>, so that results match the
+snapshot and other aedes metadata; and otherwise now.</p>
+<p>Local queries after the snapshot time fetch only the changes made since
+then from CAVE and look up the new root ids of the affected synapses'
+supervoxels. These updates are kept for the rest of the R session, so the
+first query after a long gap may take a while (seconds to a few minutes)
+but later ones are quick. A query for <code>"now"</code> reuses the last update if it
+is less than <code>getOption("aedes.synapse_max_age", 60)</code> seconds old. Small
+queries may instead update just their own synapses when that is cheaper
+(tuned by the <code>aedes.synapse_head_ratio</code> and <code>aedes.synapse_head_min_sv</code>
+options).</p>
+<p>The local and CAVE results should agree, apart from CAVE's default cleft
+score filtering and any root 0 (unassigned) partners, which the local
+method drops. The local result has <code>snapshot</code>, <code>timestamp</code> (the time it is
+valid for) and <code>method</code> attributes.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

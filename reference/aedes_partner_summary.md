@@ -9,7 +9,7 @@ at the Aedes segmentation, and updates root ids to the requested
 `version`/`timestamp` before querying. When a local synapse snapshot has
 been selected with
 [`aedes_synapse_snapshot()`](aedes_synapse_snapshot.md) the query is
-instead answered from that snapshot, at the snapshot's time.
+instead answered from that snapshot, updated to the requested time.
 
 ## Usage
 
@@ -82,15 +82,31 @@ for the full column description.
 ## Details
 
 With `method = "auto"` (the default) the local snapshot is used when one
-is selected, no `version` is given, `timestamp` is missing or matches
-the snapshot time, and `...` contains nothing other than
-`remove_autapses`; otherwise CAVE is queried. Note that without a
-`timestamp` a local query gives partners at the snapshot time, while a
-CAVE query gives them now. `method = "local"` gives an error rather than
-falling back to CAVE. The local and CAVE results should agree, apart
-from CAVE's default cleft score filtering and any root 0 (unassigned)
-partners, which the local method drops. The local result has `snapshot`
-and `timestamp` attributes.
+is selected, the requested time is not before the snapshot, and `...`
+contains nothing other than `remove_autapses`; otherwise CAVE is
+queried. `method = "local"` gives an error rather than falling back to
+CAVE.
+
+The time of a local query is `timestamp` (or the time of `version`) when
+given. Otherwise it is the `aedes.version` option when that is a
+timestamp, as set by
+[`aedes_synapse_snapshot()`](aedes_synapse_snapshot.md), so that results
+match the snapshot and other aedes metadata; and otherwise now.
+
+Local queries after the snapshot time fetch only the changes made since
+then from CAVE and look up the new root ids of the affected synapses'
+supervoxels. These updates are kept for the rest of the R session, so
+the first query after a long gap may take a while (seconds to a few
+minutes) but later ones are quick. A query for `"now"` reuses the last
+update if it is less than `getOption("aedes.synapse_max_age", 60)`
+seconds old. Small queries may instead update just their own synapses
+when that is cheaper (tuned by the `aedes.synapse_head_ratio` and
+`aedes.synapse_head_min_sv` options).
+
+The local and CAVE results should agree, apart from CAVE's default cleft
+score filtering and any root 0 (unassigned) partners, which the local
+method drops. The local result has `snapshot`, `timestamp` (the time it
+is valid for) and `method` attributes.
 
 ## See also
 

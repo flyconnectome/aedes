@@ -97,7 +97,10 @@ the suggested packages <span class="pkg">duckdb</span>, <span class="pkg">DBI</s
 read the parts of the parquet files that they need.</p>
 <p>Selecting a snapshot with <code>set = TRUE</code> also sets the <code>aedes.version</code>
 option to the snapshot's timestamp (see <code><a href="aedes_set_version.html">aedes_set_version()</a></code>), so that
-metadata and root ids from other aedes functions match the synapse data.</p>
+metadata and root ids from other aedes functions match the synapse data.
+<code><a href="aedes_partner_summary.html">aedes_partner_summary()</a></code> can still answer queries for later times,
+including <code>timestamp = "now"</code>, by fetching the edits made since the
+snapshot from CAVE (see its details).</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

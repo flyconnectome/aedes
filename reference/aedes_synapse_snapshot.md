@@ -54,6 +54,9 @@ Selecting a snapshot with `set = TRUE` also sets the `aedes.version`
 option to the snapshot's timestamp (see
 [`aedes_set_version()`](aedes_set_version.md)), so that metadata and
 root ids from other aedes functions match the synapse data.
+[`aedes_partner_summary()`](aedes_partner_summary.md) can still answer
+queries for later times, including `timestamp = "now"`, by fetching the
+edits made since the snapshot from CAVE (see its details).
 
 ## See also
 
