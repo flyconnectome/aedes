@@ -156,12 +156,7 @@ aedes_synapse_data <- function(side = NULL, static = FALSE,
 aedes_synsnap_ctx <- function() {
   list(
     delta_roots = function(past, future) with_aedes(cave_delta_roots(past, future)),
-    rootid = function(sv, timestamp) {
-      ch <- split(sv, ceiling(seq_along(sv) / 1e5))
-      r <- lapply(ch, function(s) with_aedes(fafbseg::flywire_rootid(
-        as.character(s), timestamp = timestamp, integer64 = TRUE)))
-      do.call(c, unname(r))
-    },
+    rootid = function(sv, timestamp) with_aedes(cave_rootid_parallel(sv, timestamp)),
     # leaves of a root id never change, so caching is safe
     leaves = function(root) with_aedes(fafbseg::flywire_leaves(
       as.character(root), integer64 = TRUE, cache = TRUE)),
@@ -171,6 +166,34 @@ aedes_synsnap_ctx <- function() {
       fafbseg::flywire_latestid(as.character(roots), timestamp = timestamp))),
     now = Sys.time)
 }
+
+# Root ids at `timestamp` for supervoxels, looked up in chunks by a python
+# thread pool (the chunkedgraph requests release the GIL, so `threads` chunks
+# are in flight at once).
+cave_rootid_parallel <- function(sv, timestamp,
+                                 threads = getOption("aedes.rootid_threads", 4L),
+                                 chunksize = 1e5) {
+  if (!length(sv)) return(bit64::integer64())
+  fcc <- fafbseg::flywire_cave_client()
+  res <- reticulate::py_call(py_parallel_roots(), fcc$chunkedgraph,
+                             fafbseg:::rids2pyint(bit64::as.integer64(sv)),
+                             fafbseg:::ts2pydatetime(timestamp),
+                             as.integer(chunksize), as.integer(threads))
+  fafbseg:::pyids2bit64(res, as_character = FALSE)
+}
+
+py_parallel_roots <- memoise::memoise(function() {
+  reticulate::py_run_string("
+def parallel_roots(cg, ids, timestamp, chunksize, threads):
+    import numpy as np
+    from concurrent.futures import ThreadPoolExecutor
+    chunks = [ids[i:i + chunksize] for i in range(0, len(ids), chunksize)]
+    def f(c):
+        return np.asarray(cg.get_roots(c, timestamp=timestamp), dtype=np.int64)
+    with ThreadPoolExecutor(max_workers=threads) as ex:
+        return np.concatenate(list(ex.map(f, chunks)))
+", local = TRUE, convert = FALSE)$parallel_roots
+})
 
 # roots expired (old) and created (new) between two times. Unlike
 # fafbseg:::cave_get_delta_roots this fails loudly, since an empty result would
