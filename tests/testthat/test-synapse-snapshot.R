@@ -274,3 +274,26 @@ test_that("static.parquet from a csv edgelist", {
   expect_error(synsnap_build_static(csv, root, format = "csv", overwrite = TRUE),
                "id is not a whole number")
 })
+
+test_that("fetching the source file", {
+  src <- withr::local_tempfile(fileext = ".csv")
+  writeLines(c("a,b", "1,2"), src)
+  md5 <- unname(tools::md5sum(src))
+  b64 <- jsonlite::base64_enc(as.raw(strtoi(substring(md5, seq(1, 31, 2), seq(2, 32, 2)), 16L)))
+  expect_true(synsnap_md5_ok(src, md5))
+  expect_true(synsnap_md5_ok(src, b64))
+  skip_if(!nzchar(Sys.which("curl")))
+  dest <- withr::local_tempfile(fileext = ".csv")
+  url <- paste0("file://", src)
+  synsnap_fetch_source(url, dest, b64, method = "curl")
+  expect_equal(readLines(dest), c("a,b", "1,2"))
+  unlink(dest)
+  expect_error(synsnap_fetch_source(url, dest, strrep("0", 32), method = "curl"),
+               "wrong md5")
+  expect_false(file.exists(dest) || file.exists(paste0(dest, ".part")))
+  # the url doesn't appear in errors
+  err <- tryCatch(synsnap_fetch_source(paste0(url, "-missing"), dest, md5,
+                                       method = "curl"), error = conditionMessage)
+  expect_match(err, "Download failed")
+  expect_false(grepl(src, err, fixed = TRUE))
+})
