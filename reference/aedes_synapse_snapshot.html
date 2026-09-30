@@ -89,9 +89,10 @@ for passing to <code><a href="https://rdrr.io/r/base/options.html" class="extern
     <p>A snapshot folder contains <code>static.parquet</code> (one row per synapse,
 with its supervoxels, positions and size) and one sub-folder per snapshot
 tag. A tag folder has a <code>meta.json</code> with the snapshot <code>timestamp</code> and
-either the full root id tables (<code>ids.parquet</code>, <code>by_pre.parquet</code>,
-<code>by_post.parquet</code>) or, for a delta snapshot, a <code>delta.parquet</code> with the
-rows that differ from its full <code>base</code> snapshot. Queries use DuckDB (from
+either the full root id table (<code>by_pre.parquet</code>, sorted by presynaptic
+root, plus an optional <code>by_post.parquet</code> sorted by postsynaptic root) or,
+for a delta snapshot, a <code>delta.parquet</code> with the rows that differ from its
+full <code>base</code> snapshot. Queries use DuckDB (from
 the suggested packages <span class="pkg">duckdb</span>, <span class="pkg">DBI</span> and <span class="pkg">dbplyr</span>) and only
 read the parts of the parquet files that they need.</p>
 <p>Selecting a snapshot with <code>set = TRUE</code> also sets the <code>aedes.version</code>

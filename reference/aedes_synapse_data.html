@@ -63,8 +63,9 @@ until you <code><a href="https://dplyr.tidyverse.org/reference/compute.html" cla
 
 
 <dl><dt id="arg-side">side<a class="anchor" aria-label="anchor" href="#arg-side"></a></dt>
-<dd><p><code>"pre"</code> or <code>"post"</code> to read the copy sorted by that root, or
-<code>NULL</code> (the default) for the copy sorted by synapse <code>id</code>.</p></dd>
+<dd><p><code>"post"</code> to read the copy sorted by <code>post_root</code> when the
+snapshot has one. <code>NULL</code> (the default) and <code>"pre"</code> read the copy sorted by
+<code>pre_root</code>.</p></dd>
 
 
 <dt id="arg-static">static<a class="anchor" aria-label="anchor" href="#arg-static"></a></dt>
@@ -92,9 +93,10 @@ recent snapshot in <code>root</code>.</p></dd>
 <code>static.parquet</code>: <code>pre_sv</code>, <code>post_sv</code>, <code>pre_x</code>...<code>post_z</code> (raw voxel
 coordinates of the pre and postsynaptic points), <code>centroid_x</code>...
 <code>centroid_z</code> and <code>size</code>.</p>
-<p>Filtering on <code>pre_root</code> or <code>post_root</code> is fastest when <code>side</code> matches,
-since the snapshot keeps a copy sorted by each and DuckDB can then skip
-most of the file. Use <code><a href="https://bit64.r-lib.org/reference/as.integer64.character.html" class="external-link">bit64::as.integer64()</a></code> for root ids in filters.</p>
+<p>Rows are sorted by <code>pre_root</code>, so filtering on a few <code>pre_root</code> values
+lets DuckDB skip most of the file. Snapshots with a <code>by_post.parquet</code>
+also keep a copy sorted by <code>post_root</code>, which <code>side = "post"</code> reads. Use
+<code><a href="https://bit64.r-lib.org/reference/as.integer64.character.html" class="external-link">bit64::as.integer64()</a></code> for root ids in filters.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

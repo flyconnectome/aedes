@@ -43,11 +43,12 @@ Otherwise a list with the snapshot `tag`, `timestamp` and `root`.
 A snapshot folder contains `static.parquet` (one row per synapse, with
 its supervoxels, positions and size) and one sub-folder per snapshot
 tag. A tag folder has a `meta.json` with the snapshot `timestamp` and
-either the full root id tables (`ids.parquet`, `by_pre.parquet`,
-`by_post.parquet`) or, for a delta snapshot, a `delta.parquet` with the
-rows that differ from its full `base` snapshot. Queries use DuckDB (from
-the suggested packages duckdb, DBI and dbplyr) and only read the parts
-of the parquet files that they need.
+either the full root id table (`by_pre.parquet`, sorted by presynaptic
+root, plus an optional `by_post.parquet` sorted by postsynaptic root)
+or, for a delta snapshot, a `delta.parquet` with the rows that differ
+from its full `base` snapshot. Queries use DuckDB (from the suggested
+packages duckdb, DBI and dbplyr) and only read the parts of the parquet
+files that they need.
 
 Selecting a snapshot with `set = TRUE` also sets the `aedes.version`
 option to the snapshot's timestamp (see
