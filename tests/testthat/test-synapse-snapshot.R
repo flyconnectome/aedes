@@ -321,6 +321,11 @@ test_that("fetching the source file", {
   synsnap_fetch_source(url, dest, b64, method = "curl")
   expect_equal(readLines(dest), c("a,b", "1,2"))
   unlink(dest)
+  # a path with ~
+  withr::local_envvar(HOME = dirname(dest))
+  synsnap_fetch_source(url, file.path("~", basename(dest)), md5, method = "curl")
+  expect_equal(readLines(dest), c("a,b", "1,2"))
+  unlink(dest)
   expect_error(synsnap_fetch_source(url, dest, strrep("0", 32), method = "curl"),
                "wrong md5")
   expect_false(file.exists(dest) || file.exists(paste0(dest, ".part")))

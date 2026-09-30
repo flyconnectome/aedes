@@ -12,6 +12,8 @@ synsnap_fetch_source <- function(url, dest, md5,
                                  method = c("auto", "gcloud", "curl"),
                                  gcloud = Sys.which("gcloud")) {
   method <- match.arg(method)
+  # the tools get a quoted path, so ~ must be expanded here
+  dest <- path.expand(dest)
   if (file.exists(dest) && synsnap_md5_ok(dest, md5)) return(invisible(dest))
   part <- paste0(dest, ".part")
   get <- function(method) {
