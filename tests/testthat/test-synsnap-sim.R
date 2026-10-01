@@ -134,3 +134,57 @@ test_that("an overlap catches edits that became visible late", {
   synsnap_update("c1", "c2o", T2, w$root, w$ctx, overlap = 600)
   expect_true(sim_matches(w, "c2o", T2))
 })
+
+test_that("the server job makes and fills in regular and version checkpoints", {
+  skip_if_no_duckdb()
+  skip_on_cran()
+  w <- sim_world(seed = 4)
+  day <- 86400
+  pub <- withr::local_tempdir()
+  now <- w$t0 + 3 * day + 1800
+  ctx <- w$ctx
+  ctx$now <- function() now
+  rootid <- ctx$rootid
+  fail <- FALSE
+  ctx$rootid <- function(x, timestamp) {
+    if (fail) stop("CAVE is down")
+    rootid(x, timestamp)
+  }
+  vv <- data.frame(version = 1:3,
+                   timestamp = w$t0 + c(1.5, 2.7, 3) * day + 0.123456)
+  expect_equal(synsnap_server_todo(w$root, now, vv)$tag,
+               c("r20260101T000000", "r20260102T000000", "v1", "r20260103T000000", "v2"))
+  st <- synsnap_server_update(w$root, ctx, dest = pub, versions = vv)
+  expect_equal(st$built,
+               c("r20260101T000000", "r20260102T000000", "v1", "r20260103T000000", "v2"))
+  expect_equal(st$latest, "v2")
+  expect_equal(synsnap_meta("v2", w$root)$timestamp, synsnap_parse_time(
+    synsnap_format_time(vv$timestamp[2])))
+  expect_equal(synsnap_meta("v1", w$root)$parent, "r20260102T000000")
+  expect_true(jsonlite::read_json(file.path(pub, "status.json"))$ok)
+  expect_length(synsnap_server_todo(w$root, now, vv)$tag, 0)
+
+  # v3 is only made once it has settled. A failed run reports the error; the
+  # next one fills in the gap
+  now <- now + day
+  fail <- TRUE
+  expect_error(synsnap_server_update(w$root, ctx, dest = pub, versions = vv),
+               "r20260104T000000: CAVE is down")
+  expect_false(jsonlite::read_json(file.path(pub, "status.json"))$ok)
+  fail <- FALSE
+  now <- now + 2 * day
+  st <- synsnap_server_update(w$root, ctx, dest = pub, versions = vv)
+  expect_equal(st$built, c("r20260104T000000", "v3", "r20260105T000000", "r20260106T000000"))
+  tags <- synsnap_tags(w$root)
+  expect_true(all(tags$usable))
+  for (i in seq_len(nrow(tags)))
+    expect_true(sim_matches(w, tags$tag[i], tags$timestamp[i]), label = tags$tag[i])
+  m <- jsonlite::read_json(file.path(pub, "manifest.json"), simplifyVector = TRUE)
+  expect_equal(m$latest, "r20260106T000000")
+  expect_setequal(m$snapshots$tag, tags$tag)
+
+  # a stale newest snapshot is an error even when nothing failed
+  now <- now + 3 * day
+  expect_error(synsnap_server_update(w$root, ctx, versions = vv, every = 7 * day),
+               "hours old")
+})

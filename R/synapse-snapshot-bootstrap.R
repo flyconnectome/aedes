@@ -88,13 +88,27 @@ aedes_synsnap_source <- function(client = aedes_cave_client()) {
   list(table = table, url = url, md5 = synsnap_gcs_md5(url))
 }
 
+# all materialisation versions: version, timestamp, expires and ok (valid and
+# available)
+aedes_synsnap_versions <- function(client = aedes_cave_client())
+  dplyr::bind_rows(lapply(client$materialize$get_versions_metadata(), function(m)
+    data.frame(version = m$version, timestamp = m$time_stamp, expires = m$expires_on,
+               ok = isTRUE(m$valid) && identical(m$status, "AVAILABLE"))))
+
+# Server cron job (see inst/scripts/synsnap-cron.sh): make missing regular
+# and version checkpoints in `root` and publish them to `dest`. See
+# synsnap_server_update() for the other arguments.
+aedes_synsnap_server <- function(root, dest = NULL, ...) {
+  vv <- aedes_synsnap_versions()
+  synsnap_server_update(root, aedes_synsnap_ctx(), dest = dest,
+                        versions = vv[vv$ok, c("version", "timestamp")], ...)
+}
+
 # version and timestamp of a materialisation version: the given one or the
 # newest valid, available one with at least `min_life` before it expires
 aedes_synsnap_version <- function(version = NULL, min_life = as.difftime(1, units = "days"),
                                   client = aedes_cave_client()) {
-  vv <- dplyr::bind_rows(lapply(client$materialize$get_versions_metadata(), function(m)
-    data.frame(version = m$version, timestamp = m$time_stamp, expires = m$expires_on,
-               ok = isTRUE(m$valid) && identical(m$status, "AVAILABLE"))))
+  vv <- aedes_synsnap_versions(client)
   if (is.null(version)) {
     vv <- vv[vv$ok & vv$expires > Sys.time() + min_life, ]
     if (!nrow(vv)) stop("No CAVE materialisation version is available", call. = FALSE)
