@@ -48,6 +48,7 @@ reference:
   - aedes_update_snapshot
   - aedes_snapshot_root
   - aedes_build_snapshot
+  - aedes_download_snapshot
   - aedes_synapse_data
 
 - title: Low level CAVE access
