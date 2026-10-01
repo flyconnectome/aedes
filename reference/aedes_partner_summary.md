@@ -7,9 +7,9 @@ number of connecting synapses. This is a thin Aedes-aware wrapper around
 it resolves the input via [`aedes_ids()`](aedes_meta.md), points fafbseg
 at the Aedes segmentation, and updates root ids to the requested
 `version`/`timestamp` before querying. When a local synapse snapshot has
-been selected with
-[`aedes_synapse_snapshot()`](aedes_synapse_snapshot.md) the query is
-instead answered from that snapshot, updated to the requested time.
+been selected with [`aedes_use_snapshot()`](aedes_use_snapshot.md) the
+query is instead answered from that snapshot, updated to the requested
+time.
 
 ## Usage
 
@@ -59,7 +59,7 @@ aedes_partner_summary(
 - method:
 
   Whether to query CAVE (`"cave"`), a local synapse snapshot (`"local"`,
-  see [`aedes_synapse_snapshot()`](aedes_synapse_snapshot.md)) or choose
+  see [`aedes_use_snapshot()`](aedes_use_snapshot.md)) or choose
   automatically (`"auto"`, the default; see details).
 
 - ...:
@@ -88,10 +88,10 @@ queried. `method = "local"` gives an error rather than falling back to
 CAVE.
 
 The time of a local query is `timestamp` (or the time of `version`) when
-given. Otherwise it is the `aedes.version` option when that is a
-timestamp, as set by
-[`aedes_synapse_snapshot()`](aedes_synapse_snapshot.md), so that results
-match the snapshot and other aedes metadata; and otherwise now.
+given, otherwise that of the `aedes.version` option (see
+[`aedes_set_version()`](aedes_set_version.md)), just as for CAVE
+queries. If the selected snapshot is newer than this, the newest older
+snapshot in the same folder is used instead, when there is one.
 
 Local queries after the snapshot time fetch only the changes made since
 then from CAVE and look up the new root ids of the affected synapses'
@@ -112,7 +112,7 @@ is valid for) and `method` attributes.
 
 [`fafbseg::flywire_partner_summary()`](https://rdrr.io/pkg/fafbseg/man/flywire_partners.html),
 [`aedes_ids()`](aedes_meta.md),
-[`aedes_synapse_snapshot()`](aedes_synapse_snapshot.md)
+[`aedes_use_snapshot()`](aedes_use_snapshot.md)
 
 ## Examples
 
@@ -136,7 +136,7 @@ aedes_partner_summary(mbon11, remove_autapses = FALSE)
 
 # answer from a local synapse snapshot
 options(aedes.synapse_snapshot_root = "~/data/aedes/syn_snapshot")
-aedes_synapse_snapshot()
+aedes_use_snapshot()
 aedes_partner_summary(mbon11, method = "local")
 } # }
 ```

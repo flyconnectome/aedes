@@ -264,14 +264,17 @@ Summarise synaptic partners.
   synaptic partners of one or more Aedes neurons
 - [`aedes_predict_group()`](aedes_predict_group.md) : Predict the group
   of aedes neurons using type or group information
-- [`aedes_synapse_snapshot()`](aedes_synapse_snapshot.md) : Use a local
-  snapshot of the Aedes synapse table
-- [`aedes_synapse_snapshot_update()`](aedes_synapse_snapshot_update.md)
-  : Bring a local Aedes synapse snapshot up to date
-- [`aedes_synapse_snapshot_root()`](aedes_synapse_snapshot_root.md) :
-  Folder for local Aedes synapse snapshots
-- [`aedes_synapse_snapshot_bootstrap()`](aedes_synapse_snapshot_bootstrap.md)
-  : Build the synapse snapshot from scratch
+- [`aedes_use_snapshot()`](aedes_use_snapshot.md) : Use a local snapshot
+  of the Aedes synapse table
+- [`aedes_update_snapshot()`](aedes_update_snapshot.md) : Bring a local
+  Aedes synapse snapshot up to date
+- [`aedes_snapshot_root()`](aedes_snapshot_root.md) : Folder for local
+  Aedes synapse snapshots
+- [`aedes_build_snapshot()`](aedes_build_snapshot.md) : Build the
+  synapse snapshot from scratch
+- [`aedes_download_snapshot()`](aedes_download_snapshot.md)
+  [`aedes_publish_snapshot()`](aedes_download_snapshot.md) : Download or
+  publish Aedes synapse snapshots
 - [`aedes_synapse_data()`](aedes_synapse_data.md) : Lazy access to all
   synapses in a local snapshot
 
@@ -296,3 +299,4 @@ Summarise synaptic partners.
 - [Connectivity Clustering with Predicted
   Groups](connectivity-clustering.md):
 - [KC Soma Annotations in Neuroglancer](kc-soma-annotations.md):
+- [Local Synapse Snapshots](synapse-snapshots.md):

@@ -1,8 +1,8 @@
 # Lazy access to all synapses in a local snapshot
 
 Returns a lazy dbplyr table of every synapse in a local snapshot (see
-[`aedes_synapse_snapshot()`](aedes_synapse_snapshot.md)) for use with
-dplyr verbs. Nothing is read until you
+[`aedes_use_snapshot()`](aedes_use_snapshot.md)) for use with dplyr
+verbs. Nothing is read until you
 [`dplyr::collect()`](https://dplyr.tidyverse.org/reference/compute.html)
 the result.
 
@@ -11,9 +11,9 @@ the result.
 ``` r
 aedes_synapse_data(
   side = NULL,
-  static = FALSE,
+  details = FALSE,
   snapshot = getOption("aedes.synapse_snapshot", "latest"),
-  root = aedes_synapse_snapshot_root()
+  root = aedes_snapshot_root()
 )
 ```
 
@@ -25,19 +25,20 @@ aedes_synapse_data(
   one. `NULL` (the default) and `"pre"` read the copy sorted by
   `pre_root`.
 
-- static:
+- details:
 
   Whether to add supervoxel, position and size columns.
 
 - snapshot:
 
-  The snapshot tag, or `"latest"` (the default) for the most recent
-  snapshot in `root`.
+  The snapshot tag, or `"latest"` for the most recent snapshot in
+  `root`. Defaults to the one chosen by
+  [`aedes_use_snapshot()`](aedes_use_snapshot.md).
 
 - root:
 
   The snapshot folder. Defaults to
-  [`aedes_synapse_snapshot_root()`](aedes_synapse_snapshot_root.md).
+  [`aedes_snapshot_root()`](aedes_snapshot_root.md).
 
 ## Value
 
@@ -46,10 +47,10 @@ A lazy `tbl`.
 ## Details
 
 The table has columns `id`, `pre_root` and `post_root` (as `integer64`).
-With `static = TRUE` it also has the columns of `static.parquet`:
-`pre_sv`, `post_sv`, `pre_x`...`post_z` (raw voxel coordinates of the
-pre and postsynaptic points) and `size`. Use the midpoint of the pre and
-post points where you need one location per synapse.
+With `details = TRUE` it also has `pre_sv`, `post_sv`,
+`pre_x`...`post_z` (raw voxel coordinates of the pre and postsynaptic
+points) and `size`, from `static.parquet`. Use the midpoint of the pre
+and post points where you need one location per synapse.
 
 Rows are sorted by `pre_root`, so filtering on a few `pre_root` values
 lets DuckDB skip most of the file. Snapshots with a `by_post.parquet`
@@ -59,14 +60,14 @@ for root ids in filters.
 
 ## See also
 
-[`aedes_synapse_snapshot()`](aedes_synapse_snapshot.md)
+[`aedes_use_snapshot()`](aedes_use_snapshot.md)
 
 ## Examples
 
 ``` r
 if (FALSE) { # \dontrun{
 library(dplyr)
-ids <- bit64::as.integer64(aedes_ids("cell_class:DNa"))
+ids <- aedes_ids("class:DNa")
 aedes_synapse_data("post") %>%
   filter(post_root %in% ids) %>%
   count(pre_root, sort = TRUE) %>%

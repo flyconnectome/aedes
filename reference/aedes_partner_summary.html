@@ -5,14 +5,14 @@ of connecting synapses. This is a thin Aedes-aware wrapper around
 fafbseg::flywire_partner_summary(): it resolves the input via
 aedes_ids(), points fafbseg at the Aedes segmentation, and updates root
 ids to the requested version/timestamp before querying. When a local
-synapse snapshot has been selected with aedes_synapse_snapshot() the
+synapse snapshot has been selected with aedes_use_snapshot() the
 query is instead answered from that snapshot, updated to the requested time."><meta property="og:description" content="Tabulates the up- or downstream partners of a set of query neurons at a
 chosen CAVE materialisation, returning one row per partner with the number
 of connecting synapses. This is a thin Aedes-aware wrapper around
 fafbseg::flywire_partner_summary(): it resolves the input via
 aedes_ids(), points fafbseg at the Aedes segmentation, and updates root
 ids to the requested version/timestamp before querying. When a local
-synapse snapshot has been selected with aedes_synapse_snapshot() the
+synapse snapshot has been selected with aedes_use_snapshot() the
 query is instead answered from that snapshot, updated to the requested time."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
@@ -35,6 +35,7 @@ query is instead answered from that snapshot, updated to the requested time."></
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/connectivity-clustering.html">Connectivity Clustering with Predicted Groups</a></li>
     <li><a class="dropdown-item" href="../articles/kc-soma-annotations.html">KC Soma Annotations in Neuroglancer</a></li>
+    <li><a class="dropdown-item" href="../articles/synapse-snapshots.html">Local Synapse Snapshots</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="external-link nav-link" href="https://github.com/flyconnectome/aedes/"><span class="fa fab fa-github fa-lg"></span></a></li>
@@ -59,7 +60,7 @@ of connecting synapses. This is a thin Aedes-aware wrapper around
 <code><a href="https://rdrr.io/pkg/fafbseg/man/flywire_partners.html" class="external-link">fafbseg::flywire_partner_summary()</a></code>: it resolves the input via
 <code><a href="aedes_meta.html">aedes_ids()</a></code>, points fafbseg at the Aedes segmentation, and updates root
 ids to the requested <code>version</code>/<code>timestamp</code> before querying. When a local
-synapse snapshot has been selected with <code><a href="aedes_synapse_snapshot.html">aedes_synapse_snapshot()</a></code> the
+synapse snapshot has been selected with <code><a href="aedes_use_snapshot.html">aedes_use_snapshot()</a></code> the
 query is instead answered from that snapshot, updated to the requested time.</p>
     </div>
 
@@ -110,7 +111,7 @@ run against that materialisation. Give at most one of the two.</p></dd>
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
 <dd><p>Whether to query CAVE (<code>"cave"</code>), a local synapse snapshot
-(<code>"local"</code>, see <code><a href="aedes_synapse_snapshot.html">aedes_synapse_snapshot()</a></code>) or choose automatically
+(<code>"local"</code>, see <code><a href="aedes_use_snapshot.html">aedes_use_snapshot()</a></code>) or choose automatically
 (<code>"auto"</code>, the default; see details).</p></dd>
 
 
@@ -138,9 +139,10 @@ when one is selected, the requested time is not before the snapshot, and
 queried. <code>method = "local"</code> gives an error rather than falling back to
 CAVE.</p>
 <p>The time of a local query is <code>timestamp</code> (or the time of <code>version</code>) when
-given. Otherwise it is the <code>aedes.version</code> option when that is a
-timestamp, as set by <code><a href="aedes_synapse_snapshot.html">aedes_synapse_snapshot()</a></code>, so that results match the
-snapshot and other aedes metadata; and otherwise now.</p>
+given, otherwise that of the <code>aedes.version</code> option (see
+<code><a href="aedes_set_version.html">aedes_set_version()</a></code>), just as for CAVE queries. If the selected
+snapshot is newer than this, the newest older snapshot in the same folder
+is used instead, when there is one.</p>
 <p>Local queries after the snapshot time fetch only the changes made since
 then from CAVE and look up the new root ids of the affected synapses'
 supervoxels. These updates are kept for the rest of the R session, so the
@@ -158,7 +160,7 @@ valid for) and <code>method</code> attributes.</p>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="https://rdrr.io/pkg/fafbseg/man/flywire_partners.html" class="external-link">fafbseg::flywire_partner_summary()</a></code>, <code><a href="aedes_meta.html">aedes_ids()</a></code>,
-<code><a href="aedes_synapse_snapshot.html">aedes_synapse_snapshot()</a></code></p></div>
+<code><a href="aedes_use_snapshot.html">aedes_use_snapshot()</a></code></p></div>
     </div>
 
     <div class="section level2">
@@ -182,7 +184,7 @@ valid for) and <code>method</code> attributes.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># answer from a local synapse snapshot</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>aedes.synapse_snapshot_root <span class="op">=</span> <span class="st">"~/data/aedes/syn_snapshot"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="aedes_synapse_snapshot.html">aedes_synapse_snapshot</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="aedes_use_snapshot.html">aedes_use_snapshot</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">aedes_partner_summary</span><span class="op">(</span><span class="va">mbon11</span>, method <span class="op">=</span> <span class="st">"local"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
