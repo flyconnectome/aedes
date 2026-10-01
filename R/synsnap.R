@@ -2,14 +2,28 @@
 #
 # Layout (see aedes_use_snapshot() for the user-facing description):
 #   <root>/static.parquet      id, pre_sv, post_sv, xyz, size; sorted by id
-#   <root>/<tag>/meta.json     tag, timestamp, base (NULL for a full snapshot)
+#   <root>/<tag>/meta.json     tag, timestamp, base (NULL for a full snapshot),
+#                              parent, kind, version. Written last: its presence
+#                              marks a finished snapshot.
 #   <root>/<tag>/by_pre.parquet
 #                              full: pre_root, post_root, id; sorted by
 #                              pre_root, id
 #   <root>/<tag>/by_post.parquet
 #                              optional: the same rows sorted by post_root, id.
 #                              Only speeds up small input queries.
-#   <root>/<tag>/delta.parquet delta: rows that differ from full snapshot `base`
+#   <root>/<tag>/log.parquet   checkpoint: id, t, pre_root, post_root, old_pre,
+#                              old_post for synapses whose roots changed since
+#                              the `parent` snapshot; sorted by id. Only a side
+#                              that changed is filled in (the others are NULL);
+#                              old_* are its roots at the parent.
+#
+# A checkpoint's rows are those of its full `base` updated by the logs of every
+# checkpoint between them (its chain of parents), taking the latest value of
+# each side of each synapse. Root ids are never reused, so each log row is a
+# fact ("at time t this side had root r") whichever chain it came from.
+# Full snapshots made with synsnap_rebase() keep their log.parquet, which is
+# then not read. Older checkpoints instead have <tag>/delta.parquet (all rows
+# that differ from the base); synsnap_convert_deltas() turns them into logs.
 #
 # Older snapshots also have <tag>/ids.parquet (sorted by id); it is not read.
 #
@@ -66,31 +80,86 @@ synsnap_parse_time <- function(x) {
              tryFormats = c("%Y-%m-%d %H:%M:%OS", "%Y-%m-%dT%H:%M:%OS"))
 }
 
+# Times are kept to whole milliseconds, as CAVE gives them. Rounding down to
+# the ms tolerates 1 microsecond of floating point error.
+synsnap_floor_ms <- function(x)
+  .POSIXct(floor(as.numeric(x) * 1000 + 1e-3) / 1000, tz = "UTC")
+
+# Exact text of a time to the microsecond, which python (and so CAVE) rounds
+# to; format(x, "%OS6") truncates, so can be 1 microsecond early.
+synsnap_format_time <- function(x) {
+  us <- round(as.numeric(x) * 1e6)
+  paste0(format(.POSIXct(us %/% 1e6, tz = "UTC"), "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+         sprintf(".%06d UTC", as.integer(us %% 1e6)))
+}
+
 synsnap_meta <- function(tag, root) {
   f <- synsnap_path(root, tag, "meta.json")
   if (!file.exists(f))
     stop("No synapse snapshot '", tag, "' in ", root, call. = FALSE)
   m <- jsonlite::read_json(f, simplifyVector = TRUE)
   if (is.null(m$base)) m$base <- NA_character_
+  if (is.null(m$parent)) m$parent <- if (is.na(m$base)) NA_character_ else m$base
+  if (is.null(m$kind)) m$kind <- NA_character_
   m$timestamp <- synsnap_parse_time(m$timestamp)
+  # a checkpoint from before logs, which synsnap_convert_deltas() can convert
+  m$old_delta <- !is.na(m$base) &&
+    !file.exists(synsnap_path(root, tag, "log.parquet"))
   m
 }
 
 synsnap_is_delta <- function(tag, root) !is.na(synsnap_meta(tag, root)$base)
 
-# data.frame of available snapshots, oldest first
-synsnap_tags <- function(root) {
+# data.frame of usable snapshots, oldest first. Checkpoints whose chain of
+# parents back to their base is incomplete, or that still need converting
+# (`old_delta`), are left out unless `all`.
+synsnap_tags <- function(root, all = FALSE) {
   metas <- Sys.glob(file.path(synsnap_path(root), "*", "meta.json"))
   tags <- basename(dirname(metas))
   if (!length(tags))
     return(data.frame(tag = character(), timestamp = synsnap_parse_time(character()),
-                      base = character()))
+                      base = character(), parent = character(), kind = character(),
+                      usable = logical()))
   mm <- lapply(tags, synsnap_meta, root = root)
+  str <- function(f) vapply(mm, function(m) as.character(m[[f]]), "")
   df <- data.frame(
     tag = tags,
     timestamp = do.call(c, lapply(mm, `[[`, "timestamp")),
-    base = vapply(mm, function(m) as.character(m$base), ""))
-  df[order(df$timestamp), , drop = FALSE]
+    base = str("base"), parent = str("parent"), kind = str("kind"),
+    old_delta = vapply(mm, `[[`, FALSE, "old_delta"))
+  df <- df[order(df$timestamp), , drop = FALSE]
+  # parents are always older, so one pass in time order settles each chain
+  ok <- stats::setNames(logical(nrow(df)), df$tag)
+  for (i in seq_len(nrow(df))) ok[i] <- is.na(df$base[i]) ||
+    (!df$old_delta[i] && isTRUE(ok[df$parent[i]]) &&
+       (df$parent[i] == df$base[i] || identical(df$base[match(df$parent[i], df$tag)], df$base[i])))
+  df$usable <- unname(ok)
+  df$old_delta <- NULL
+  rownames(df) <- NULL
+  if (all) df else df[df$usable, , drop = FALSE]
+}
+
+# Tags of the checkpoints from `tag` back to (not including) its base, newest
+# first; character(0) for a full snapshot
+synsnap_chain <- function(tag, root) {
+  m <- synsnap_meta(tag, root)
+  chain <- character()
+  while (!is.na(m$base)) {
+    if (m$old_delta)
+      stop("Synapse snapshot '", m$tag, "' is in an old format; convert it ",
+           "with aedes:::synsnap_convert_deltas()", call. = FALSE)
+    chain <- c(chain, m$tag)
+    if (identical(m$parent, m$base)) break
+    if (!file.exists(synsnap_path(root, m$parent, "meta.json")))
+      stop("Synapse snapshot '", tag, "' needs snapshot '", m$parent,
+           "', which is missing", call. = FALSE)
+    m2 <- synsnap_meta(m$parent, root)
+    if (!identical(m2$base, m$base))
+      stop("Synapse snapshot '", m$tag, "' has parent '", m$parent,
+           "' with a different base", call. = FALSE)
+    m <- m2
+  }
+  chain
 }
 
 synsnap_latest <- function(root) {
@@ -126,19 +195,33 @@ synsnap_ids_file <- function(root, tag, side = NULL) {
 
 # SQL giving id, pre_root, post_root for a snapshot. With `side`, reads a copy
 # sorted by that root if there is one, so that a `where` on it prunes row
-# groups.
+# groups. `where` may only refer to pre_root and post_root.
 synsnap_rows_sql <- function(tag, root, side = NULL, where = NULL) {
-  w <- if (is.null(where)) "" else paste(" WHERE", where)
+  w <- function(x) if (is.null(where)) "" else paste(x, where)
   cols <- "id, pre_root, post_root"
   m <- synsnap_meta(tag, root)
   if (is.na(m$base))
     return(sprintf("SELECT %s FROM %s%s", cols,
-                   synsnap_sql_str(synsnap_ids_file(root, tag, side)), w))
-  d <- synsnap_sql_str(synsnap_path(root, tag, "delta.parquet"))
-  sprintf("SELECT %s FROM %s%s%s id NOT IN (SELECT id FROM %s)
-    UNION ALL SELECT %s FROM %s%s",
-    cols, synsnap_sql_str(synsnap_ids_file(root, m$base, side)), w,
-    if (is.null(where)) " WHERE" else " AND", d, cols, d, w)
+                   synsnap_sql_str(synsnap_ids_file(root, tag, side)), w(" WHERE")))
+  base <- synsnap_sql_str(synsnap_ids_file(root, m$base, side))
+  logs <- file.path(synsnap_path(root), synsnap_chain(tag, root), "log.parquet")
+  # latest value of each changed side
+  fold <- sprintf("SELECT id,
+      arg_max(pre_root, t) FILTER (WHERE pre_root IS NOT NULL) AS pre_root,
+      arg_max(post_root, t) FILTER (WHERE post_root IS NOT NULL) AS post_root
+    FROM read_parquet([%s]) GROUP BY id",
+    paste(synsnap_sql_str(logs), collapse = ", "))
+  # base rows matching `where` before or after the changes
+  b <- if (is.null(where)) base
+  else sprintf("(SELECT %s FROM %s WHERE %s UNION SELECT %s FROM %s
+      WHERE id IN (SELECT id FROM synsnap_f WHERE %s))",
+      cols, base, where, cols, base, where)
+  # a plain SELECT (no top-level WITH), so callers can UNION it
+  sprintf("SELECT %s FROM (WITH synsnap_f AS (%s)
+    SELECT b.id,
+      coalesce(f.pre_root, b.pre_root) AS pre_root,
+      coalesce(f.post_root, b.post_root) AS post_root
+    FROM %s b LEFT JOIN synsnap_f f USING (id))%s", cols, fold, b, w(" WHERE"))
 }
 
 # restrict to query roots: literal IN list for small queries, otherwise a

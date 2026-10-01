@@ -108,9 +108,9 @@ synsnap_build_static <- function(edgelist, root, columns = synsnap_edgelist_cols
 
 # write meta.json last: its presence marks a finished snapshot
 synsnap_write_meta <- function(root, tag, meta) {
-  if (!is.null(meta$timestamp))
-    meta$timestamp <- format(synsnap_parse_time(meta$timestamp),
-                             "%Y-%m-%d %H:%M:%OS6 UTC", tz = "UTC")
+  # CAVE version times are given as text, kept as is
+  if (inherits(meta$timestamp, "POSIXct"))
+    meta$timestamp <- synsnap_format_time(meta$timestamp)
   jsonlite::write_json(meta, synsnap_path(root, tag, "meta.json"),
                        auto_unbox = TRUE, pretty = TRUE, null = "null")
 }
@@ -195,65 +195,127 @@ synsnap_build <- function(tag, svmap, timestamp, root, by_post = FALSE,
   })
 }
 
-# Turn delta snapshot `tag` into a full one, to base later deltas on
+# Turn checkpoint `tag` into a full snapshot, to base later checkpoints on.
+# Its log.parquet is kept (but no longer read).
 synsnap_rebase <- function(tag, root, by_post = FALSE) {
   m <- synsnap_meta(tag, root)
   if (is.na(m$base)) return(invisible(tag))
   con <- synsnap_con()
   synsnap_write_ids(con, synsnap_rows_sql(tag, root), root, tag, by_post = by_post)
-  # the delta is ignored once meta.json no longer names a base
-  synsnap_write_meta(root, tag, list(tag = tag, timestamp = m$timestamp,
-                                     parent = if (is.null(m$parent)) m$base else m$parent))
-  file.remove(synsnap_path(root, tag, "delta.parquet"))
+  # the log is ignored once meta.json no longer names a base
+  m$base <- NULL
+  m$old_delta <- NULL
+  synsnap_write_meta(root, tag, m)
+  unlink(synsnap_path(root, tag, "delta.parquet"))
   invisible(tag)
 }
 
-# Delta snapshot `tag` at `timestamp` from snapshot `from`, using CAVE access
-# in `ctx` (see R/synsnap-live.R). Only synapses on roots that expired since
-# `from` are looked up. The delta is always against a full snapshot: `from`, or
-# `from`'s base when `from` is itself a delta. Rows that are the same as the
-# base are dropped, so edits that are later undone do not grow the delta.
-synsnap_update <- function(from, tag, timestamp, root, ctx) {
+# Checkpoint `tag` at `timestamp` from snapshot `from` (its parent), using CAVE
+# access in `ctx` (see R/synsnap-live.R). Synapses on roots that expired from
+# `overlap` seconds before `from` up to `timestamp` are looked up at
+# `timestamp`; log.parquet gets those whose roots changed. The overlap catches
+# edits that only became visible after `from` was made. A POSIXct `timestamp`
+# is rounded down to a whole ms; text (e.g. a CAVE version time) is used
+# exactly. `kind` ("local", "regular" or "version") and `version`
+# are recorded in meta.json.
+synsnap_update <- function(from, tag, timestamp, root, ctx, kind = "local",
+                           version = NULL, overlap = 0) {
   if (file.exists(file.path(synsnap_path(root), tag, "meta.json")))
     stop("Synapse snapshot '", tag, "' already exists", call. = FALSE)
   synsnap_stage(root, tag, function(stage)
-    synsnap_update_write(from, tag, stage, timestamp, root, ctx))
+    synsnap_update_write(from, tag, stage, timestamp, root, ctx, kind = kind,
+                         version = version, overlap = overlap))
 }
 
-synsnap_update_write <- function(from, tag, stage, timestamp, root, ctx) {
+synsnap_update_write <- function(from, tag, stage, timestamp, root, ctx,
+                                 kind = "local", version = NULL, overlap = 0) {
   m <- synsnap_meta(from, root)
   base <- if (is.na(m$base)) from else m$base
-  T <- as.POSIXct(timestamp, tz = "UTC")
+  T <- if (is.character(timestamp)) synsnap_parse_time(timestamp)
+  else synsnap_floor_ms(timestamp)
   if (T < m$timestamp)
     stop("timestamp is before snapshot '", from, "'", call. = FALSE)
+  # reading `from` also checks its chain
+  synsnap_chain(from, root)
   con <- synsnap_con()
-  # a private head state for `from`, so session states are left alone
   st <- new.env(parent = emptyenv())
   st$tag <- from
   st$root <- root
-  st$t0 <- st$t <- st$log_t <- m$timestamp
   st$table <- NULL
-  st$log <- list()
-  on.exit(if (!is.null(st$table))
-    DBI::dbExecute(con, paste("DROP TABLE IF EXISTS", st$table)), add = TRUE)
-  lg <- synsnap_log_range(st, m$timestamp, T, ctx)
-  synsnap_advance(st, synsnap_changed(st, lg$old, con), T, ctx, con)
+  lg <- synsnap_fetch_log(m$timestamp - overlap, T, ctx)
+  old <- i64_union(lapply(lg, `[[`, "old"))
+  chg <- synsnap_changed(st, old, con)
+  ts <- sprintf("TIMESTAMP '%s'", sub(" UTC$", "", synsnap_format_time(T)))
+  sql <- if (is.null(chg$table))
+    sprintf("SELECT 0::INTEGER AS id, %s AS t, NULL::BIGINT AS pre_root,
+      NULL::BIGINT AS post_root, NULL::BIGINT AS old_pre, NULL::BIGINT AS old_post
+      WHERE false", ts)
+  else {
+    sv <- DBI::dbGetQuery(con, sprintf("SELECT pre_sv AS sv FROM %s WHERE pre_stale
+      UNION SELECT post_sv FROM %s WHERE post_stale", chg$table, chg$table))$sv
+    nr <- synsnap_register(con, synsnap_lookup(sv, T, ctx))
+    # a stale side looked up at T can be unchanged: an edit in the overlap
+    # already in `from`, or one that only touched other supervoxels
+    sprintf("SELECT * FROM (SELECT c.id, %s AS t,
+        CASE WHEN c.pre_stale AND p.root != c.pre_root THEN p.root END AS pre_root,
+        CASE WHEN c.post_stale AND q.root != c.post_root THEN q.root END AS post_root,
+        CASE WHEN c.pre_stale AND p.root != c.pre_root THEN c.pre_root END AS old_pre,
+        CASE WHEN c.post_stale AND q.root != c.post_root THEN c.post_root END AS old_post
+      FROM %s c LEFT JOIN %s p ON c.pre_sv = p.sv LEFT JOIN %s q ON c.post_sv = q.sv)
+      WHERE pre_root IS NOT NULL OR post_root IS NOT NULL ORDER BY id",
+      ts, chg$table, nr, nr)
+  }
+  n <- NULL
+  synsnap_write(con, sql, synsnap_path(root, stage, "log.parquet"),
+                check = function(written) n <<- DBI::dbGetQuery(con, sprintf(
+                  "SELECT count(*)::DOUBLE AS n FROM %s", written))$n)
+  synsnap_write_meta(root, stage, list(
+    tag = tag, timestamp = T, base = base, parent = from, kind = kind,
+    version = version, rows = n))
+}
 
-  # rows of `from` that differ from the base, updated by the head rows
-  rows <- if (is.null(st$table)) {
-    if (is.na(m$base)) sprintf("SELECT id, pre_root, post_root FROM %s WHERE false",
-                               synsnap_sql_str(synsnap_ids_file(root, base)))
-    else sprintf("SELECT id, pre_root, post_root FROM %s",
-                 synsnap_sql_str(synsnap_path(root, from, "delta.parquet")))
-  } else if (is.na(m$base)) sprintf("SELECT id, pre_root, post_root FROM %s", st$table)
-  else sprintf("SELECT id, pre_root, post_root FROM %s WHERE id NOT IN (SELECT id FROM %s)
-    UNION ALL SELECT id, pre_root, post_root FROM %s",
-    synsnap_sql_str(synsnap_path(root, from, "delta.parquet")), st$table, st$table)
-  sql <- sprintf("SELECT d.id, d.pre_root, d.post_root FROM (%s) d
-    ANTI JOIN %s b ON d.id = b.id AND d.pre_root = b.pre_root
-      AND d.post_root = b.post_root
-    ORDER BY d.id", rows, synsnap_sql_str(synsnap_ids_file(root, base)))
-  synsnap_write(con, sql, synsnap_path(root, stage, "delta.parquet"))
-  synsnap_write_meta(root, stage, list(tag = tag, timestamp = T, base = base,
-                                       parent = from))
+# Convert checkpoints from before logs (a delta.parquet of all rows that
+# differ from the base) to log.parquet against their parent, oldest first.
+# Returns the converted tags.
+synsnap_convert_deltas <- function(root) {
+  tags <- synsnap_tags(root, all = TRUE)
+  todo <- tags$tag[vapply(tags$tag, function(t) synsnap_meta(t, root)$old_delta, FALSE)]
+  con <- synsnap_con()
+  for (tag in todo) {
+    m <- synsnap_meta(tag, root)
+    T <- sub(" UTC$", "", synsnap_format_time(m$timestamp))
+    base <- synsnap_sql_str(synsnap_ids_file(root, m$base))
+    d <- synsnap_sql_str(synsnap_path(root, tag, "delta.parquet"))
+    # synapses that differ from the base at the parent or now
+    plogs <- file.path(synsnap_path(root), synsnap_chain(m$parent, root), "log.parquet")
+    ids <- synsnap_tmpname("synsnap_ids_")
+    DBI::dbExecute(con, sprintf("CREATE TEMP TABLE %s AS SELECT id FROM %s%s",
+      ids, d, if (length(plogs)) sprintf(" UNION SELECT id FROM read_parquet([%s])",
+                                         paste(synsnap_sql_str(plogs), collapse = ", ")) else ""))
+    on.exit(DBI::dbExecute(con, paste("DROP TABLE IF EXISTS", ids)), add = TRUE)
+    inids <- sprintf("id IN (SELECT id FROM %s)", ids)
+    now <- sprintf("SELECT id, pre_root, post_root FROM %s UNION ALL
+      SELECT id, pre_root, post_root FROM %s WHERE %s AND id NOT IN (SELECT id FROM %s)",
+      d, base, inids, d)
+    par <- sprintf("SELECT * FROM (%s) WHERE %s", synsnap_rows_sql(m$parent, root), inids)
+    sql <- sprintf("SELECT * FROM (SELECT c.id, TIMESTAMP '%s' AS t,
+        CASE WHEN c.pre_root != p.pre_root THEN c.pre_root END AS pre_root,
+        CASE WHEN c.post_root != p.post_root THEN c.post_root END AS post_root,
+        CASE WHEN c.pre_root != p.pre_root THEN p.pre_root END AS old_pre,
+        CASE WHEN c.post_root != p.post_root THEN p.post_root END AS old_post
+      FROM (%s) c JOIN (%s) p USING (id))
+      WHERE pre_root IS NOT NULL OR post_root IS NOT NULL ORDER BY id", T, now, par)
+    n <- NULL
+    synsnap_write(con, sql, synsnap_path(root, tag, "log.parquet"),
+                  check = function(written) n <<- DBI::dbGetQuery(con, sprintf(
+                    "SELECT count(*)::DOUBLE AS n FROM %s", written))$n)
+    m$old_delta <- NULL
+    m$timestamp <- synsnap_format_time(m$timestamp)
+    if (is.na(m$kind)) m$kind <- "local"
+    m$rows <- n
+    synsnap_write_meta(root, tag, m)
+    unlink(synsnap_path(root, tag, "delta.parquet"))
+    DBI::dbExecute(con, paste("DROP TABLE", ids))
+  }
+  invisible(todo)
 }

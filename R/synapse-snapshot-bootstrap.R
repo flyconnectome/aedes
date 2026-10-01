@@ -23,7 +23,7 @@
 #'   different sizes are compared with a CAVE query at the same version, and a
 #'   snapshot with any difference is moved to `<root>/.failed` instead.
 #'
-#'   Later snapshots are built as small deltas against this one by
+#'   Later snapshots are built as small checkpoints on top of this one by
 #'   [aedes_update_snapshot()].
 #'
 #' @param root Folder for the snapshot (created if needed).

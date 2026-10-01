@@ -27,7 +27,7 @@ most recent snapshot in \code{root} at or before \code{timestamp}.}
 \item{root}{The snapshot folder. Defaults to
 \code{\link[=aedes_snapshot_root]{aedes_snapshot_root()}}.}
 
-\item{rebase}{Whether to save a full snapshot rather than a delta.}
+\item{rebase}{Whether to also save the new snapshot as a full snapshot.}
 
 \item{set}{Whether to make this the default snapshot for the session.}
 }
@@ -42,11 +42,15 @@ snapshot time are then fast, since they need few or no CAVE lookups.
 \details{
 Only synapses on neurons that were edited since \code{from} are looked
 up in CAVE, so updating a day-old snapshot typically takes seconds to
-minutes. The new snapshot is saved as a small \code{delta.parquet} file of the
-synapses that differ from the full snapshot it is based on. Each delta
-holds all changes since that full snapshot, so deltas grow over time; use
-\code{rebase = TRUE} to save a full snapshot (about 0.6 GB) that later deltas
-start from.
+minutes. The new snapshot is saved as a checkpoint: a small \code{log.parquet}
+of the synapses whose root ids changed since \code{from} (typically about 1 MB
+per day of edits). Reading a checkpoint combines the logs back to the last
+full snapshot, which stays fast for months of edits; use \code{rebase = TRUE}
+to also save a full snapshot (about 0.6 GB) that later checkpoints start
+from.
+
+A \code{timestamp} given as a time is rounded down to a whole millisecond (the
+precision of CAVE edit times).
 }
 \examples{
 \dontrun{

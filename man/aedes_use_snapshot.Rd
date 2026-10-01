@@ -43,8 +43,10 @@ with its supervoxels, positions and size) and one sub-folder per snapshot
 tag. A tag folder has a \code{meta.json} with the snapshot \code{timestamp} and
 either the full root id table (\code{by_pre.parquet}, sorted by presynaptic
 root, plus an optional \code{by_post.parquet} sorted by postsynaptic root) or,
-for a delta snapshot, a \code{delta.parquet} with the rows that differ from its
-full \code{base} snapshot. Queries use DuckDB (from
+for a checkpoint, a \code{log.parquet} with the synapses whose root ids changed
+since its \code{parent} snapshot. A checkpoint is read as its full \code{base}
+snapshot plus the logs of every checkpoint between them, so it is only
+used when all of those are present. Queries use DuckDB (from
 the suggested packages \pkg{duckdb}, \pkg{DBI} and \pkg{dbplyr}) and only
 read the parts of the parquet files that they need. DuckDB uses every
 core; set the \code{aedes.duckdb_threads} option before the first query to use
