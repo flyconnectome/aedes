@@ -52,7 +52,7 @@ test_that("delta snapshots from full and delta snapshots", {
   expect_tag_matches(w, "u2", t0 + 3 * h)
 })
 
-test_that("aedes_synapse_snapshot_update", {
+test_that("aedes_update_snapshot", {
   skip_if_no_duckdb()
   root <- make_snapshot(withr::local_tempdir())
   w <- fake_world()
@@ -60,11 +60,11 @@ test_that("aedes_synapse_snapshot_update", {
   local_mocked_bindings(aedes_synsnap_ctx = function() w$ctx)
   withr::local_options(aedes.synapse_snapshot_root = NULL,
                        aedes.synapse_snapshot = NULL, aedes.version = NULL)
-  s <- aedes_synapse_snapshot_update(from = "s1", root = root, set = FALSE)
+  s <- aedes_update_snapshot(from = "s1", root = root, set = FALSE)
   expect_equal(s$tag, "20260101T030000")
   expect_equal(s$timestamp, w$now)
   expect_tag_matches(w, s$tag, w$now)
-  aedes_synapse_snapshot_update("2026-01-01 02:00:00", from = "s1", tag = "full",
+  aedes_update_snapshot("2026-01-01 02:00:00", from = "s1", tag = "full",
                                 root = root, rebase = TRUE)
   expect_true(file.exists(synsnap_path(root, "full", "by_pre.parquet")))
   expect_equal(getOption("aedes.synapse_snapshot"), "full")

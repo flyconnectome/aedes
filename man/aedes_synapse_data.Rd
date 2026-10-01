@@ -6,9 +6,9 @@
 \usage{
 aedes_synapse_data(
   side = NULL,
-  static = FALSE,
+  details = FALSE,
   snapshot = getOption("aedes.synapse_snapshot", "latest"),
-  root = aedes_synapse_snapshot_root()
+  root = aedes_snapshot_root()
 )
 }
 \arguments{
@@ -16,27 +16,27 @@ aedes_synapse_data(
 snapshot has one. \code{NULL} (the default) and \code{"pre"} read the copy sorted by
 \code{pre_root}.}
 
-\item{static}{Whether to add supervoxel, position and size columns.}
+\item{details}{Whether to add supervoxel, position and size columns.}
 
 \item{snapshot}{The snapshot tag, or \code{"latest"} (the default) for the most
 recent snapshot in \code{root}.}
 
 \item{root}{The snapshot folder. Defaults to
-\code{\link[=aedes_synapse_snapshot_root]{aedes_synapse_snapshot_root()}}.}
+\code{\link[=aedes_snapshot_root]{aedes_snapshot_root()}}.}
 }
 \value{
 A lazy \code{tbl}.
 }
 \description{
 Returns a lazy \pkg{dbplyr} table of every synapse in a local snapshot (see
-\code{\link[=aedes_synapse_snapshot]{aedes_synapse_snapshot()}}) for use with \pkg{dplyr} verbs. Nothing is read
+\code{\link[=aedes_use_snapshot]{aedes_use_snapshot()}}) for use with \pkg{dplyr} verbs. Nothing is read
 until you \code{\link[dplyr:collect]{dplyr::collect()}} the result.
 }
 \details{
 The table has columns \code{id}, \code{pre_root} and \code{post_root} (as
-\code{integer64}). With \code{static = TRUE} it also has the columns of
-\code{static.parquet}: \code{pre_sv}, \code{post_sv}, \code{pre_x}...\code{post_z} (raw voxel
-coordinates of the pre and postsynaptic points) and \code{size}. Use the
+\code{integer64}). With \code{details = TRUE} it also has \code{pre_sv}, \code{post_sv},
+\code{pre_x}...\code{post_z} (raw voxel coordinates of the pre and postsynaptic
+points) and \code{size}, from \code{static.parquet}. Use the
 midpoint of the pre and post points where you need one location per
 synapse.
 
@@ -56,5 +56,5 @@ aedes_synapse_data("post") \%>\%
 }
 }
 \seealso{
-\code{\link[=aedes_synapse_snapshot]{aedes_synapse_snapshot()}}
+\code{\link[=aedes_use_snapshot]{aedes_use_snapshot()}}
 }

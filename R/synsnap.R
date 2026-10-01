@@ -1,6 +1,6 @@
 # Dataset-agnostic access to a local synapse snapshot folder.
 #
-# Layout (see aedes_synapse_snapshot() for the user-facing description):
+# Layout (see aedes_use_snapshot() for the user-facing description):
 #   <root>/static.parquet      id, pre_sv, post_sv, xyz, size; sorted by id
 #   <root>/<tag>/meta.json     tag, timestamp, base (NULL for a full snapshot)
 #   <root>/<tag>/by_pre.parquet

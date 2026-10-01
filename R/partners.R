@@ -6,7 +6,7 @@
 #' [fafbseg::flywire_partner_summary()]: it resolves the input via
 #' [aedes_ids()], points fafbseg at the Aedes segmentation, and updates root
 #' ids to the requested `version`/`timestamp` before querying. When a local
-#' synapse snapshot has been selected with [aedes_synapse_snapshot()] the
+#' synapse snapshot has been selected with [aedes_use_snapshot()] the
 #' query is instead answered from that snapshot, updated to the requested time.
 #'
 #' @details With `method = "auto"` (the default) the local snapshot is used
@@ -17,7 +17,7 @@
 #'
 #'   The time of a local query is `timestamp` (or the time of `version`) when
 #'   given. Otherwise it is the `aedes.version` option when that is a
-#'   timestamp, as set by [aedes_synapse_snapshot()], so that results match the
+#'   timestamp, as set by [aedes_use_snapshot()], so that results match the
 #'   snapshot and other aedes metadata; and otherwise now.
 #'
 #'   Local queries after the snapshot time fetch only the changes made since
@@ -53,7 +53,7 @@
 #'   and `cleft.threshold`. Only `remove_autapses` is supported by the local
 #'   method.
 #' @param method Whether to query CAVE (`"cave"`), a local synapse snapshot
-#'   (`"local"`, see [aedes_synapse_snapshot()]) or choose automatically
+#'   (`"local"`, see [aedes_use_snapshot()]) or choose automatically
 #'   (`"auto"`, the default; see details).
 #'
 #' @return A `data.frame` with one row per partner neuron. `query` holds the
@@ -63,7 +63,7 @@
 #'   full column description.
 #'
 #' @seealso [fafbseg::flywire_partner_summary()], [aedes_ids()],
-#'   [aedes_synapse_snapshot()]
+#'   [aedes_use_snapshot()]
 #' @export
 #' @examples
 #' \dontrun{
@@ -85,7 +85,7 @@
 #'
 #' # answer from a local synapse snapshot
 #' options(aedes.synapse_snapshot_root = "~/data/aedes/syn_snapshot")
-#' aedes_synapse_snapshot()
+#' aedes_use_snapshot()
 #' aedes_partner_summary(mbon11, method = "local")
 #' }
 aedes_partner_summary <- function(rootids,
@@ -97,9 +97,9 @@ aedes_partner_summary <- function(rootids,
                                   ...) {
   partners = match.arg(partners)
   method = match.arg(method)
-  snap = if (method != "cave") aedes_synapse_snapshot_active()
+  snap = if (method != "cave") aedes_snapshot_active()
   if (method == "local" && is.null(snap))
-    stop("No local synapse snapshot selected. See ?aedes_synapse_snapshot")
+    stop("No local synapse snapshot selected. See ?aedes_use_snapshot")
   if (!is.null(snap)) {
     when = partner_summary_local_time(version, timestamp)
     why = partner_summary_local_problem(snap, when, ...)
@@ -147,7 +147,7 @@ aedes_partner_summary <- function(rootids,
 
 # The time a local query should use: an explicit timestamp or version, else
 # the aedes.version option when it is pinned to a timestamp (as by
-# aedes_synapse_snapshot()), else "now"
+# aedes_use_snapshot()), else "now"
 partner_summary_local_time <- function(version = NULL, timestamp = NULL) {
   if (identical(timestamp, "now")) return("now")
   if (!is.null(timestamp) || !is.null(version))

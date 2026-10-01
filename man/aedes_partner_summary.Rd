@@ -34,7 +34,7 @@ run against that materialisation. Give at most one of the two.}
 \code{coconatfly.aedes.synapses} option (\code{"synapses_v2"}).}
 
 \item{method}{Whether to query CAVE (\code{"cave"}), a local synapse snapshot
-(\code{"local"}, see \code{\link[=aedes_synapse_snapshot]{aedes_synapse_snapshot()}}) or choose automatically
+(\code{"local"}, see \code{\link[=aedes_use_snapshot]{aedes_use_snapshot()}}) or choose automatically
 (\code{"auto"}, the default; see details).}
 
 \item{...}{Additional arguments passed on to
@@ -57,7 +57,7 @@ of connecting synapses. This is a thin Aedes-aware wrapper around
 \code{\link[fafbseg:flywire_partner_summary]{fafbseg::flywire_partner_summary()}}: it resolves the input via
 \code{\link[=aedes_ids]{aedes_ids()}}, points fafbseg at the Aedes segmentation, and updates root
 ids to the requested \code{version}/\code{timestamp} before querying. When a local
-synapse snapshot has been selected with \code{\link[=aedes_synapse_snapshot]{aedes_synapse_snapshot()}} the
+synapse snapshot has been selected with \code{\link[=aedes_use_snapshot]{aedes_use_snapshot()}} the
 query is instead answered from that snapshot, updated to the requested time.
 }
 \details{
@@ -69,7 +69,7 @@ CAVE.
 
 The time of a local query is \code{timestamp} (or the time of \code{version}) when
 given. Otherwise it is the \code{aedes.version} option when that is a
-timestamp, as set by \code{\link[=aedes_synapse_snapshot]{aedes_synapse_snapshot()}}, so that results match the
+timestamp, as set by \code{\link[=aedes_use_snapshot]{aedes_use_snapshot()}}, so that results match the
 snapshot and other aedes metadata; and otherwise now.
 
 Local queries after the snapshot time fetch only the changes made since
@@ -107,11 +107,11 @@ aedes_partner_summary(mbon11, remove_autapses = FALSE)
 
 # answer from a local synapse snapshot
 options(aedes.synapse_snapshot_root = "~/data/aedes/syn_snapshot")
-aedes_synapse_snapshot()
+aedes_use_snapshot()
 aedes_partner_summary(mbon11, method = "local")
 }
 }
 \seealso{
 \code{\link[fafbseg:flywire_partner_summary]{fafbseg::flywire_partner_summary()}}, \code{\link[=aedes_ids]{aedes_ids()}},
-\code{\link[=aedes_synapse_snapshot]{aedes_synapse_snapshot()}}
+\code{\link[=aedes_use_snapshot]{aedes_use_snapshot()}}
 }

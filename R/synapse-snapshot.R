@@ -25,7 +25,7 @@
 #' @param snapshot The snapshot tag, or `"latest"` (the default) for the most
 #'   recent snapshot in `root`.
 #' @param root The snapshot folder. Defaults to
-#'   [aedes_synapse_snapshot_root()].
+#'   [aedes_snapshot_root()].
 #' @param set Whether to make this the default snapshot for the session.
 #'
 #' @return When `set = TRUE`, the previous option values (invisibly, suitable
@@ -36,13 +36,12 @@
 #' @examples
 #' \dontrun{
 #' options(aedes.synapse_snapshot_root = "~/data/aedes/syn_snapshot")
-#' aedes_synapse_snapshot()
+#' aedes_use_snapshot()
 #' # now answered locally at the snapshot time
 #' aedes_partner_summary("cell_class:DNa")
 #' }
-aedes_synapse_snapshot <- function(snapshot = "latest",
-                                   root = aedes_synapse_snapshot_root(),
-                                   set = TRUE) {
+aedes_use_snapshot <- function(snapshot = "latest",
+                               root = aedes_snapshot_root(), set = TRUE) {
   if (identical(snapshot, "latest"))
     snapshot <- synsnap_latest(root)
   m <- synsnap_meta(snapshot, root)
@@ -71,11 +70,11 @@ aedes_synapse_snapshot <- function(snapshot = "latest",
 #' @param create Whether to create the folder (and any missing parent folders)
 #'   if it does not exist yet.
 #' @return The path to the folder, with `~` expanded.
-#' @seealso [aedes_synapse_snapshot()]
+#' @seealso [aedes_use_snapshot()]
 #' @export
 #' @examples
-#' aedes_synapse_snapshot_root()
-aedes_synapse_snapshot_root <- function(create = FALSE) {
+#' aedes_snapshot_root()
+aedes_snapshot_root <- function(create = FALSE) {
   root <- getOption("aedes.synapse_snapshot_root")
   if (is.null(root)) {
     proj <- "~/projects/2025aedes/data/syn_snapshot"
@@ -109,20 +108,19 @@ aedes_synapse_snapshot_root <- function(create = FALSE) {
 #' @param tag The name of the new snapshot. Defaults to the timestamp, e.g.
 #'   `"20261001T120000"`.
 #' @param rebase Whether to save a full snapshot rather than a delta.
-#' @inheritParams aedes_synapse_snapshot
-#' @return The result of [aedes_synapse_snapshot()] for the new snapshot.
-#' @seealso [aedes_synapse_snapshot()]
+#' @inheritParams aedes_use_snapshot
+#' @return The result of [aedes_use_snapshot()] for the new snapshot.
+#' @seealso [aedes_use_snapshot()]
 #' @export
 #' @examples
 #' \dontrun{
 #' options(aedes.synapse_snapshot_root = "~/data/aedes/syn_snapshot")
-#' aedes_synapse_snapshot_update()
+#' aedes_update_snapshot()
 #' aedes_partner_summary("cell_class:DNa", timestamp = "now")
 #' }
-aedes_synapse_snapshot_update <- function(timestamp = "now", from = "latest",
-                                          tag = NULL,
-                                          root = aedes_synapse_snapshot_root(),
-                                          rebase = FALSE, set = TRUE) {
+aedes_update_snapshot <- function(timestamp = "now", from = "latest",
+                                  tag = NULL, root = aedes_snapshot_root(),
+                                  rebase = FALSE, set = TRUE) {
   if (identical(from, "latest"))
     from <- synsnap_latest(root)
   ctx <- aedes_synsnap_ctx()
@@ -133,26 +131,26 @@ aedes_synapse_snapshot_update <- function(timestamp = "now", from = "latest",
   synsnap_update(from, tag, timestamp, root = root, ctx = ctx)
   if (rebase)
     synsnap_rebase(tag, root)
-  aedes_synapse_snapshot(tag, root = root, set = set)
+  aedes_use_snapshot(tag, root = root, set = set)
 }
 
 # the active snapshot: list(tag, timestamp, root) or NULL if none configured
-aedes_synapse_snapshot_active <- function(snapshot = getOption("aedes.synapse_snapshot"),
-                                          root = getOption("aedes.synapse_snapshot_root")) {
+aedes_snapshot_active <- function(snapshot = getOption("aedes.synapse_snapshot"),
+                                  root = getOption("aedes.synapse_snapshot_root")) {
   if (is.null(root) || is.null(snapshot)) return(NULL)
-  aedes_synapse_snapshot(snapshot, root = root, set = FALSE)
+  aedes_use_snapshot(snapshot, root = root, set = FALSE)
 }
 
 #' Lazy access to all synapses in a local snapshot
 #'
 #' Returns a lazy \pkg{dbplyr} table of every synapse in a local snapshot (see
-#' [aedes_synapse_snapshot()]) for use with \pkg{dplyr} verbs. Nothing is read
+#' [aedes_use_snapshot()]) for use with \pkg{dplyr} verbs. Nothing is read
 #' until you [dplyr::collect()] the result.
 #'
 #' @details The table has columns `id`, `pre_root` and `post_root` (as
-#'   `integer64`). With `static = TRUE` it also has the columns of
-#'   `static.parquet`: `pre_sv`, `post_sv`, `pre_x`...`post_z` (raw voxel
-#'   coordinates of the pre and postsynaptic points) and `size`. Use the
+#'   `integer64`). With `details = TRUE` it also has `pre_sv`, `post_sv`,
+#'   `pre_x`...`post_z` (raw voxel coordinates of the pre and postsynaptic
+#'   points) and `size`, from `static.parquet`. Use the
 #'   midpoint of the pre and post points where you need one location per
 #'   synapse.
 #'
@@ -164,10 +162,10 @@ aedes_synapse_snapshot_active <- function(snapshot = getOption("aedes.synapse_sn
 #' @param side `"post"` to read the copy sorted by `post_root` when the
 #'   snapshot has one. `NULL` (the default) and `"pre"` read the copy sorted by
 #'   `pre_root`.
-#' @param static Whether to add supervoxel, position and size columns.
-#' @inheritParams aedes_synapse_snapshot
+#' @param details Whether to add supervoxel, position and size columns.
+#' @inheritParams aedes_use_snapshot
 #' @return A lazy `tbl`.
-#' @seealso [aedes_synapse_snapshot()]
+#' @seealso [aedes_use_snapshot()]
 #' @export
 #' @examples
 #' \dontrun{
@@ -178,12 +176,12 @@ aedes_synapse_snapshot_active <- function(snapshot = getOption("aedes.synapse_sn
 #'   count(pre_root, sort = TRUE) %>%
 #'   collect()
 #' }
-aedes_synapse_data <- function(side = NULL, static = FALSE,
+aedes_synapse_data <- function(side = NULL, details = FALSE,
                                snapshot = getOption("aedes.synapse_snapshot", "latest"),
-                               root = aedes_synapse_snapshot_root()) {
+                               root = aedes_snapshot_root()) {
   if (!is.null(side)) side <- match.arg(side, c("pre", "post"))
   if (identical(snapshot, "latest")) snapshot <- synsnap_latest(root)
-  synsnap_tbl(snapshot, root, side = side, static = static)
+  synsnap_tbl(snapshot, root, side = side, static = details)
 }
 
 # CAVE access for synsnap_query_at() (see R/synsnap-live.R)

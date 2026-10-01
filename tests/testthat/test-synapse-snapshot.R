@@ -76,30 +76,30 @@ test_that("synapse rows and lazy tables", {
   expect_equal(sort(all$id), 1:10)
   expect_s3_class(all$pre_root, "integer64")
   expect_equal(sum(all$post_root == bit64::as.integer64(40)), 1L)
-  s1 <- dplyr::collect(aedes_synapse_data("pre", snapshot = "s1", static = TRUE))
+  s1 <- dplyr::collect(aedes_synapse_data("pre", snapshot = "s1", details = TRUE))
   expect_true(all(c("pre_sv", "size") %in% colnames(s1)))
   expect_equal(sum(s1$post_root == bit64::as.integer64(30)), 1L)
 })
 
-test_that("aedes_synapse_snapshot sets options", {
+test_that("aedes_use_snapshot sets options", {
   skip_if_no_duckdb()
   root <- make_snapshot(withr::local_tempdir())
   withr::local_options(aedes.synapse_snapshot_root = root,
                        aedes.synapse_snapshot = NULL, aedes.version = NULL)
-  info <- aedes_synapse_snapshot("s1", set = FALSE)
+  info <- aedes_use_snapshot("s1", set = FALSE)
   expect_equal(info$tag, "s1")
-  op <- aedes_synapse_snapshot()
+  op <- aedes_use_snapshot()
   expect_null(op$aedes.synapse_snapshot)
   expect_equal(getOption("aedes.synapse_snapshot"), "s2")
   expect_equal(fafbseg::flywire_timestamp(timestamp = getOption("aedes.version")),
                synsnap_meta("s2", root)$timestamp)
-  expect_equal(aedes_synapse_snapshot_active()$tag, "s2")
+  expect_equal(aedes_snapshot_active()$tag, "s2")
 })
 
 test_that("choosing between local and CAVE", {
   skip_if_no_duckdb()
   root <- make_snapshot(withr::local_tempdir())
-  snap <- aedes_synapse_snapshot("s2", root = root, set = FALSE)
+  snap <- aedes_use_snapshot("s2", root = root, set = FALSE)
 
   withr::local_options(aedes.version = "latest")
   expect_equal(partner_summary_local_time(), "now")
@@ -203,23 +203,23 @@ test_that("building snapshots", {
   expect_equal(rows(), before)
 })
 
-test_that("aedes_synapse_snapshot_root", {
+test_that("aedes_snapshot_root", {
   tmp <- withr::local_tempdir()
   withr::local_options(aedes.synapse_snapshot_root = file.path(tmp, "a", "b"))
-  expect_equal(aedes_synapse_snapshot_root(), file.path(tmp, "a", "b"))
+  expect_equal(aedes_snapshot_root(), file.path(tmp, "a", "b"))
   expect_false(dir.exists(file.path(tmp, "a")))
-  expect_error(synsnap_tags(aedes_synapse_snapshot_root()), "No synapse snapshot folder")
+  expect_error(synsnap_tags(aedes_snapshot_root()), "No synapse snapshot folder")
   # parents are created too
-  expect_true(dir.exists(aedes_synapse_snapshot_root(create = TRUE)))
+  expect_true(dir.exists(aedes_snapshot_root(create = TRUE)))
 
   withr::local_options(aedes.synapse_snapshot_root = NULL)
   withr::local_envvar(HOME = tmp, XDG_DATA_HOME = file.path(tmp, "xdg"))
-  expect_match(aedes_synapse_snapshot_root(), "rpkg-aedes.syn_snapshot$")
+  expect_match(aedes_snapshot_root(), "rpkg-aedes.syn_snapshot$")
   proj <- file.path(tmp, "projects", "2025aedes", "data", "syn_snapshot")
   dir.create(proj, recursive = TRUE)
-  expect_match(aedes_synapse_snapshot_root(), "rpkg-aedes")
+  expect_match(aedes_snapshot_root(), "rpkg-aedes")
   file.create(file.path(proj, "static.parquet"))
-  expect_equal(normalizePath(aedes_synapse_snapshot_root()), normalizePath(proj))
+  expect_equal(normalizePath(aedes_snapshot_root()), normalizePath(proj))
 })
 
 test_that("snapshots are built in a staging folder", {
