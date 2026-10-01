@@ -36,7 +36,8 @@ synsnap_path <- function(root, tag = NULL, file = NULL) {
 }
 
 # One in-memory duckdb connection per session; parquet files are read by path.
-# BIGINT comes back as integer64, never double.
+# BIGINT comes back as integer64, never double. The aedes.duckdb_threads option
+# limits the threads it uses (default: one per core).
 synsnap_con <- function() {
   synsnap_check()
   con <- .synsnap$con
@@ -48,6 +49,9 @@ synsnap_con <- function() {
     tmp <- file.path(tempdir(), "synsnap_duckdb")
     dir.create(tmp, showWarnings = FALSE)
     DBI::dbExecute(con, sprintf("SET temp_directory = '%s'", tmp))
+    threads <- getOption("aedes.duckdb_threads")
+    if (!is.null(threads))
+      DBI::dbExecute(con, sprintf("SET threads = %d", as.integer(threads)))
     .synsnap$con <- con
     reg.finalizer(.synsnap, function(e) {
       if (!is.null(e$con) && DBI::dbIsValid(e$con))

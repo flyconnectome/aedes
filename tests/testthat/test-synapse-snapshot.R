@@ -408,3 +408,16 @@ test_that("aedes_use_snapshot without a snapshot", {
                        aedes.synapse_snapshot = NULL, aedes.version = "now")
   expect_message(aedes_use_snapshot(root = root), "'s2'")
 })
+
+test_that("aedes.duckdb_threads limits duckdb threads", {
+  skip_if_no_duckdb()
+  old <- .synsnap$con
+  .synsnap$con <- NULL
+  withr::defer({
+    DBI::dbDisconnect(.synsnap$con, shutdown = TRUE)
+    .synsnap$con <- old
+  })
+  withr::local_options(aedes.duckdb_threads = 2)
+  expect_equal(DBI::dbGetQuery(synsnap_con(),
+                               "SELECT current_setting('threads') AS n")$n, 2)
+})

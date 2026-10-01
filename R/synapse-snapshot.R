@@ -13,7 +13,9 @@
 #'   for a delta snapshot, a `delta.parquet` with the rows that differ from its
 #'   full `base` snapshot. Queries use DuckDB (from
 #'   the suggested packages \pkg{duckdb}, \pkg{DBI} and \pkg{dbplyr}) and only
-#'   read the parts of the parquet files that they need.
+#'   read the parts of the parquet files that they need. DuckDB uses every
+#'   core; set the `aedes.duckdb_threads` option before the first query to use
+#'   fewer, e.g. on a shared machine.
 #'
 #'   When no `snapshot` is given, the newest one at or before the requested
 #'   time is used: `timestamp` or the time of `version` when given, otherwise

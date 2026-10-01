@@ -46,7 +46,9 @@ root, plus an optional \code{by_post.parquet} sorted by postsynaptic root) or,
 for a delta snapshot, a \code{delta.parquet} with the rows that differ from its
 full \code{base} snapshot. Queries use DuckDB (from
 the suggested packages \pkg{duckdb}, \pkg{DBI} and \pkg{dbplyr}) and only
-read the parts of the parquet files that they need.
+read the parts of the parquet files that they need. DuckDB uses every
+core; set the \code{aedes.duckdb_threads} option before the first query to use
+fewer, e.g. on a shared machine.
 
 When no \code{snapshot} is given, the newest one at or before the requested
 time is used: \code{timestamp} or the time of \code{version} when given, otherwise
