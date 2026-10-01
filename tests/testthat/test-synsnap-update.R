@@ -116,6 +116,12 @@ test_that("publish and download snapshots", {
   other <- make_snapshot(withr::local_tempdir())
   jsonlite::write_json(list(x = 1), file.path(other, "static.json"))
   expect_error(synsnap_download(url, other), "different static data")
-  withr::local_options(aedes.snapshot_url = NULL)
-  expect_error(aedes_download_snapshot(root = local), "No snapshot url")
+  withr::local_options(aedes.snapshot_url = url)
+  expect_equal(aedes_snapshot_url(), url)
+})
+
+test_that("synsnap_l2_hash", {
+  h <- digest::digest("9\n10\n648518347624785674", algo = "sha256", serialize = FALSE)
+  expect_equal(synsnap_l2_hash(c("648518347624785674", "10", "9", "10")), h)
+  expect_equal(synsnap_l2_hash(bit64::as.integer64(c("10", "9", "648518347624785674"))), h)
 })
