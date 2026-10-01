@@ -17,14 +17,14 @@
 #'   Root ids are looked up at the time of the materialisation `version`: by
 #'   default the newest available version that does not expire within a day.
 #'   The lookup is saved in chunks as it goes, so if it is interrupted (or the
-#'   server fails) just run `aedes_synapse_snapshot_bootstrap()` again with the
+#'   server fails) just run `aedes_build_snapshot()` again with the
 #'   same `version` to carry on. Nothing is visible as a snapshot until it is
 #'   complete and has been checked: the synapses of `n_verify` neurons of
 #'   different sizes are compared with a CAVE query at the same version, and a
 #'   snapshot with any difference is moved to `<root>/.failed` instead.
 #'
 #'   Later snapshots are built as small deltas against this one by
-#'   [aedes_synapse_snapshot_update()].
+#'   [aedes_update_snapshot()].
 #'
 #' @param root Folder for the snapshot (created if needed).
 #' @param version A CAVE materialisation version; `NULL` for the newest one
@@ -35,16 +35,16 @@
 #' @param by_post Whether to also write a copy of the root ids sorted by
 #'   postsynaptic root (see [aedes_synapse_data()]).
 #' @return The snapshot tag, invisibly.
-#' @seealso [aedes_synapse_snapshot()], [aedes_synapse_snapshot_update()]
+#' @seealso [aedes_use_snapshot()], [aedes_update_snapshot()]
 #' @export
 #' @examples
 #' \dontrun{
-#' aedes_synapse_snapshot_bootstrap()
-#' aedes_synapse_snapshot()
+#' aedes_build_snapshot()
+#' aedes_use_snapshot()
 #' }
-aedes_synapse_snapshot_bootstrap <- function(root = aedes_synapse_snapshot_root(create = TRUE),
-                                             version = NULL, keep_source = FALSE,
-                                             n_verify = 20, by_post = FALSE) {
+aedes_build_snapshot <- function(root = aedes_snapshot_root(create = TRUE),
+                                 version = NULL, keep_source = FALSE,
+                                 n_verify = 20, by_post = FALSE) {
   v <- aedes_synsnap_version(version)
   tag <- paste0("v", v$version)
   if (tag %in% synsnap_tags(root)$tag) {

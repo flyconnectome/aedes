@@ -1,6 +1,6 @@
 # Dataset-agnostic access to a local synapse snapshot folder.
 #
-# Layout (see aedes_synapse_snapshot() for the user-facing description):
+# Layout (see aedes_use_snapshot() for the user-facing description):
 #   <root>/static.parquet      id, pre_sv, post_sv, xyz, size; sorted by id
 #   <root>/<tag>/meta.json     tag, timestamp, base (NULL for a full snapshot)
 #   <root>/<tag>/by_pre.parquet
@@ -93,6 +93,15 @@ synsnap_latest <- function(root) {
   tags <- synsnap_tags(root)
   if (!nrow(tags)) stop("No synapse snapshots in ", root, call. = FALSE)
   tags$tag[nrow(tags)]
+}
+
+# newest snapshot at or before `when` (a time, or "now" for the newest
+# snapshot), allowing `tol` seconds for rounding; NULL if there is none
+synsnap_at <- function(root, when, tol = 1) {
+  tags <- synsnap_tags(root)
+  if (!identical(when, "now"))
+    tags <- tags[as.numeric(tags$timestamp) <= as.numeric(when) + tol, , drop = FALSE]
+  if (nrow(tags)) tags$tag[nrow(tags)]
 }
 
 synsnap_sql_str <- function(x) paste0("'", gsub("'", "''", x), "'")

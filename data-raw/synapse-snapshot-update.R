@@ -4,7 +4,7 @@
 devtools::load_all(quiet = TRUE)
 root <- getOption("aedes.synapse_snapshot_root")
 max_delta <- 5e6
-s <- aedes_synapse_snapshot_update(root = root, set = FALSE)
+s <- aedes_update_snapshot(root = root, set = FALSE)
 f <- file.path(root, s$tag, "delta.parquet")
 n <- arrow::open_dataset(f)$num_rows
 message(format(Sys.time()), " saved ", s$tag, " with ", n, " changed synapses")

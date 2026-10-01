@@ -1,4 +1,4 @@
-# Build a local synapse snapshot (see ?aedes_synapse_snapshot) from the
+# Build a local synapse snapshot (see ?aedes_use_snapshot) from the
 # 260226_v3 synapse edgelist and a supervoxel -> root map at CAVE
 # materialisation v513, then check it against the map's root counts and CAVE.
 #
