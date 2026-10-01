@@ -48,7 +48,7 @@ also keep a copy sorted by \code{post_root}, which \code{side = "post"} reads. U
 \examples{
 \dontrun{
 library(dplyr)
-ids <- bit64::as.integer64(aedes_ids("cell_class:DNa"))
+ids <- aedes_ids("class:DNa")
 aedes_synapse_data("post") \%>\%
   filter(post_root \%in\% ids) \%>\%
   count(pre_root, sort = TRUE) \%>\%

@@ -52,7 +52,7 @@ start from.
 \dontrun{
 options(aedes.synapse_snapshot_root = "~/data/aedes/syn_snapshot")
 aedes_update_snapshot()
-aedes_partner_summary("cell_class:DNa", timestamp = "now")
+aedes_partner_summary("class:DNa", timestamp = "now")
 }
 }
 \seealso{

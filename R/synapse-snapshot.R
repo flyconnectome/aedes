@@ -47,7 +47,7 @@
 #' options(aedes.synapse_snapshot_root = "~/data/aedes/syn_snapshot")
 #' aedes_use_snapshot()
 #' # answered locally at the time of the latest materialisation
-#' aedes_partner_summary("cell_class:DNa")
+#' aedes_partner_summary("class:DNa")
 #' }
 aedes_use_snapshot <- function(snapshot = NULL, version = NULL, timestamp = NULL,
                                root = aedes_snapshot_root(), set = TRUE) {
@@ -144,7 +144,7 @@ aedes_snapshot_root <- function(create = FALSE) {
 #' \dontrun{
 #' options(aedes.synapse_snapshot_root = "~/data/aedes/syn_snapshot")
 #' aedes_update_snapshot()
-#' aedes_partner_summary("cell_class:DNa", timestamp = "now")
+#' aedes_partner_summary("class:DNa", timestamp = "now")
 #' }
 aedes_update_snapshot <- function(timestamp = "now", from = "latest",
                                   tag = NULL, root = aedes_snapshot_root(),
@@ -220,7 +220,7 @@ aedes_snapshot_active <- function(snapshot = getOption("aedes.synapse_snapshot")
 #' @examples
 #' \dontrun{
 #' library(dplyr)
-#' ids <- bit64::as.integer64(aedes_ids("cell_class:DNa"))
+#' ids <- aedes_ids("class:DNa")
 #' aedes_synapse_data("post") %>%
 #'   filter(post_root %in% ids) %>%
 #'   count(pre_root, sort = TRUE) %>%

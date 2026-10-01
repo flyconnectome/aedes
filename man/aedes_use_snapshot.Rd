@@ -65,7 +65,7 @@ match the synapse data.
 options(aedes.synapse_snapshot_root = "~/data/aedes/syn_snapshot")
 aedes_use_snapshot()
 # answered locally at the time of the latest materialisation
-aedes_partner_summary("cell_class:DNa")
+aedes_partner_summary("class:DNa")
 }
 }
 \seealso{
