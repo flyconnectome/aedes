@@ -7,20 +7,17 @@ snapshot on disk and access to the aedes CAVE datastack.
 
 ## Quick Start
 
-If you have been given the address of the published snapshots:
+If you have access to the aedes CAVE datastack:
 
 ``` r
 
 library(aedes)
-options(aedes.snapshot_url = "<the address you were given>")
 aedes_download_snapshot()
 aedes_partner_summary("superclass:descending_neuron", partners = "inputs")
 ```
 
 The first download is about 2.3 GB; later ones normally fetch just a few
-MB. You will probably want to put the
-[`options()`](https://rdrr.io/r/base/options.html) line in your
-`.Rprofile`.
+MB.
 
 Read on for more details.
 
@@ -154,8 +151,9 @@ selected snapshot exactly as it is; it does not apply later edits.
 ## Getting a Snapshot
 
 [`aedes_download_snapshot()`](../reference/aedes_download_snapshot.md)
-reads a `manifest.json` from the address you were given and downloads
-any snapshots that you don’t have yet, into
+reads a `manifest.json` from the server where the snapshots are
+published (working out its address needs access to the aedes CAVE
+datastack) and downloads any snapshots that you don’t have yet, into
 [`aedes_snapshot_root()`](../reference/aedes_snapshot_root.md). Every
 file is checked against its md5 and the download resumes after an
 interruption, so if anything goes wrong just run it again. Snapshots

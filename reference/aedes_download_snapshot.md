@@ -14,7 +14,7 @@ served over https.
 
 ``` r
 aedes_download_snapshot(
-  url = getOption("aedes.snapshot_url"),
+  url = NULL,
   root = aedes_snapshot_root(create = TRUE),
   set = TRUE
 )
@@ -27,7 +27,9 @@ aedes_publish_snapshot(dest, root = aedes_snapshot_root(), snapshot = "latest")
 - url:
 
   The address of the published snapshots (the folder or its
-  `manifest.json`). Defaults to the `aedes.snapshot_url` option.
+  `manifest.json`). The default (`NULL`) uses the `aedes.snapshot_url`
+  option if set, and otherwise the standard address, which needs access
+  to the aedes CAVE datastack to work out.
 
 - root:
 
@@ -79,8 +81,6 @@ that has just read the previous manifest can still finish.
 
 ``` r
 if (FALSE) { # \dontrun{
-# the url is given to you by the snapshot maintainer
-options(aedes.snapshot_url = "https://...")
 aedes_download_snapshot()
 } # }
 ```

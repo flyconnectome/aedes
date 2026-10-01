@@ -73,6 +73,10 @@ The `aedes.version` option is only changed when you give `version` or
 `timestamp`, so that metadata and root ids from other aedes functions
 match the synapse data.
 
+If there is no snapshot in `root`, you are asked whether to download one
+with [`aedes_download_snapshot()`](aedes_download_snapshot.md) (in an
+interactive session) or get an error saying how to.
+
 ## See also
 
 [`aedes_partner_summary()`](aedes_partner_summary.md),
