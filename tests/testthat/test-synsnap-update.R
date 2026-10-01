@@ -183,12 +183,43 @@ test_that("publish and download snapshots", {
     dplyr::collect(dplyr::arrange(synsnap_tbl("s2", root, static = TRUE), id)))
   expect_length(synsnap_download(paste0(url, "/manifest.json"), local), 0)
 
-  # a snapshot dropped from the manifest is removed one publish later
-  m2 <- synsnap_publish(root, pub, "s1")
+  # later checkpoints, including a backfill on a side branch, arrive after
+  # their parents; an unfinished one is not published
+  add_cp <- function(tag, parent, time) {
+    dir.create(file.path(root, tag))
+    file.copy(file.path(root, "s2", "log.parquet"), file.path(root, tag))
+    if (!is.null(time))
+      jsonlite::write_json(list(tag = tag, timestamp = time, base = "s1", parent = parent),
+                           file.path(root, tag, "meta.json"), auto_unbox = TRUE)
+  }
+  add_cp("s4", "s2", "2026-01-04 00:00:00.000000 UTC")
+  add_cp("s3", "s2", "2026-01-03 00:00:00.000000 UTC")
+  add_cp("s3b", "s3", "2026-01-03 06:00:00.000000 UTC")
+  add_cp("s5", "s4", NULL)
+  m <- synsnap_publish(root, pub)
+  expect_equal(m$latest, "s4")
+  expect_equal(m$snapshots$tag, c("s1", "s2", "s3", "s3b", "s4"))
+  expect_equal(m$snapshots$parent[m$snapshots$tag == "s3b"], "s3")
+  expect_equal(synsnap_download(url, local), c("s3", "s4", "s3b"))
+  expect_true(all(synsnap_tags(local)$usable))
+  expect_equal(synsnap_meta("s3b", local)$timestamp, synsnap_meta("s3b", root)$timestamp)
+
+  # a checkpoint with a missing parent is not published
+  unlink(file.path(root, "s3"), recursive = TRUE)
+  expect_error(synsnap_publish(root, pub, "s3b"), "needs snapshot 's3'")
+  expect_false("s3b" %in% synsnap_publish(root, pub)$snapshots$tag)
+
+  # after a rebase only the new full snapshot and its checkpoints are listed;
+  # dropped files are removed one publish later
+  synsnap_rebase("s4", root)
+  m2 <- synsnap_publish(root, pub)
+  expect_equal(m2$snapshots$tag, "s4")
+  expect_true(file.exists(file.path(pub, "s4", "by_pre.parquet")))
   expect_true("s2/log.parquet" %in% m2$keep)
   expect_true(file.exists(file.path(pub, "s2", "log.parquet")))
-  synsnap_publish(root, pub, "s1")
+  synsnap_publish(root, pub)
   expect_false(dir.exists(file.path(pub, "s2")))
+  expect_false(file.exists(file.path(pub, "s4", "log.parquet")))
 
   other <- make_snapshot(withr::local_tempdir())
   jsonlite::write_json(list(x = 1), file.path(other, "static.json"))
