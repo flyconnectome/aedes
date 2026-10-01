@@ -27,6 +27,10 @@
 #'   `timestamp`, so that metadata and root ids from other aedes functions
 #'   match the synapse data.
 #'
+#'   If there is no snapshot in `root`, you are asked whether to download one
+#'   with [aedes_download_snapshot()] (in an interactive session) or get an
+#'   error saying how to.
+#'
 #' @param snapshot The snapshot tag, or `"latest"` for the most recent
 #'   snapshot in `root`. The default (`NULL`) chooses one to match `version`,
 #'   `timestamp` or the `aedes.version` option.
@@ -54,6 +58,7 @@ aedes_use_snapshot <- function(snapshot = NULL, version = NULL, timestamp = NULL
   explicit <- !is.null(version) || !is.null(timestamp)
   if (!is.null(snapshot) && explicit)
     stop("Give either a snapshot or a version/timestamp, not both", call. = FALSE)
+  if (set) aedes_snapshot_check(root)
   if (is.null(snapshot)) {
     when <- partner_summary_local_time(version, timestamp)
     snapshot <- synsnap_at(root, when)
@@ -76,6 +81,22 @@ aedes_use_snapshot <- function(snapshot = NULL, version = NULL, timestamp = NULL
                     digits = 6)))
   invisible(op)
 }
+
+# Offer to download a snapshot when `root` has none, or say how to get one
+aedes_snapshot_check <- function(root) {
+  if (dir.exists(root) && nrow(synsnap_tags(root))) return(invisible(TRUE))
+  msg <- paste0("No local synapse snapshot in ", root, ".")
+  if (rlang::is_interactive() &&
+      isTRUE(ask_yes_no(paste(msg, "Download one now (about 2.3 GB)?")))) {
+    aedes_download_snapshot(root = root, set = FALSE)
+    return(invisible(TRUE))
+  }
+  stop(msg, " Download one with aedes_download_snapshot() (about 2.3 GB, ",
+       "needs access to the aedes CAVE datastack) or see ",
+       "vignette(\"synapse-snapshots\", package = \"aedes\")", call. = FALSE)
+}
+
+ask_yes_no <- function(msg) utils::askYesNo(msg)
 
 format_utc <- function(x, digits = 0)
   if (identical(x, "now")) x else

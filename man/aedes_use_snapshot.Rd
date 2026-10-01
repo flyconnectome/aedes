@@ -59,6 +59,10 @@ snapshot from CAVE (see its details).
 The \code{aedes.version} option is only changed when you give \code{version} or
 \code{timestamp}, so that metadata and root ids from other aedes functions
 match the synapse data.
+
+If there is no snapshot in \code{root}, you are asked whether to download one
+with \code{\link[=aedes_download_snapshot]{aedes_download_snapshot()}} (in an interactive session) or get an
+error saying how to.
 }
 \examples{
 \dontrun{

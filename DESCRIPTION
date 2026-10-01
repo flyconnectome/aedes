@@ -20,6 +20,7 @@ Depends:
 Imports:
     arrow,
     bit64,
+    digest,
     dplyr,
     glue,
     httr,

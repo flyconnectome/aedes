@@ -6,7 +6,7 @@
 \title{Download or publish Aedes synapse snapshots}
 \usage{
 aedes_download_snapshot(
-  url = getOption("aedes.snapshot_url"),
+  url = NULL,
   root = aedes_snapshot_root(create = TRUE),
   set = TRUE
 )
@@ -15,7 +15,9 @@ aedes_publish_snapshot(dest, root = aedes_snapshot_root(), snapshot = "latest")
 }
 \arguments{
 \item{url}{The address of the published snapshots (the folder or its
-\code{manifest.json}). Defaults to the \code{aedes.snapshot_url} option.}
+\code{manifest.json}). The default (\code{NULL}) uses the \code{aedes.snapshot_url}
+option if set, and otherwise the standard address, which needs access to
+the aedes CAVE datastack to work out.}
 
 \item{root}{The local snapshot folder. Defaults to \code{\link[=aedes_snapshot_root]{aedes_snapshot_root()}}.}
 
@@ -59,8 +61,6 @@ just read the previous manifest can still finish.
 }
 \examples{
 \dontrun{
-# the url is given to you by the snapshot maintainer
-options(aedes.snapshot_url = "https://...")
 aedes_download_snapshot()
 }
 }
