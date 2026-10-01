@@ -95,6 +95,15 @@ synsnap_latest <- function(root) {
   tags$tag[nrow(tags)]
 }
 
+# newest snapshot at or before `when` (a time, or "now" for the newest
+# snapshot), allowing `tol` seconds for rounding; NULL if there is none
+synsnap_at <- function(root, when, tol = 1) {
+  tags <- synsnap_tags(root)
+  if (!identical(when, "now"))
+    tags <- tags[as.numeric(tags$timestamp) <= as.numeric(when) + tol, , drop = FALSE]
+  if (nrow(tags)) tags$tag[nrow(tags)]
+}
+
 synsnap_sql_str <- function(x) paste0("'", gsub("'", "''", x), "'")
 
 # ids as SQL integer literals without going through double

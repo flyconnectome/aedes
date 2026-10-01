@@ -15,15 +15,24 @@
 #'   the suggested packages \pkg{duckdb}, \pkg{DBI} and \pkg{dbplyr}) and only
 #'   read the parts of the parquet files that they need.
 #'
-#'   Selecting a snapshot with `set = TRUE` also sets the `aedes.version`
-#'   option to the snapshot's timestamp (see [aedes_set_version()]), so that
-#'   metadata and root ids from other aedes functions match the synapse data.
-#'   [aedes_partner_summary()] can still answer queries for later times,
-#'   including `timestamp = "now"`, by fetching the edits made since the
+#'   When no `snapshot` is given, the newest one at or before the requested
+#'   time is used: `timestamp` or the time of `version` when given, otherwise
+#'   the `aedes.version` option (see [aedes_set_version()]). So by default
+#'   (`"latest"`) this is the snapshot of the newest materialisation version,
+#'   while for `"now"` it is the newest snapshot. [aedes_partner_summary()]
+#'   answers queries for later times by fetching the edits made since the
 #'   snapshot from CAVE (see its details).
 #'
-#' @param snapshot The snapshot tag, or `"latest"` (the default) for the most
-#'   recent snapshot in `root`.
+#'   The `aedes.version` option is only changed when you give `version` or
+#'   `timestamp`, so that metadata and root ids from other aedes functions
+#'   match the synapse data.
+#'
+#' @param snapshot The snapshot tag, or `"latest"` for the most recent
+#'   snapshot in `root`. The default (`NULL`) chooses one to match `version`,
+#'   `timestamp` or the `aedes.version` option.
+#' @param version,timestamp A CAVE materialisation version or a timestamp
+#'   (including `"now"`) to choose the snapshot for. Either one also sets the
+#'   `aedes.version` option.
 #' @param root The snapshot folder. Defaults to
 #'   [aedes_snapshot_root()].
 #' @param set Whether to make this the default snapshot for the session.
@@ -37,22 +46,40 @@
 #' \dontrun{
 #' options(aedes.synapse_snapshot_root = "~/data/aedes/syn_snapshot")
 #' aedes_use_snapshot()
-#' # now answered locally at the snapshot time
+#' # answered locally at the time of the latest materialisation
 #' aedes_partner_summary("cell_class:DNa")
 #' }
-aedes_use_snapshot <- function(snapshot = "latest",
+aedes_use_snapshot <- function(snapshot = NULL, version = NULL, timestamp = NULL,
                                root = aedes_snapshot_root(), set = TRUE) {
-  if (identical(snapshot, "latest"))
-    snapshot <- synsnap_latest(root)
+  explicit <- !is.null(version) || !is.null(timestamp)
+  if (!is.null(snapshot) && explicit)
+    stop("Give either a snapshot or a version/timestamp, not both", call. = FALSE)
+  if (is.null(snapshot)) {
+    when <- partner_summary_local_time(version, timestamp)
+    snapshot <- synsnap_at(root, when)
+    if (is.null(snapshot)) {
+      snapshot <- synsnap_tags(root)$tag[1]
+      message("No synapse snapshot is as old as ", format_utc(when),
+              ": queries for that time will use CAVE")
+    }
+  } else if (identical(snapshot, "latest")) snapshot <- synsnap_latest(root)
   m <- synsnap_meta(snapshot, root)
   root <- normalizePath(root, mustWork = TRUE)
   if (!set)
     return(list(tag = snapshot, timestamp = m$timestamp, root = root))
-  invisible(options(
-    aedes.synapse_snapshot_root = root,
-    aedes.synapse_snapshot = snapshot,
-    aedes.version = format(m$timestamp, "%Y-%m-%d %H:%M:%OS6 UTC", tz = "UTC")))
+  message("Using synapse snapshot '", snapshot, "' (", format_utc(m$timestamp), ")")
+  op <- options(aedes.synapse_snapshot_root = root,
+                aedes.synapse_snapshot = snapshot)
+  if (explicit) op <- c(op, options(aedes.version = if (is.null(timestamp))
+    as.integer(version) else if (identical(timestamp, "now")) "now"
+    else format_utc(with_aedes(fafbseg::flywire_timestamp(timestamp = timestamp)),
+                    digits = 6)))
+  invisible(op)
 }
+
+format_utc <- function(x, digits = 0)
+  if (identical(x, "now")) x else
+    format(x, paste0("%Y-%m-%d %H:%M:%OS", if (digits) digits, " UTC"), tz = "UTC")
 
 #' Folder for local Aedes synapse snapshots
 #'
@@ -163,6 +190,8 @@ aedes_snapshot_active <- function(snapshot = getOption("aedes.synapse_snapshot")
 #'   snapshot has one. `NULL` (the default) and `"pre"` read the copy sorted by
 #'   `pre_root`.
 #' @param details Whether to add supervoxel, position and size columns.
+#' @param snapshot The snapshot tag, or `"latest"` for the most recent
+#'   snapshot in `root`. Defaults to the one chosen by [aedes_use_snapshot()].
 #' @inheritParams aedes_use_snapshot
 #' @return A lazy `tbl`.
 #' @seealso [aedes_use_snapshot()]

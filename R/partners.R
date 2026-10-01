@@ -16,9 +16,10 @@
 #'   CAVE.
 #'
 #'   The time of a local query is `timestamp` (or the time of `version`) when
-#'   given. Otherwise it is the `aedes.version` option when that is a
-#'   timestamp, as set by [aedes_use_snapshot()], so that results match the
-#'   snapshot and other aedes metadata; and otherwise now.
+#'   given, otherwise that of the `aedes.version` option (see
+#'   [aedes_set_version()]), just as for CAVE queries. If the selected
+#'   snapshot is newer than this, the newest older snapshot in the same folder
+#'   is used instead, when there is one.
 #'
 #'   Local queries after the snapshot time fetch only the changes made since
 #'   then from CAVE and look up the new root ids of the affected synapses'
@@ -102,6 +103,11 @@ aedes_partner_summary <- function(rootids,
     stop("No local synapse snapshot selected. See ?aedes_use_snapshot")
   if (!is.null(snap)) {
     when = partner_summary_local_time(version, timestamp)
+    # e.g. after aedes_update_snapshot() but querying an older version
+    if (!identical(when, "now") && as.numeric(when) < as.numeric(snap$timestamp) - 1) {
+      tag = synsnap_at(snap$root, when)
+      if (!is.null(tag)) snap = aedes_use_snapshot(tag, root = snap$root, set = FALSE)
+    }
     why = partner_summary_local_problem(snap, when, ...)
     if (method == "local" && !is.null(why))
       stop("Cannot use the local synapse snapshot: ", why)
@@ -146,17 +152,23 @@ aedes_partner_summary <- function(rootids,
 }
 
 # The time a local query should use: an explicit timestamp or version, else
-# the aedes.version option when it is pinned to a timestamp (as by
-# aedes_use_snapshot()), else "now"
+# the aedes.version option ("latest" meaning the time of the newest version).
+# "now" is kept as is, since updates to now are cached differently.
 partner_summary_local_time <- function(version = NULL, timestamp = NULL) {
+  if (is.null(version) && is.null(timestamp)) {
+    which = getOption("aedes.version", "latest")
+    if (is.numeric(which) || identical(which, "latest")) version = which
+    else timestamp = which
+  }
   if (identical(timestamp, "now")) return("now")
-  if (!is.null(timestamp) || !is.null(version))
-    return(with_aedes(fafbseg::flywire_timestamp(version = version,
-                                                 timestamp = timestamp)))
-  opt = getOption("aedes.version")
-  if (is.character(opt) && length(opt) == 1 && !opt %in% c("latest", "now"))
-    return(with_aedes(fafbseg::flywire_timestamp(timestamp = opt)))
-  "now"
+  if (!is.null(timestamp))
+    return(with_aedes(fafbseg::flywire_timestamp(timestamp = timestamp)))
+  aedes_version_timestamp(version)
+}
+
+aedes_version_timestamp <- function(version = "latest") {
+  v = aedes_get_version(version = version)$version
+  with_aedes(fafbseg::flywire_timestamp(version = v))
 }
 
 # NULL if a partner query can be answered from snapshot `snap` at `when`,

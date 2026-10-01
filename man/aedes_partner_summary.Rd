@@ -68,9 +68,10 @@ queried. \code{method = "local"} gives an error rather than falling back to
 CAVE.
 
 The time of a local query is \code{timestamp} (or the time of \code{version}) when
-given. Otherwise it is the \code{aedes.version} option when that is a
-timestamp, as set by \code{\link[=aedes_use_snapshot]{aedes_use_snapshot()}}, so that results match the
-snapshot and other aedes metadata; and otherwise now.
+given, otherwise that of the \code{aedes.version} option (see
+\code{\link[=aedes_set_version]{aedes_set_version()}}), just as for CAVE queries. If the selected
+snapshot is newer than this, the newest older snapshot in the same folder
+is used instead, when there is one.
 
 Local queries after the snapshot time fetch only the changes made since
 then from CAVE and look up the new root ids of the affected synapses'

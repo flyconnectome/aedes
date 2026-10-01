@@ -5,14 +5,21 @@
 \title{Use a local snapshot of the Aedes synapse table}
 \usage{
 aedes_use_snapshot(
-  snapshot = "latest",
+  snapshot = NULL,
+  version = NULL,
+  timestamp = NULL,
   root = aedes_snapshot_root(),
   set = TRUE
 )
 }
 \arguments{
-\item{snapshot}{The snapshot tag, or \code{"latest"} (the default) for the most
-recent snapshot in \code{root}.}
+\item{snapshot}{The snapshot tag, or \code{"latest"} for the most recent
+snapshot in \code{root}. The default (\code{NULL}) chooses one to match \code{version},
+\code{timestamp} or the \code{aedes.version} option.}
+
+\item{version, timestamp}{A CAVE materialisation version or a timestamp
+(including \code{"now"}) to choose the snapshot for. Either one also sets the
+\code{aedes.version} option.}
 
 \item{root}{The snapshot folder. Defaults to
 \code{\link[=aedes_snapshot_root]{aedes_snapshot_root()}}.}
@@ -41,18 +48,23 @@ full \code{base} snapshot. Queries use DuckDB (from
 the suggested packages \pkg{duckdb}, \pkg{DBI} and \pkg{dbplyr}) and only
 read the parts of the parquet files that they need.
 
-Selecting a snapshot with \code{set = TRUE} also sets the \code{aedes.version}
-option to the snapshot's timestamp (see \code{\link[=aedes_set_version]{aedes_set_version()}}), so that
-metadata and root ids from other aedes functions match the synapse data.
-\code{\link[=aedes_partner_summary]{aedes_partner_summary()}} can still answer queries for later times,
-including \code{timestamp = "now"}, by fetching the edits made since the
+When no \code{snapshot} is given, the newest one at or before the requested
+time is used: \code{timestamp} or the time of \code{version} when given, otherwise
+the \code{aedes.version} option (see \code{\link[=aedes_set_version]{aedes_set_version()}}). So by default
+(\code{"latest"}) this is the snapshot of the newest materialisation version,
+while for \code{"now"} it is the newest snapshot. \code{\link[=aedes_partner_summary]{aedes_partner_summary()}}
+answers queries for later times by fetching the edits made since the
 snapshot from CAVE (see its details).
+
+The \code{aedes.version} option is only changed when you give \code{version} or
+\code{timestamp}, so that metadata and root ids from other aedes functions
+match the synapse data.
 }
 \examples{
 \dontrun{
 options(aedes.synapse_snapshot_root = "~/data/aedes/syn_snapshot")
 aedes_use_snapshot()
-# now answered locally at the snapshot time
+# answered locally at the time of the latest materialisation
 aedes_partner_summary("cell_class:DNa")
 }
 }

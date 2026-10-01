@@ -18,8 +18,8 @@ snapshot has one. \code{NULL} (the default) and \code{"pre"} read the copy sorte
 
 \item{details}{Whether to add supervoxel, position and size columns.}
 
-\item{snapshot}{The snapshot tag, or \code{"latest"} (the default) for the most
-recent snapshot in \code{root}.}
+\item{snapshot}{The snapshot tag, or \code{"latest"} for the most recent
+snapshot in \code{root}. Defaults to the one chosen by \code{\link[=aedes_use_snapshot]{aedes_use_snapshot()}}.}
 
 \item{root}{The snapshot folder. Defaults to
 \code{\link[=aedes_snapshot_root]{aedes_snapshot_root()}}.}
