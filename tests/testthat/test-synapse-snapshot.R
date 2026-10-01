@@ -391,3 +391,20 @@ test_that("verifying a snapshot against CAVE", {
   expect_error(suppressMessages(aedes_synsnap_verify("s1", root, 1, ctx = w$ctx)),
                "synapse ids differ")
 })
+
+test_that("aedes_use_snapshot without a snapshot", {
+  empty <- file.path(withr::local_tempdir(), "none")
+  withr::local_options(rlang_interactive = FALSE)
+  expect_error(aedes_use_snapshot(root = empty), "aedes_download_snapshot\\(\\)")
+  withr::local_options(rlang_interactive = TRUE)
+  local_mocked_bindings(ask_yes_no = function(msg) FALSE)
+  expect_error(aedes_use_snapshot(root = empty), "No local synapse snapshot")
+  skip_if_no_duckdb()
+  root <- withr::local_tempdir()
+  local_mocked_bindings(
+    ask_yes_no = function(msg) TRUE,
+    aedes_download_snapshot = function(root, set) make_snapshot(root))
+  withr::local_options(aedes.synapse_snapshot_root = NULL,
+                       aedes.synapse_snapshot = NULL, aedes.version = "now")
+  expect_message(aedes_use_snapshot(root = root), "'s2'")
+})
