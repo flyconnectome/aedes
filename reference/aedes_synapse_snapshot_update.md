@@ -12,7 +12,7 @@ aedes_synapse_snapshot_update(
   timestamp = "now",
   from = "latest",
   tag = NULL,
-  root = getOption("aedes.synapse_snapshot_root"),
+  root = aedes_synapse_snapshot_root(),
   rebase = FALSE,
   set = TRUE
 )
@@ -38,8 +38,8 @@ aedes_synapse_snapshot_update(
 
 - root:
 
-  The snapshot folder. Defaults to the `aedes.synapse_snapshot_root`
-  option.
+  The snapshot folder. Defaults to
+  [`aedes_synapse_snapshot_root()`](aedes_synapse_snapshot_root.md).
 
 - rebase:
 

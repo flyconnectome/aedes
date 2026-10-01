@@ -13,7 +13,7 @@ aedes_synapse_data(
   side = NULL,
   static = FALSE,
   snapshot = getOption("aedes.synapse_snapshot", "latest"),
-  root = getOption("aedes.synapse_snapshot_root")
+  root = aedes_synapse_snapshot_root()
 )
 ```
 
@@ -36,8 +36,8 @@ aedes_synapse_data(
 
 - root:
 
-  The snapshot folder. Defaults to the `aedes.synapse_snapshot_root`
-  option.
+  The snapshot folder. Defaults to
+  [`aedes_synapse_snapshot_root()`](aedes_synapse_snapshot_root.md).
 
 ## Value
 

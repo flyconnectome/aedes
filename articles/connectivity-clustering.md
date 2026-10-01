@@ -88,7 +88,7 @@ cov <- x %>%
   as.data.frame()
 cov
 #>   partners  type group pgroup
-#> 1   inputs 0.001 0.126  0.161
+#> 1   inputs 0.001 0.127  0.161
 #> 2  outputs 0.008 0.327  0.631
 ```
 
@@ -106,7 +106,7 @@ cf_cosine_plot(x, group = "group", labRow = "{side}_{serial_id}")
 #> "pre_key", : Dropping: 1441/1715 neurons representing 19931/29629 synapses due
 #> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
-#> groupcol, : Dropping: 4335/4477 neurons representing 51965/59464 synapses due
+#> groupcol, : Dropping: 4332/4477 neurons representing 51935/59469 synapses due
 #> to missing ids!
 ```
 
@@ -121,7 +121,7 @@ cf_cosine_plot(x, group = "pgroup", labRow = "{side}_{serial_id}")
 #> "pre_key", : Dropping: 1069/1715 neurons representing 10921/29629 synapses due
 #> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
-#> groupcol, : Dropping: 4261/4477 neurons representing 49905/59464 synapses due
+#> groupcol, : Dropping: 4261/4477 neurons representing 49910/59469 synapses due
 #> to missing ids!
 ```
 
@@ -174,7 +174,7 @@ cf_cosine_plot(x, group = "pgroup2", labRow = "{side}_{serial_id}")
 #> "pre_key", : Dropping: 1069/1715 neurons representing 10921/29629 synapses due
 #> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
-#> groupcol, : Dropping: 4261/4477 neurons representing 49905/59464 synapses due
+#> groupcol, : Dropping: 4261/4477 neurons representing 49910/59469 synapses due
 #> to missing ids!
 ```
 

@@ -11,7 +11,7 @@ root id of both partners of every synapse at one moment in time.
 ``` r
 aedes_synapse_snapshot(
   snapshot = "latest",
-  root = getOption("aedes.synapse_snapshot_root"),
+  root = aedes_synapse_snapshot_root(),
   set = TRUE
 )
 ```
@@ -25,8 +25,8 @@ aedes_synapse_snapshot(
 
 - root:
 
-  The snapshot folder. Defaults to the `aedes.synapse_snapshot_root`
-  option.
+  The snapshot folder. Defaults to
+  [`aedes_synapse_snapshot_root()`](aedes_synapse_snapshot_root.md).
 
 - set:
 

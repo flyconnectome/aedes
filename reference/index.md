@@ -71,6 +71,10 @@ Summarise synaptic partners.
   snapshot of the Aedes synapse table
 - [`aedes_synapse_snapshot_update()`](aedes_synapse_snapshot_update.md)
   : Bring a local Aedes synapse snapshot up to date
+- [`aedes_synapse_snapshot_root()`](aedes_synapse_snapshot_root.md) :
+  Folder for local Aedes synapse snapshots
+- [`aedes_synapse_snapshot_bootstrap()`](aedes_synapse_snapshot_bootstrap.md)
+  : Build the synapse snapshot from scratch
 - [`aedes_synapse_data()`](aedes_synapse_data.md) : Lazy access to all
   synapses in a local snapshot
 
