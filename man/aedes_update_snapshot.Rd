@@ -14,11 +14,12 @@ aedes_update_snapshot(
 )
 }
 \arguments{
-\item{timestamp}{The time for the new snapshot: a POSIXct or a string
-accepted by \code{\link[=as.POSIXct]{as.POSIXct()}}, or \code{"now"} (the default).}
+\item{timestamp}{The time for the new snapshot: \code{"now"} (the default),
+\code{"latest"} for the time of the newest CAVE materialisation version, a
+POSIXct or a string accepted by \code{\link[=as.POSIXct]{as.POSIXct()}}.}
 
 \item{from}{The snapshot to start from, or \code{"latest"} (the default) for the
-most recent snapshot in \code{root}.}
+most recent snapshot in \code{root} at or before \code{timestamp}.}
 
 \item{tag}{The name of the new snapshot. Defaults to the timestamp, e.g.
 \code{"20261001T120000"}.}

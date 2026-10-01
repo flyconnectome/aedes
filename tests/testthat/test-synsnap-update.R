@@ -60,7 +60,8 @@ test_that("aedes_update_snapshot", {
   local_mocked_bindings(aedes_synsnap_ctx = function() w$ctx)
   withr::local_options(aedes.synapse_snapshot_root = NULL,
                        aedes.synapse_snapshot = NULL, aedes.version = NULL)
-  s <- aedes_update_snapshot(from = "s1", root = root, set = FALSE)
+  expect_message(s <- aedes_update_snapshot(from = "s1", root = root, set = FALSE),
+                 "to 2026-01-01 03:00:00 UTC \\(now\\)")
   expect_equal(s$tag, "20260101T030000")
   expect_equal(s$timestamp, w$now)
   expect_tag_matches(w, s$tag, w$now)
@@ -69,4 +70,15 @@ test_that("aedes_update_snapshot", {
   expect_true(file.exists(synsnap_path(root, "full", "by_pre.parquet")))
   expect_equal(getOption("aedes.synapse_snapshot"), "full")
   expect_tag_matches(w, "full", w$now - 3600)
+  expect_message(aedes_update_snapshot(), "aedes_set_version")
+
+  # "latest": the time of the newest version; the start is the newest
+  # snapshot at or before it
+  local_mocked_bindings(aedes_version_timestamp = function(version) w$now - 7200)
+  expect_message(s <- aedes_update_snapshot("latest", root = root, set = FALSE),
+                 "'s1'.*latest materialisation")
+  expect_equal(s$timestamp, w$now - 7200)
+  expect_message(aedes_update_snapshot("latest", root = root, set = FALSE),
+                 "already at")
+  expect_error(aedes_update_snapshot("2025-01-01", root = root), "as old as")
 })

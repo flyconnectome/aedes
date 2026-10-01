@@ -128,10 +128,11 @@ aedes_snapshot_root <- function(create = FALSE) {
 #'   `rebase = TRUE` to save a full snapshot (about 0.6 GB) that later deltas
 #'   start from.
 #'
-#' @param timestamp The time for the new snapshot: a POSIXct or a string
-#'   accepted by [as.POSIXct()], or `"now"` (the default).
+#' @param timestamp The time for the new snapshot: `"now"` (the default),
+#'   `"latest"` for the time of the newest CAVE materialisation version, a
+#'   POSIXct or a string accepted by [as.POSIXct()].
 #' @param from The snapshot to start from, or `"latest"` (the default) for the
-#'   most recent snapshot in `root`.
+#'   most recent snapshot in `root` at or before `timestamp`.
 #' @param tag The name of the new snapshot. Defaults to the timestamp, e.g.
 #'   `"20261001T120000"`.
 #' @param rebase Whether to save a full snapshot rather than a delta.
@@ -148,17 +149,37 @@ aedes_snapshot_root <- function(create = FALSE) {
 aedes_update_snapshot <- function(timestamp = "now", from = "latest",
                                   tag = NULL, root = aedes_snapshot_root(),
                                   rebase = FALSE, set = TRUE) {
-  if (identical(from, "latest"))
-    from <- synsnap_latest(root)
   ctx <- aedes_synsnap_ctx()
+  what <- if (identical(timestamp, "now")) "now"
+  else if (identical(timestamp, "latest")) "latest materialisation"
   timestamp <- if (identical(timestamp, "now")) ctx$now()
+  else if (identical(timestamp, "latest")) aedes_version_timestamp("latest")
   else as.POSIXct(timestamp, tz = "UTC")
-  if (is.null(tag))
-    tag <- format(timestamp, "%Y%m%dT%H%M%S", tz = "UTC")
-  synsnap_update(from, tag, timestamp, root = root, ctx = ctx)
-  if (rebase)
-    synsnap_rebase(tag, root)
-  aedes_use_snapshot(tag, root = root, set = set)
+  if (identical(from, "latest")) {
+    from <- synsnap_at(root, timestamp)
+    if (is.null(from))
+      stop("No synapse snapshot in ", root, " is as old as ",
+           format_utc(timestamp), call. = FALSE)
+  }
+  ft <- synsnap_meta(from, root)$timestamp
+  if (is.null(tag) && abs(as.numeric(timestamp) - as.numeric(ft)) <= 1 && !rebase) {
+    message("Synapse snapshot '", from, "' is already at ", format_utc(timestamp))
+    tag <- from
+  } else {
+    if (is.null(tag))
+      tag <- format(timestamp, "%Y%m%dT%H%M%S", tz = "UTC")
+    message("Updating synapse snapshot '", from, "' (", format_utc(ft), ") to ",
+            format_utc(timestamp), if (!is.null(what)) paste0(" (", what, ")"))
+    synsnap_update(from, tag, timestamp, root = root, ctx = ctx)
+    if (rebase)
+      synsnap_rebase(tag, root)
+  }
+  res <- aedes_use_snapshot(tag, root = root, set = set)
+  if (set && identical(what, "now") &&
+      !identical(getOption("aedes.version", "latest"), "now"))
+    message("Partner queries follow the aedes.version option; ",
+            "use aedes_set_version(\"now\") to query this snapshot by default")
+  res
 }
 
 # the active snapshot: list(tag, timestamp, root) or NULL if none configured
