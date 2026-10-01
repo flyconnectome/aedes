@@ -8,7 +8,7 @@ aedes_synapse_data(
   side = NULL,
   static = FALSE,
   snapshot = getOption("aedes.synapse_snapshot", "latest"),
-  root = getOption("aedes.synapse_snapshot_root")
+  root = aedes_synapse_snapshot_root()
 )
 }
 \arguments{
@@ -21,8 +21,8 @@ snapshot has one. \code{NULL} (the default) and \code{"pre"} read the copy sorte
 \item{snapshot}{The snapshot tag, or \code{"latest"} (the default) for the most
 recent snapshot in \code{root}.}
 
-\item{root}{The snapshot folder. Defaults to the
-\code{aedes.synapse_snapshot_root} option.}
+\item{root}{The snapshot folder. Defaults to
+\code{\link[=aedes_synapse_snapshot_root]{aedes_synapse_snapshot_root()}}.}
 }
 \value{
 A lazy \code{tbl}.

@@ -22,18 +22,36 @@ synsnap_write <- function(con, sql, f, row_group_size = 262144, level = 19,
   invisible(f)
 }
 
-# Make a data.frame or feather file(s) queryable as a duckdb view. Returns its
-# name; unregistered when `env` exits.
-synsnap_source <- function(con, x, env = parent.frame()) {
+# Make a data.frame, or feather, parquet or csv file(s), queryable as a duckdb
+# view. Returns its name; the view goes away when `env` exits. `format` "auto"
+# goes by the first file's extension (feather/arrow, parquet, otherwise csv).
+# `types` gives duckdb types for named csv columns; the rest are sniffed.
+synsnap_source <- function(con, x, env = parent.frame(), format = "auto",
+                           types = NULL) {
   nm <- paste0("synsnap_src_", paste(sample(letters, 12, TRUE), collapse = ""))
   if (is.data.frame(x)) {
     duckdb::duckdb_register(con, nm, x)
     withr::defer(duckdb::duckdb_unregister(con, nm), envir = env)
-  } else {
+    return(nm)
+  }
+  format <- match.arg(format, c("auto", "feather", "parquet", "csv"))
+  if (format == "auto")
+    format <- switch(tolower(tools::file_ext(x[1])), feather = , arrow = "feather",
+                     parquet = "parquet", "csv")
+  if (format == "feather") {
     arrow::to_duckdb(arrow::open_dataset(x, format = "feather"), con = con,
                      table_name = nm, auto_disconnect = FALSE)
     withr::defer(duckdb::duckdb_unregister_arrow(con, nm), envir = env)
+    return(nm)
   }
+  files <- sprintf("[%s]", paste(synsnap_sql_str(path.expand(x)), collapse = ", "))
+  from <- if (format == "parquet") sprintf("read_parquet(%s)", files)
+  else sprintf("read_csv(%s, header = true%s)", files,
+               if (length(types)) sprintf(", types = {%s}", paste(sprintf(
+                 "%s: '%s'", synsnap_sql_str(names(types)), types), collapse = ", "))
+               else "")
+  DBI::dbExecute(con, sprintf("CREATE TEMP VIEW %s AS SELECT * FROM %s", nm, from))
+  withr::defer(DBI::dbExecute(con, paste("DROP VIEW IF EXISTS", nm)), envir = env)
   nm
 }
 
@@ -44,22 +62,48 @@ synsnap_edgelist_cols <- function() c(
   post_x = "postsyn_x", post_y = "postsyn_y", post_z = "postsyn_z",
   size = "size")
 
+# duckdb types of static.parquet columns; others keep their source type
+synsnap_static_types <- function() c(
+  id = "INTEGER", pre_sv = "BIGINT", post_sv = "BIGINT",
+  pre_x = "INTEGER", pre_y = "INTEGER", pre_z = "INTEGER",
+  post_x = "INTEGER", post_y = "INTEGER", post_z = "INTEGER", size = "INTEGER")
+
 # Write <root>/static.parquet (sorted by id) from a synapse edgelist: a
-# data.frame or feather file(s), with `columns` mapping output to input names.
+# data.frame, or feather or csv file(s), with `columns` mapping output to input
+# names. Columns are cast to `types`, failing on values that are not whole
+# numbers or do not fit (csv exports write some integer columns as 1.0).
+# Supervoxel (BIGINT) columns are read from csv as BIGINT, never via double.
+# `meta` is written to static.json along with the row count.
 synsnap_build_static <- function(edgelist, root, columns = synsnap_edgelist_cols(),
-                                 overwrite = FALSE) {
+                                 overwrite = FALSE, format = "auto",
+                                 types = synsnap_static_types(), meta = list()) {
   f <- file.path(synsnap_path(root), "static.parquet")
   if (file.exists(f) && !overwrite)
     stop("static.parquet already exists in ", root, call. = FALSE)
+  types <- types[intersect(names(columns), names(types))]
   con <- synsnap_con()
-  src <- synsnap_source(con, edgelist)
-  sel <- paste(sprintf("%s AS %s", columns, names(columns)), collapse = ", ")
-  synsnap_write(con, sprintf("SELECT %s FROM %s ORDER BY id", sel, src), f,
+  src <- synsnap_source(con, edgelist, format = format, types = setNames(
+    ifelse(types == "BIGINT", "BIGINT", "DOUBLE"), columns[names(types)]))
+  sel <- vapply(names(columns), function(out) {
+    col <- DBI::dbQuoteIdentifier(con, columns[[out]])
+    if (is.na(types[out])) return(sprintf("%s AS %s", col, out))
+    sprintf("CASE WHEN %1$s = trunc(%1$s) THEN %1$s::%2$s ELSE error('%3$s is not a whole number') END AS %3$s",
+            col, types[[out]], out)
+  }, "")
+  n <- NULL
+  synsnap_write(con, sprintf("SELECT %s FROM %s ORDER BY id",
+                             paste(sel, collapse = ", "), src), f,
                 row_group_size = 1048576, check = function(written) {
-    n <- DBI::dbGetQuery(con, sprintf(
-      "SELECT count(*) - count(DISTINCT id) AS n FROM %s", written))$n
-    if (n > 0) stop(n, " duplicate synapse ids in edgelist", call. = FALSE)
+    res <- DBI::dbGetQuery(con, sprintf(
+      "SELECT count(*) AS n, count(*) - count(DISTINCT id) AS dup FROM %s", written))
+    if (res$dup > 0) stop(res$dup, " duplicate synapse ids in edgelist", call. = FALSE)
+    n <<- res$n
   })
+  meta$rows <- as.numeric(n)
+  meta$built <- format(Sys.time(), "%Y-%m-%d %H:%M:%S UTC", tz = "UTC")
+  jsonlite::write_json(meta, file.path(synsnap_path(root), "static.json"),
+                       auto_unbox = TRUE, pretty = TRUE, digits = NA)
+  invisible(f)
 }
 
 # write meta.json last: its presence marks a finished snapshot
@@ -85,34 +129,70 @@ synsnap_write_ids <- function(con, sql, root, tag, by_post = FALSE,
       synsnap_sql_str(by_pre)), synsnap_path(root, tag, "by_post.parquet"))
 }
 
-# Full snapshot `tag` at `timestamp` from a supervoxel -> root map (a
-# data.frame or feather file(s) with columns sv, root_id) that covers every
-# pre_sv and post_sv in static.parquet.
-synsnap_build <- function(tag, svmap, timestamp, root, by_post = FALSE) {
-  if (file.exists(file.path(synsnap_path(root), tag, "meta.json")))
+# Build snapshot `tag` in <root>/.staging/<tag> and only then move it into
+# place, so a tag folder only ever holds a finished snapshot. `build` is called
+# with the staging tag (".staging/<tag>", which the other synsnap functions
+# accept as a tag) and writes its files and meta.json there. `verify`, if
+# given, is then called with the staging tag and should stop() if the snapshot
+# is bad: its files move to <root>/.failed for inspection.
+synsnap_stage <- function(root, tag, build, verify = NULL) {
+  final <- file.path(synsnap_path(root), tag)
+  if (file.exists(file.path(final, "meta.json")))
     stop("Synapse snapshot '", tag, "' already exists", call. = FALSE)
-  dir.create(file.path(synsnap_path(root), tag), showWarnings = FALSE)
-  con <- synsnap_con()
-  src <- synsnap_source(con, svmap)
-  DBI::dbExecute(con, sprintf(
-    "CREATE OR REPLACE TEMP TABLE synsnap_svmap AS SELECT DISTINCT sv, root_id FROM %s",
-    src))
-  on.exit(DBI::dbExecute(con, "DROP TABLE IF EXISTS synsnap_svmap"), add = TRUE)
-  dup <- DBI::dbGetQuery(con,
-    "SELECT count(*) - count(DISTINCT sv) AS n FROM synsnap_svmap")$n
-  if (dup > 0) stop(dup, " supervoxels map to more than one root", call. = FALSE)
-  sql <- sprintf("SELECT p.root_id AS pre_root, q.root_id AS post_root, s.id
-    FROM %s s LEFT JOIN synsnap_svmap p ON s.pre_sv = p.sv
-    LEFT JOIN synsnap_svmap q ON s.post_sv = q.sv",
-    synsnap_sql_str(synsnap_path(root, file = "static.parquet")))
-  synsnap_write_ids(con, sql, root, tag, by_post = by_post, check = function(written) {
-    n <- DBI::dbGetQuery(con, sprintf("SELECT count(*) AS n FROM %s
-      WHERE pre_root IS NULL OR post_root IS NULL", written))$n
-    if (n > 0)
-      stop(n, " synapses have a supervoxel missing from svmap", call. = FALSE)
+  stage <- file.path(".staging", tag)
+  dir <- file.path(synsnap_path(root), stage)
+  unlink(dir, recursive = TRUE)
+  dir.create(dir, recursive = TRUE)
+  build(stage)
+  if (!is.null(verify)) tryCatch(verify(stage), error = function(e) {
+    synsnap_fail(root, tag)
+    stop(e)
   })
-  synsnap_write_meta(root, tag, list(tag = tag, timestamp = timestamp, parent = NULL))
+  unlink(final, recursive = TRUE)
+  if (!file.rename(dir, final))
+    stop("Could not move synapse snapshot '", tag, "' into place", call. = FALSE)
   invisible(tag)
+}
+
+# Move the staging files of `tag` (including a supervoxel lookup cache) to
+# <root>/.failed/<tag>-<time>
+synsnap_fail <- function(root, tag) {
+  dest <- file.path(synsnap_path(root), ".failed",
+                    paste0(tag, format(Sys.time(), "-%Y%m%dT%H%M%S", tz = "UTC")))
+  dir.create(dest, recursive = TRUE)
+  src <- file.path(synsnap_path(root), ".staging", paste0(tag, c("", ".svmap")))
+  for (f in src[file.exists(src)]) file.rename(f, file.path(dest, basename(f)))
+  invisible(dest)
+}
+
+# Full snapshot `tag` at `timestamp` from a supervoxel -> root map (a
+# data.frame or feather file(s) with columns sv, root_id) that
+# covers every pre_sv and post_sv in static.parquet. See synsnap_stage() for
+# `verify`.
+synsnap_build <- function(tag, svmap, timestamp, root, by_post = FALSE,
+                          verify = NULL) {
+  synsnap_stage(root, tag, verify = verify, build = function(stage) {
+    con <- synsnap_con()
+    src <- synsnap_source(con, svmap)
+    DBI::dbExecute(con, sprintf(
+      "CREATE OR REPLACE TEMP TABLE synsnap_svmap AS SELECT DISTINCT sv, root_id FROM %s",
+      src))
+    on.exit(DBI::dbExecute(con, "DROP TABLE IF EXISTS synsnap_svmap"), add = TRUE)
+    dup <- DBI::dbGetQuery(con,
+      "SELECT count(*) - count(DISTINCT sv) AS n FROM synsnap_svmap")$n
+    if (dup > 0) stop(dup, " supervoxels map to more than one root", call. = FALSE)
+    sql <- sprintf("SELECT p.root_id AS pre_root, q.root_id AS post_root, s.id
+      FROM %s s LEFT JOIN synsnap_svmap p ON s.pre_sv = p.sv
+      LEFT JOIN synsnap_svmap q ON s.post_sv = q.sv",
+      synsnap_sql_str(synsnap_path(root, file = "static.parquet")))
+    synsnap_write_ids(con, sql, root, stage, by_post = by_post, check = function(written) {
+      n <- DBI::dbGetQuery(con, sprintf("SELECT count(*) AS n FROM %s
+        WHERE pre_root IS NULL OR post_root IS NULL", written))$n
+      if (n > 0)
+        stop(n, " synapses have a supervoxel missing from svmap", call. = FALSE)
+    })
+    synsnap_write_meta(root, stage, list(tag = tag, timestamp = timestamp, parent = NULL))
+  })
 }
 
 # Turn delta snapshot `tag` into a full one, to base later deltas on
@@ -136,6 +216,11 @@ synsnap_rebase <- function(tag, root, by_post = FALSE) {
 synsnap_update <- function(from, tag, timestamp, root, ctx) {
   if (file.exists(file.path(synsnap_path(root), tag, "meta.json")))
     stop("Synapse snapshot '", tag, "' already exists", call. = FALSE)
+  synsnap_stage(root, tag, function(stage)
+    synsnap_update_write(from, tag, stage, timestamp, root, ctx))
+}
+
+synsnap_update_write <- function(from, tag, stage, timestamp, root, ctx) {
   m <- synsnap_meta(from, root)
   base <- if (is.na(m$base)) from else m$base
   T <- as.POSIXct(timestamp, tz = "UTC")
@@ -168,9 +253,7 @@ synsnap_update <- function(from, tag, timestamp, root, ctx) {
     ANTI JOIN %s b ON d.id = b.id AND d.pre_root = b.pre_root
       AND d.post_root = b.post_root
     ORDER BY d.id", rows, synsnap_sql_str(synsnap_ids_file(root, base)))
-  dir.create(file.path(synsnap_path(root), tag), showWarnings = FALSE)
-  synsnap_write(con, sql, synsnap_path(root, tag, "delta.parquet"))
-  synsnap_write_meta(root, tag, list(tag = tag, timestamp = T, base = base,
-                                     parent = from))
-  invisible(tag)
+  synsnap_write(con, sql, synsnap_path(root, stage, "delta.parquet"))
+  synsnap_write_meta(root, stage, list(tag = tag, timestamp = T, base = base,
+                                       parent = from))
 }

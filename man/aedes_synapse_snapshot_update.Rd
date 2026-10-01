@@ -8,7 +8,7 @@ aedes_synapse_snapshot_update(
   timestamp = "now",
   from = "latest",
   tag = NULL,
-  root = getOption("aedes.synapse_snapshot_root"),
+  root = aedes_synapse_snapshot_root(),
   rebase = FALSE,
   set = TRUE
 )
@@ -23,8 +23,8 @@ most recent snapshot in \code{root}.}
 \item{tag}{The name of the new snapshot. Defaults to the timestamp, e.g.
 \code{"20261001T120000"}.}
 
-\item{root}{The snapshot folder. Defaults to the
-\code{aedes.synapse_snapshot_root} option.}
+\item{root}{The snapshot folder. Defaults to
+\code{\link[=aedes_synapse_snapshot_root]{aedes_synapse_snapshot_root()}}.}
 
 \item{rebase}{Whether to save a full snapshot rather than a delta.}
 

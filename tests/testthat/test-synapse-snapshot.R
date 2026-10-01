@@ -202,3 +202,167 @@ test_that("building snapshots", {
   expect_false(file.exists(file.path(root, "s2", "delta.parquet")))
   expect_equal(rows(), before)
 })
+
+test_that("aedes_synapse_snapshot_root", {
+  tmp <- withr::local_tempdir()
+  withr::local_options(aedes.synapse_snapshot_root = file.path(tmp, "a", "b"))
+  expect_equal(aedes_synapse_snapshot_root(), file.path(tmp, "a", "b"))
+  expect_false(dir.exists(file.path(tmp, "a")))
+  expect_error(synsnap_tags(aedes_synapse_snapshot_root()), "No synapse snapshot folder")
+  # parents are created too
+  expect_true(dir.exists(aedes_synapse_snapshot_root(create = TRUE)))
+
+  withr::local_options(aedes.synapse_snapshot_root = NULL)
+  withr::local_envvar(HOME = tmp, XDG_DATA_HOME = file.path(tmp, "xdg"))
+  expect_match(aedes_synapse_snapshot_root(), "rpkg-aedes.syn_snapshot$")
+  proj <- file.path(tmp, "projects", "2025aedes", "data", "syn_snapshot")
+  dir.create(proj, recursive = TRUE)
+  expect_match(aedes_synapse_snapshot_root(), "rpkg-aedes")
+  file.create(file.path(proj, "static.parquet"))
+  expect_equal(normalizePath(aedes_synapse_snapshot_root()), normalizePath(proj))
+})
+
+test_that("snapshots are built in a staging folder", {
+  skip_if_no_duckdb()
+  root <- make_snapshot(withr::local_tempdir())
+  static <- dplyr::collect(synsnap_tbl("s1", root, static = TRUE))
+  svmap <- data.frame(sv = c(static$pre_sv, static$post_sv),
+                      root_id = c(static$pre_root, static$post_root))
+  seen <- NULL
+  synsnap_build("s3", svmap, "2026-01-03 00:00:00", root, verify = function(stage) {
+    seen <<- stage
+    expect_false(dir.exists(file.path(root, "s3")))
+    expect_equal(nrow(dplyr::collect(synsnap_tbl(stage, root))), 10)
+  })
+  expect_equal(seen, file.path(".staging", "s3"))
+  expect_equal(synsnap_meta("s3", root)$tag, "s3")
+  expect_false(dir.exists(file.path(root, ".staging", "s3")))
+  expect_equal(synsnap_tags(root)$tag, c("s1", "s2", "s3"))
+
+  # failed verification: no tag, files kept in .failed
+  expect_error(synsnap_build("s4", svmap, "2026-01-04 00:00:00", root,
+                             verify = function(stage) stop("mismatch")), "mismatch")
+  expect_false(dir.exists(file.path(root, "s4")))
+  failed <- list.files(file.path(root, ".failed"), full.names = TRUE)
+  expect_match(basename(failed), "^s4-")
+  expect_true(file.exists(file.path(failed, "s4", "meta.json")))
+  # and a later build of the same tag works
+  synsnap_build("s4", svmap, "2026-01-04 00:00:00", root)
+  expect_true(file.exists(file.path(root, "s4", "by_pre.parquet")))
+})
+
+test_that("static.parquet from a csv edgelist", {
+  skip_if_no_duckdb()
+  root <- withr::local_tempdir()
+  csv <- file.path(root, "edges.df")
+  big <- c("73959615070926589", "73959615070926590")
+  writeLines(c("cleft_segid,presyn_basin,postsyn_basin,presyn_x,presyn_y,presyn_z,postsyn_x,postsyn_y,postsyn_z,size,extra",
+               sprintf("2.0,%s,%s,1,2,3,4,5,6,14.0,0.5", big[1], big[2]),
+               sprintf("1.0,%s,%s,1,2,3,4,5,6,7.0,0.5", big[2], big[1])), csv)
+  synsnap_build_static(csv, root, format = "csv", meta = list(source_md5 = "abc"))
+  st <- arrow::read_parquet(file.path(root, "static.parquet"))
+  expect_equal(st$id, 1:2)
+  expect_equal(as.character(st$pre_sv), rev(big))
+  expect_equal(st$size, c(7L, 14L))
+  expect_true(is.integer(st$pre_x))
+  js <- jsonlite::read_json(file.path(root, "static.json"))
+  expect_equal(js$rows, 2)
+  expect_equal(js$source_md5, "abc")
+
+  writeLines(c("cleft_segid,presyn_basin,postsyn_basin,presyn_x,presyn_y,presyn_z,postsyn_x,postsyn_y,postsyn_z,size",
+               "1.5,1,2,1,2,3,4,5,6,7.0"), csv)
+  expect_error(synsnap_build_static(csv, root, format = "csv", overwrite = TRUE),
+               "id is not a whole number")
+})
+
+test_that("full snapshot from a resumable supervoxel lookup", {
+  skip_if_no_duckdb()
+  root <- make_snapshot(withr::local_tempdir())
+  w <- fake_world()
+  t3 <- "2026-01-01 03:00:00"
+  # the lookup fails after the first chunk has been saved
+  ctx <- w$ctx
+  n <- 0L
+  ctx$rootid <- function(x, timestamp) {
+    n <<- n + 1L
+    if (n == 2L) stop("server down")
+    w$ctx$rootid(x, timestamp)
+  }
+  expect_error(suppressMessages(synsnap_build_from_lookup(
+    "s3", t3, root, ctx, chunksize = 8, wait = numeric())), "server down")
+  cache <- file.path(root, ".staging", "s3.svmap")
+  expect_equal(basename(list.files(cache, "^chunk")), "chunk-00000.parquet")
+  expect_false(dir.exists(file.path(root, "s3")))
+  # a different timestamp can't reuse the cache
+  expect_error(synsnap_build_from_lookup("s3", "2026-01-01 04:00:00", root, ctx,
+                                         chunksize = 8), "different timestamp")
+  # resume: only the two missing chunks are looked up
+  w$calls$rootid <- 0L
+  suppressMessages(synsnap_build_from_lookup("s3", t3, root, w$ctx, chunksize = 8))
+  expect_equal(w$calls$rootid, 2L)
+  expect_false(dir.exists(cache))
+  got <- dplyr::arrange(dplyr::collect(synsnap_tbl("s3", root)), .data$id)
+  T <- synsnap_parse_time(t3)
+  i64 <- bit64::as.integer64
+  expect_equal(got$pre_root, w$ctx$rootid(i64(got$id + 100), T))
+  expect_equal(got$post_root, w$ctx$rootid(i64(got$id + 200), T))
+})
+
+test_that("fetching the source file", {
+  src <- withr::local_tempfile(fileext = ".csv")
+  writeLines(c("a,b", "1,2"), src)
+  md5 <- unname(tools::md5sum(src))
+  b64 <- jsonlite::base64_enc(as.raw(strtoi(substring(md5, seq(1, 31, 2), seq(2, 32, 2)), 16L)))
+  expect_true(synsnap_md5_ok(src, md5))
+  expect_true(synsnap_md5_ok(src, b64))
+  skip_if(!nzchar(Sys.which("curl")))
+  dest <- withr::local_tempfile(fileext = ".csv")
+  url <- paste0("file://", src)
+  synsnap_fetch_source(url, dest, b64, method = "curl")
+  expect_equal(readLines(dest), c("a,b", "1,2"))
+  unlink(dest)
+  # a path with ~
+  withr::local_envvar(HOME = dirname(dest))
+  synsnap_fetch_source(url, file.path("~", basename(dest)), md5, method = "curl")
+  expect_equal(readLines(dest), c("a,b", "1,2"))
+  unlink(dest)
+  expect_error(synsnap_fetch_source(url, dest, strrep("0", 32), method = "curl"),
+               "wrong md5")
+  expect_false(file.exists(dest) || file.exists(paste0(dest, ".part")))
+  # the url doesn't appear in errors
+  err <- tryCatch(synsnap_fetch_source(paste0(url, "-missing"), dest, md5,
+                                       method = "curl"), error = conditionMessage)
+  expect_match(err, "Download failed")
+  expect_false(grepl(src, err, fixed = TRUE))
+})
+
+test_that("verifying a snapshot against CAVE", {
+  skip_if_no_duckdb()
+  root <- make_snapshot(withr::local_tempdir())
+  w <- fake_world()
+  s1 <- dplyr::collect(synsnap_tbl("s1", root))
+  cave <- data.frame(id = s1$id, pre_pt_root_id = s1$pre_root,
+                     post_pt_root_id = s1$post_root)
+  local_mocked_bindings(aedes_cave_query = function(table, filter_in_dict, ...) {
+    col <- names(filter_in_dict)
+    cave[as.character(cave[[col]]) %in% filter_in_dict[[col]], ]
+  })
+  expect_true(suppressMessages(aedes_synsnap_verify("s1", root, 1, ctx = w$ctx)))
+  # a stale root in CAVE is fine if the chunkedgraph agrees with the snapshot
+  cave$post_pt_root_id[cave$id == 1] <- bit64::as.integer64(99)
+  expect_match(capture_messages(aedes_synsnap_verify("s1", root, 1, ctx = w$ctx)),
+               "1 synapses with stale", all = FALSE)
+  # but not if it disagrees
+  ctx <- w$ctx
+  ctx$rootid <- function(x, timestamp) {
+    r <- w$ctx$rootid(x, timestamp)
+    r[x == 201] <- bit64::as.integer64(99)
+    r
+  }
+  expect_error(suppressMessages(aedes_synsnap_verify("s1", root, 1, ctx = ctx)),
+               "1 synapses have root ids")
+  # and synapses missing from CAVE are always an error
+  cave <- cave[cave$id != 2, ]
+  expect_error(suppressMessages(aedes_synsnap_verify("s1", root, 1, ctx = w$ctx)),
+               "synapse ids differ")
+})
