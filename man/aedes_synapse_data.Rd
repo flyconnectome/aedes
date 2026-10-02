@@ -34,7 +34,8 @@ A lazy \code{tbl}.
 \description{
 Returns a lazy \pkg{dbplyr} table of every synapse in a local snapshot (see
 \code{\link[=aedes_use_snapshot]{aedes_use_snapshot()}}) for use with \pkg{dplyr} verbs. Nothing is read
-until you \code{\link[dplyr:collect]{dplyr::collect()}} the result.
+until you \code{\link[dplyr:collect]{dplyr::collect()}} the result. This needs a local snapshot; there
+is no CAVE equivalent.
 }
 \details{
 The table has columns \code{id}, \code{pre_root} and \code{post_root} (as

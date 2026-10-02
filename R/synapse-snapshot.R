@@ -233,7 +233,8 @@ aedes_snapshot_active <- function(snapshot = getOption("aedes.synapse_snapshot")
 #'
 #' Returns a lazy \pkg{dbplyr} table of every synapse in a local snapshot (see
 #' [aedes_use_snapshot()]) for use with \pkg{dplyr} verbs. Nothing is read
-#' until you [dplyr::collect()] the result.
+#' until you [dplyr::collect()] the result. This needs a local snapshot; there
+#' is no CAVE equivalent.
 #'
 #' @details The table has columns `id`, `pre_root` and `post_root` (as
 #'   `integer64`). With `details = TRUE` it also has `pre_sv`, `post_sv`,
