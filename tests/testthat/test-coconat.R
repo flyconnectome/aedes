@@ -38,3 +38,23 @@ test_that("aedes_cfids says which ids it replaces to match a version", {
   withr::local_options(aedes.version = "now")
   expect_silent(aedes_cfids(old))
 })
+
+test_that("aedes_cfpartners adds partner metadata at the query time", {
+  got <- list()
+  local_mocked_bindings(
+    aedes_get_version = function(...) list(version = NULL, timestamp = "T1"),
+    aedes_partner_summary = function(ids, partners, threshold, version,
+                                     timestamp, ...) {
+      got$partners <<- timestamp
+      data.frame(query = "1", post_id = c("2", "3"), weight = c(5L, 3L))
+    },
+    aedes_cfmeta = function(ids, version, timestamp, ...) {
+      got$meta <<- timestamp
+      data.frame(id = ids, type = c("a", "b"),
+                 group = bit64::as.integer64(c(NA, 7)))
+    })
+  res <- aedes_cfpartners("1", partners = "outputs")
+  expect_equal(got, list(partners = "T1", meta = "T1"))
+  expect_equal(res$type, c("a", "b"))
+  expect_equal(res$post_id, c("2", "3"))
+})

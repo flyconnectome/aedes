@@ -144,8 +144,21 @@ aedes_report_replaced <- function(old, new, vi, max_show = 10L) {
 #' @noRd
 aedes_cfpartners <- function(ids, partners = c("outputs", "inputs"),
                                  threshold = 1, ...) {
-  vi = aedes_get_version()
   partners = match.arg(partners)
-  aedes_partner_summary(ids, partners = partners, threshold = threshold - 1L,
-                        version = vi$version, timestamp = vi$timestamp, ...)
+  # resolve the time once (so "now" is one timestamp) and add the partners'
+  # metadata at that time, as coconatfly would otherwise look it up later
+  vi = aedes_get_version()
+  pp = aedes_partner_summary(ids, partners = partners,
+                             threshold = threshold - 1L,
+                             version = vi$version, timestamp = vi$timestamp,
+                             ...)
+  if (!nrow(pp)) return(pp)
+  pcol = if (partners == "outputs") "post_id" else "pre_id"
+  meta = aedes_cfmeta(as.character(unique(pp[[pcol]])),
+                      version = vi$version, timestamp = vi$timestamp)
+  # as coconatfly's cf_meta()
+  meta$group = fafbseg::flywire_ids(meta$group, integer64 = FALSE)
+  colnames(meta)[colnames(meta) == "id"] = pcol
+  pp[[pcol]] = as.character(pp[[pcol]])
+  dplyr::left_join(pp, meta, by = pcol)
 }
