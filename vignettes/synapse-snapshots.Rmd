@@ -51,7 +51,9 @@ with [DuckDB](https://duckdb.org). This gives you:
   with live CAVE queries.
 * **fast partner summaries**. Thousands of neurons take seconds.
 * **the full synapse table**, including the positions of the pre and
-  postsynaptic points and the synapse size, for your own dplyr queries.
+  postsynaptic points and the synapse size, for your own dplyr queries with
+  `aedes_synapse_data()`. This is only possible with a snapshot; there is no
+  equivalent CAVE query.
 * **a fast local cache of a materialisation version**. CAVE (via the
   chunkedgraph) already lets you go back to any time; a snapshot makes
   repeating an analysis at one particular version fast.
@@ -126,7 +128,8 @@ aedes_partner_summary("superclass:descending_neuron", partners = "inputs",
 ```
 
 For anything else, `aedes_synapse_data()` gives you a lazy table of every
-synapse that works with dplyr verbs. Nothing is actually read until you
+synapse that works with dplyr verbs. Unlike `aedes_partner_summary()`, which
+falls back to CAVE, it needs a local snapshot. Nothing is actually read until you
 `collect()` the result. For example to count the inputs onto descending
 neurons by presynaptic partner:
 
@@ -141,10 +144,78 @@ aedes_synapse_data("post") %>%
 Root ids come back as `integer64` columns, but you can filter with the
 character ids that `aedes_ids()` returns. With `details = TRUE` the table
 also has supervoxel ids, the positions of the pre and postsynaptic points and
-the synapse size. Note that `aedes_synapse_data()` reads the selected
-snapshot exactly as it is; it does not apply later edits. To get the synapses
-at a particular time, give `timestamp` (e.g. `"now"`): if no snapshot is
-close enough, a local checkpoint is made first with `aedes_update_snapshot()`.
+the synapse size.
+
+### Synapses at a Particular Time
+
+By default `aedes_synapse_data()` reads the selected snapshot exactly as it
+is. To get the synapses at another time, give `timestamp`. It uses the newest
+snapshot at or before that time. If that snapshot is more than a minute older
+(the `aedes.synapse_max_age` option), it first makes a small local checkpoint
+with `aedes_update_snapshot()`, which later calls for nearby times reuse.
+
+Root ids only mean something at one time, so look up the neurons you are
+interested in at the same time as the synapses. Fixing the time once makes
+sure that they match:
+
+```{r}
+now <- Sys.time()
+dns <- aedes_ids("superclass:descending_neuron", timestamp = now)
+aedes_synapse_data("post", timestamp = now) %>%
+  filter(post_root %in% dns) %>%
+  count(pre_root, sort = TRUE) %>%
+  collect()
+#> Updating synapse snapshot 'r20261002T000000' (2026-10-02 00:00:00 UTC) to 2026-10-02 04:08:28 UTC
+```
+
+### Repeating an Analysis at a Materialisation Version
+
+Each materialisation version has its own snapshot, named `v<version>`. You
+can repeat an analysis at that version exactly, with no CAVE lookups for the
+synapses:
+
+```{r}
+dns519 <- aedes_ids("superclass:descending_neuron", version = 519)
+aedes_synapse_data("post", snapshot = "v519") %>%
+  filter(post_root %in% dns519) %>%
+  count(pre_root, sort = TRUE) %>%
+  collect()
+```
+
+### Synapse Positions
+
+With `details = TRUE` you can get the location and size of each synapse. For
+example, here are the output synapses of one descending neuron, placed
+midway between the pre and postsynaptic points (in raw voxel coordinates):
+
+```{r}
+aedes_synapse_data(details = TRUE, timestamp = now) %>%
+  filter(pre_root %in% dns[1]) %>%
+  mutate(x = (pre_x + post_x) / 2, y = (pre_y + post_y) / 2,
+         z = (pre_z + post_z) / 2) %>%
+  select(id, post_root, x, y, z, size) %>%
+  collect()
+```
+
+### Comparing Two Times
+
+Synapse ids never change, so you can join snapshots from different times by
+`id`. For example, this finds the input synapses onto descending neurons
+whose presynaptic neuron has been edited since version 519:
+
+```{r}
+old <- aedes_synapse_data(snapshot = "v519") %>%
+  select(id, old_pre = pre_root)
+aedes_synapse_data("post", timestamp = now) %>%
+  filter(post_root %in% dns) %>%
+  inner_join(old, by = "id") %>%
+  filter(pre_root != old_pre) %>%
+  count(pre_root, sort = TRUE) %>%
+  collect()
+```
+
+A new root id means the neuron was edited, not necessarily that the synapse
+now belongs to a different neuron.
 
 ## Getting a Snapshot
 
@@ -205,8 +276,8 @@ After that, `inst/scripts/synsnap-cron.sh` runs hourly from cron. Each run
 makes any missing checkpoints from the past week: one a day at midnight UTC
 (once an hour has passed, so that all edits are visible) and one at the exact
 time of each materialisation version (e.g. `v519`). It then publishes them
-with `aedes_publish_snapshot()`, which hard links the static data, the base
-and every checkpoint built on it into a folder served over https and writes
+(as `aedes_publish_snapshot()` does), hard linking the static data, the base
+and every checkpoint built on it into a folder served over https and writing
 `manifest.json` last. Finally it writes a `status.json` and exits with an
 error, so that cron sends an email, if anything failed or the newest
 snapshot is more than 36 hours old. A run that fails or never happens is
