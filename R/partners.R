@@ -17,9 +17,9 @@
 #'
 #'   The time of a local query is `timestamp` (or the time of `version`) when
 #'   given, otherwise that of the `aedes.version` option (see
-#'   [aedes_set_version()]), just as for CAVE queries. If the selected
-#'   snapshot is newer than this, the newest older snapshot in the same folder
-#'   is used instead, when there is one.
+#'   [aedes_set_version()]), just as for CAVE queries. The query starts from
+#'   the newest snapshot in the selected snapshot's folder at or before that
+#'   time, which may be older or newer than the selected one.
 #'
 #'   Local queries after the snapshot time fetch only the changes made since
 #'   then from CAVE and look up the new root ids of the affected synapses'
@@ -103,11 +103,12 @@ aedes_partner_summary <- function(rootids,
     stop("No local synapse snapshot selected. See ?aedes_use_snapshot")
   if (!is.null(snap)) {
     when = partner_summary_local_time(version, timestamp)
-    # e.g. after aedes_update_snapshot() but querying an older version
-    if (!identical(when, "now") && as.numeric(when) < as.numeric(snap$timestamp) - 1) {
-      tag = synsnap_at(snap$root, when)
-      if (!is.null(tag)) snap = aedes_use_snapshot(tag, root = snap$root, set = FALSE)
-    }
+    # start from the newest snapshot at or before the query time: an older one
+    # than selected for an earlier time, a newer one for a later time or now
+    tag = synsnap_at(snap$root,
+                     if (identical(when, "now")) aedes_synsnap_ctx()$now() else when)
+    if (!is.null(tag) && !identical(tag, snap$tag))
+      snap = aedes_use_snapshot(tag, root = snap$root, set = FALSE)
     why = partner_summary_local_problem(snap, when, ...)
     if (method == "local" && !is.null(why))
       stop("Cannot use the local synapse snapshot: ", why)

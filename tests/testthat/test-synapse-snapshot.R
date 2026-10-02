@@ -161,6 +161,10 @@ test_that("choosing between local and CAVE", {
   res1 <- aedes_partner_summary("10", timestamp = "2026-01-01 00:00:00 UTC")
   expect_equal(attr(res1, "snapshot"), "s1")
   expect_equal(res1$post_id, c("20", "30"))
+  # and an older selected snapshot gives way to a newer one for later times
+  withr::local_options(aedes.synapse_snapshot = "s1")
+  w$now <- as.POSIXct("2026-01-03", tz = "UTC")
+  expect_equal(attr(aedes_partner_summary("10"), "snapshot"), "s2")
 })
 
 test_that("old, one-file and two-file layouts give the same answers", {
