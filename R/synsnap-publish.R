@@ -135,7 +135,10 @@ synsnap_download <- function(url, root) {
            "use a new folder", call. = FALSE)
   } else get(c("static.parquet", "static.json"))
   snaps <- m$snapshots
-  have <- synsnap_tags(root)$tag
+  # a local tag only counts if it has the same base (it may since have been
+  # made a full snapshot on the server)
+  local <- synsnap_tags(root)
+  have <- local$tag[local$base %in% snaps$base[match(local$tag, snaps$tag)]]
   todo <- setdiff(snaps$tag, have)
   done <- character()
   while (length(todo)) {
