@@ -89,7 +89,7 @@ cov <- x %>%
 cov
 #>   partners  type group pgroup
 #> 1   inputs 0.001 0.127  0.161
-#> 2  outputs 0.008 0.327  0.631
+#> 2  outputs 0.008 0.329  0.631
 ```
 
 Cell types cover under 1% of partner synapses, so `group = "type"` is
@@ -103,7 +103,7 @@ of the input partners are not yet in FlyTable at all.
 
 cf_cosine_plot(x, group = "group", labRow = "{side}_{serial_id}")
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =
-#> "pre_key", : Dropping: 1441/1715 neurons representing 19931/29629 synapses due
+#> "pre_key", : Dropping: 1437/1715 neurons representing 19887/29629 synapses due
 #> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
 #> groupcol, : Dropping: 4332/4477 neurons representing 51935/59469 synapses due

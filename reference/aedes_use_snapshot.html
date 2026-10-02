@@ -122,6 +122,10 @@ match the synapse data.</p>
 <p>If there is no snapshot in <code>root</code>, you are asked whether to download one
 with <code><a href="aedes_download_snapshot.html">aedes_download_snapshot()</a></code> (in an interactive session) or get an
 error saying how to.</p>
+<p>Every few hours (the <code>aedes.snapshot_check_hours</code> option, default 6;
+<code>Inf</code> turns this off) it also downloads any new checkpoints that have
+been published. A new full snapshot is only announced, since it is
+larger: fetch it with <code><a href="aedes_download_snapshot.html">aedes_download_snapshot()</a></code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

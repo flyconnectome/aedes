@@ -90,8 +90,9 @@ CAVE.
 The time of a local query is `timestamp` (or the time of `version`) when
 given, otherwise that of the `aedes.version` option (see
 [`aedes_set_version()`](aedes_set_version.md)), just as for CAVE
-queries. If the selected snapshot is newer than this, the newest older
-snapshot in the same folder is used instead, when there is one.
+queries. The query starts from the newest snapshot in the selected
+snapshot's folder at or before that time, which may be older or newer
+than the selected one.
 
 Local queries after the snapshot time fetch only the changes made since
 then from CAVE and look up the new root ids of the affected synapses'

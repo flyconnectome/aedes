@@ -81,6 +81,12 @@ If there is no snapshot in `root`, you are asked whether to download one
 with [`aedes_download_snapshot()`](aedes_download_snapshot.md) (in an
 interactive session) or get an error saying how to.
 
+Every few hours (the `aedes.snapshot_check_hours` option, default 6;
+`Inf` turns this off) it also downloads any new checkpoints that have
+been published. A new full snapshot is only announced, since it is
+larger: fetch it with
+[`aedes_download_snapshot()`](aedes_download_snapshot.md).
+
 ## See also
 
 [`aedes_partner_summary()`](aedes_partner_summary.md),

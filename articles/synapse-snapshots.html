@@ -76,15 +76,19 @@ snapshot on disk and access to the aedes CAVE datastack.</p>
 <p>If you have access to the aedes CAVE datastack:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/flyconnectome/aedes" class="external-link">aedes</a></span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/aedes_download_snapshot.html">aedes_download_snapshot</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/aedes_use_snapshot.html">aedes_use_snapshot</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/aedes_partner_summary.html">aedes_partner_summary</a></span><span class="op">(</span><span class="st">"superclass:descending_neuron"</span>, partners <span class="op">=</span> <span class="st">"inputs"</span><span class="op">)</span></span></code></pre></div>
-<p>The first download is about 2.3 GB; later ones normally fetch just a
-few MB.</p>
+<p>The first time, <code><a href="../reference/aedes_use_snapshot.html">aedes_use_snapshot()</a></code> offers to download
+a snapshot (about 2.3 GB). After that, new checkpoints (normally just a
+few MB) are downloaded automatically every few hours when you use the
+snapshot; a new base is only announced, so run
+<code><a href="../reference/aedes_download_snapshot.html">aedes_download_snapshot()</a></code> when asked.</p>
 <p>Read on for more details.</p>
 </div>
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
+<p><img src="synsnap-overview.svg" class="r-plt" alt="" width="100%"></p>
 <p>The Aedes synapse table has about 111 million synapses. Querying it
 through CAVE is fine for a few neurons, but it is slow for tens to
 thousands of neurons, especially at the latest state of the dataset. A
@@ -103,7 +107,8 @@ seconds.</li>
 <li>
 <strong>the full synapse table</strong>, including the positions of
 the pre and postsynaptic points and the synapse size, for your own dplyr
-queries.</li>
+queries with <code><a href="../reference/aedes_synapse_data.html">aedes_synapse_data()</a></code>. This is only possible
+with a snapshot; there is no equivalent CAVE query.</li>
 <li>
 <strong>a fast local cache of a materialisation version</strong>.
 CAVE (via the chunkedgraph) already lets you go back to any time; a
@@ -222,9 +227,11 @@ first query after a long gap is slow.</p>
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/aedes_partner_summary.html">aedes_partner_summary</a></span><span class="op">(</span><span class="st">"superclass:descending_neuron"</span>, partners <span class="op">=</span> <span class="st">"inputs"</span>,</span>
 <span>                      timestamp <span class="op">=</span> <span class="st">"now"</span><span class="op">)</span></span></code></pre></div>
 <p>For anything else, <code><a href="../reference/aedes_synapse_data.html">aedes_synapse_data()</a></code> gives you a lazy
-table of every synapse that works with dplyr verbs. Nothing is actually
-read until you <code><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect()</a></code> the result. For example to count
-the inputs onto descending neurons by presynaptic partner:</p>
+table of every synapse that works with dplyr verbs. Unlike
+<code><a href="../reference/aedes_partner_summary.html">aedes_partner_summary()</a></code>, which falls back to CAVE, it needs
+a local snapshot. Nothing is actually read until you
+<code><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect()</a></code> the result. For example to count the inputs onto
+descending neurons by presynaptic partner:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dns</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/aedes_meta.html">aedes_ids</a></span><span class="op">(</span><span class="st">"superclass:descending_neuron"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/aedes_synapse_data.html">aedes_synapse_data</a></span><span class="op">(</span><span class="st">"post"</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
@@ -234,9 +241,76 @@ the inputs onto descending neurons by presynaptic partner:</p>
 <p>Root ids come back as <code>integer64</code> columns, but you can
 filter with the character ids that <code><a href="../reference/aedes_meta.html">aedes_ids()</a></code> returns.
 With <code>details = TRUE</code> the table also has supervoxel ids, the
-positions of the pre and postsynaptic points and the synapse size. Note
-that <code><a href="../reference/aedes_synapse_data.html">aedes_synapse_data()</a></code> reads the selected snapshot
-exactly as it is; it does not apply later edits.</p>
+positions of the pre and postsynaptic points and the synapse size.</p>
+<div class="section level3">
+<h3 id="synapses-at-a-particular-time">Synapses at a Particular Time<a class="anchor" aria-label="anchor" href="#synapses-at-a-particular-time"></a>
+</h3>
+<p>By default <code><a href="../reference/aedes_synapse_data.html">aedes_synapse_data()</a></code> reads the selected
+snapshot exactly as it is. To get the synapses at another time, give
+<code>timestamp</code>. It uses the newest snapshot at or before that
+time. If that snapshot is more than a minute older (the
+<code>aedes.synapse_max_age</code> option), it first makes a small local
+checkpoint with <code><a href="../reference/aedes_update_snapshot.html">aedes_update_snapshot()</a></code>, which later calls
+for nearby times reuse.</p>
+<p>Root ids only mean something at one time, so look up the neurons you
+are interested in at the same time as the synapses. Fixing the time once
+makes sure that they match:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">now</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">dns</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/aedes_meta.html">aedes_ids</a></span><span class="op">(</span><span class="st">"superclass:descending_neuron"</span>, timestamp <span class="op">=</span> <span class="va">now</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/aedes_synapse_data.html">aedes_synapse_data</a></span><span class="op">(</span><span class="st">"post"</span>, timestamp <span class="op">=</span> <span class="va">now</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">post_root</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">dns</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">count</a></span><span class="op">(</span><span class="va">pre_root</span>, sort <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Updating synapse snapshot 'r20261002T000000' (2026-10-02 00:00:00 UTC) to 2026-10-02 04:08:28 UTC</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="repeating-an-analysis-at-a-materialisation-version">Repeating an Analysis at a Materialisation Version<a class="anchor" aria-label="anchor" href="#repeating-an-analysis-at-a-materialisation-version"></a>
+</h3>
+<p>Each materialisation version has its own snapshot, named
+<code>v&lt;version&gt;</code>. You can repeat an analysis at that
+version exactly, with no CAVE lookups for the synapses:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dns519</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/aedes_meta.html">aedes_ids</a></span><span class="op">(</span><span class="st">"superclass:descending_neuron"</span>, version <span class="op">=</span> <span class="fl">519</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/aedes_synapse_data.html">aedes_synapse_data</a></span><span class="op">(</span><span class="st">"post"</span>, snapshot <span class="op">=</span> <span class="st">"v519"</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">post_root</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">dns519</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">count</a></span><span class="op">(</span><span class="va">pre_root</span>, sort <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="synapse-positions">Synapse Positions<a class="anchor" aria-label="anchor" href="#synapse-positions"></a>
+</h3>
+<p>With <code>details = TRUE</code> you can get the location and size of
+each synapse. For example, here are the output synapses of one
+descending neuron, placed midway between the pre and postsynaptic points
+(in raw voxel coordinates):</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/aedes_synapse_data.html">aedes_synapse_data</a></span><span class="op">(</span>details <span class="op">=</span> <span class="cn">TRUE</span>, timestamp <span class="op">=</span> <span class="va">now</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">pre_root</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">dns</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>x <span class="op">=</span> <span class="op">(</span><span class="va">pre_x</span> <span class="op">+</span> <span class="va">post_x</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span>, y <span class="op">=</span> <span class="op">(</span><span class="va">pre_y</span> <span class="op">+</span> <span class="va">post_y</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span>,</span>
+<span>         z <span class="op">=</span> <span class="op">(</span><span class="va">pre_z</span> <span class="op">+</span> <span class="va">post_z</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">id</span>, <span class="va">post_root</span>, <span class="va">x</span>, <span class="va">y</span>, <span class="va">z</span>, <span class="va">size</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="comparing-two-times">Comparing Two Times<a class="anchor" aria-label="anchor" href="#comparing-two-times"></a>
+</h3>
+<p>Synapse ids never change, so you can join snapshots from different
+times by <code>id</code>. For example, this finds the input synapses
+onto descending neurons whose presynaptic neuron has been edited since
+version 519:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">old</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/aedes_synapse_data.html">aedes_synapse_data</a></span><span class="op">(</span>snapshot <span class="op">=</span> <span class="st">"v519"</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">id</span>, old_pre <span class="op">=</span> <span class="va">pre_root</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/aedes_synapse_data.html">aedes_synapse_data</a></span><span class="op">(</span><span class="st">"post"</span>, timestamp <span class="op">=</span> <span class="va">now</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">post_root</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">dns</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html" class="external-link">inner_join</a></span><span class="op">(</span><span class="va">old</span>, by <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">pre_root</span> <span class="op">!=</span> <span class="va">old_pre</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">count</a></span><span class="op">(</span><span class="va">pre_root</span>, sort <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>A new root id means the neuron was edited, not necessarily that the
+synapse now belongs to a different neuron.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="getting-a-snapshot">Getting a Snapshot<a class="anchor" aria-label="anchor" href="#getting-a-snapshot"></a>
@@ -250,8 +324,13 @@ md5 and the download resumes after an interruption, so if anything goes
 wrong just run it again. Snapshots never change once made, so a later
 download only fetches new ones: normally a few small checkpoints, and
 occasionally a new base.</p>
+<p><code><a href="../reference/aedes_use_snapshot.html">aedes_use_snapshot()</a></code> and queries for times after the
+chosen snapshot check for new checkpoints at most every 6 hours (set the
+<code>aedes.snapshot_check_hours</code> option to change this, or
+<code>Inf</code> to turn it off) and download them quietly. Failures are
+only reported once they have lasted a day.</p>
 <p>To bring a snapshot up to date yourself:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/aedes_update_snapshot.html">aedes_update_snapshot</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Updating synapse snapshot 'v518' (2026-09-30 14:12:29 UTC) to</span></span>
 <span><span class="co">#&gt; 2026-10-01 12:00:00 UTC (now)</span></span></code></pre></div>
@@ -265,7 +344,7 @@ materialisation version instead.</p>
 </h2>
 <p>This section is for whoever looks after the snapshots.
 <code><a href="../reference/aedes_build_snapshot.html">aedes_build_snapshot()</a></code> builds everything from scratch:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/aedes_build_snapshot.html">aedes_build_snapshot</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>This does two things:</p>
 <ol style="list-style-type: decimal">
@@ -287,16 +366,19 @@ sizes are compared with a CAVE query at the same version. A snapshot
 that fails this check is moved aside rather than used.</p>
 <p>After that, <code>inst/scripts/synsnap-cron.sh</code> runs hourly
 from cron. Each run makes any missing checkpoints from the past week:
-one a day at midnight UTC (once an hour has passed, so that all edits
-are visible) and one at the exact time of each materialisation version
-(e.g. <code>v519</code>). It then publishes them with
-<code><a href="../reference/aedes_download_snapshot.html">aedes_publish_snapshot()</a></code>, which hard links the static data,
-the base and every checkpoint built on it into a folder served over
-https and writes <code>manifest.json</code> last. Finally it writes a
-<code>status.json</code> and exits with an error, so that cron sends an
-email, if anything failed or the newest snapshot is more than 36 hours
-old. A run that fails or never happens is filled in by the next one. The
-comments at the top of the script say how to set it up.</p>
+one at the exact time of each materialisation version
+(e.g. <code>v519</code>, at about 14:12 UTC), and one at 20:00 UTC on
+any day without a version in the 24 hours before
+(e.g. <code>r20261002T200000</code>), so there is about one a day. Each
+is made once an hour has passed, so that all edits are visible. It then
+publishes them (as <code><a href="../reference/aedes_download_snapshot.html">aedes_publish_snapshot()</a></code> does), hard
+linking the static data, the base and every checkpoint built on it into
+a folder served over https and writing <code>manifest.json</code> last.
+Finally it writes a <code>status.json</code> and exits with an error, so
+that cron sends an email, if anything failed or the newest snapshot is
+more than 36 hours old. A run that fails or never happens is filled in
+by the next one. The comments at the top of the script say how to set it
+up.</p>
 <p>Reading a checkpoint gets slower as its chain back to the base grows,
 so every few months make a new base with
 <code>aedes_update_snapshot("latest", rebase = TRUE)</code>.</p>
@@ -315,14 +397,17 @@ snapshot:</p>
   v518/              base
     meta.json        tag, timestamp
     by_pre.parquet   id, pre_root, post_root                 0.55 GB
-  r20261001T000000/  checkpoint
-    meta.json        tag, timestamp, base = "v518",
-                     parent = "v518"
+  v519/              checkpoint at materialisation version 519
+    meta.json        tag, timestamp, base = "v518", parent = "v518"
     log.parquet      id, t, new and old roots                about 1 MB
-  r20261002T000000/  checkpoint
+  r20261002T200000/  checkpoint at 20:00 (no version on 2 Oct)
+    meta.json        tag, timestamp, base = "v518", parent = "v519"
+    log.parquet
+  v521/              checkpoint at materialisation version 521
     meta.json        tag, timestamp, base = "v518",
-                     parent = "r20261001T000000"
-    log.parquet                                              about 1 MB</code></pre>
+                     parent = "r20261002T200000"
+    log.parquet</code></pre>
+<p><img src="synsnap-chain.svg" class="r-plt" alt="" width="100%"></p>
 <p>The split follows how the data actually change. Supervoxels,
 positions and sizes are fixed once synapses have been detected;
 proofreading only changes which root id each supervoxel belongs to. So
@@ -344,16 +429,17 @@ its parent: for each one the new root id of each side that changed, and
 the old one. Its parent is the newest snapshot at or before its own
 time, so the checkpoints form a chain back to the base. Reading a
 checkpoint reads the base and the logs of every checkpoint in its chain,
-keeping the newest root id for each synapse. DuckDB does this in a
-fraction of a second for a few neurons even with months of daily
+keeping the newest root id for each synapse (below). DuckDB does this in
+a fraction of a second for a few neurons even with months of daily
 logs.</p>
+<p><img src="synsnap-read.svg" class="r-plt" alt="" width="100%"></p>
 <p>Because each checkpoint only depends on its parent, missing ones are
 easy to deal with:</p>
 <ul>
 <li>a missed day just makes the next checkpoint a little bigger</li>
-<li>a checkpoint made later for an earlier time (e.g. a materialisation
-version, or a day that failed) starts a side branch from the newest
-snapshot before it, without changing any existing checkpoint</li>
+<li>a checkpoint made later for an earlier time (e.g. a day that failed
+and was retried later) starts a side branch from the newest snapshot
+before it, without changing any existing checkpoint</li>
 <li>a checkpoint whose chain is incomplete (e.g. a parent that failed to
 download) is not listed, and running the download again fills it in</li>
 </ul>

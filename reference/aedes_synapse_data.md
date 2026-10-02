@@ -4,7 +4,7 @@ Returns a lazy dbplyr table of every synapse in a local snapshot (see
 [`aedes_use_snapshot()`](aedes_use_snapshot.md)) for use with dplyr
 verbs. Nothing is read until you
 [`dplyr::collect()`](https://dplyr.tidyverse.org/reference/compute.html)
-the result.
+the result. This needs a local snapshot; there is no CAVE equivalent.
 
 ## Usage
 
@@ -13,7 +13,8 @@ aedes_synapse_data(
   side = NULL,
   details = FALSE,
   snapshot = getOption("aedes.synapse_snapshot", "latest"),
-  root = aedes_snapshot_root()
+  root = aedes_snapshot_root(),
+  timestamp = NULL
 )
 ```
 
@@ -40,6 +41,11 @@ aedes_synapse_data(
   The snapshot folder. Defaults to
   [`aedes_snapshot_root()`](aedes_snapshot_root.md).
 
+- timestamp:
+
+  A time (including `"now"`) to get the synapses at, in place of
+  `snapshot`.
+
 ## Value
 
 A lazy `tbl`.
@@ -57,6 +63,12 @@ lets DuckDB skip most of the file. Snapshots with a `by_post.parquet`
 also keep a copy sorted by `post_root`, which `side = "post"` reads. Use
 [`bit64::as.integer64()`](https://bit64.r-lib.org/reference/as.integer64.character.html)
 for root ids in filters.
+
+With `timestamp`, the snapshot is the newest one at or before that time.
+If that is more than `getOption("aedes.synapse_max_age", 60)` seconds
+older, a local checkpoint at `timestamp` is first made with
+[`aedes_update_snapshot()`](aedes_update_snapshot.md) (seconds to
+minutes of CAVE lookups), and reused by later calls for nearby times.
 
 ## See also
 
