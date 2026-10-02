@@ -61,12 +61,50 @@ aedes_publish_snapshot <- function(dest, root = aedes_snapshot_root(),
   synsnap_publish(root, dest, snapshot)
 }
 
+# Fetch newly published checkpoints into `root` if the last check was more
+# than `hours` ago. A new full snapshot is only announced, since it is large.
+# The time of the last check is kept in `root`, so new sessions don't check
+# again straight away. Quiet unless something is downloaded or checks have
+# been failing for over a day. Returns the tags downloaded.
+aedes_snapshot_refresh <- function(root,
+                                   hours = getOption("aedes.snapshot_check_hours", 6)) {
+  if (!is.finite(hours) || !dir.exists(root) || !nrow(synsnap_tags(root)))
+    return(invisible(character()))
+  f <- file.path(root, ".last_check.json")
+  st <- if (file.exists(f)) tryCatch(jsonlite::read_json(f), error = function(e) NULL)
+  now <- Sys.time()
+  if (!is.null(st$time) &&
+      as.numeric(now) - as.numeric(synsnap_parse_time(st$time)) < hours * 3600)
+    return(invisible(character()))
+  res <- tryCatch(synsnap_download(aedes_snapshot_url(), root, full = FALSE),
+                  error = function(e) e)
+  failed <- inherits(res, "error")
+  since <- if (failed) st$failing_since %||% synsnap_format_time(now)
+  jsonlite::write_json(c(list(time = synsnap_format_time(now)),
+                         if (!is.null(since)) list(failing_since = since)),
+                       f, auto_unbox = TRUE)
+  if (failed) {
+    if (as.numeric(now) - as.numeric(synsnap_parse_time(since)) > 86400)
+      message("Could not check for new synapse snapshots since ", since, ": ",
+              conditionMessage(res))
+    return(invisible(character()))
+  }
+  if (length(attr(res, "skipped")))
+    message("A new full synapse snapshot is available (about 0.6 GB); ",
+            "fetch it with aedes_download_snapshot()")
+  invisible(as.character(res))
+}
+
 # Address of the published snapshots: the aedes.snapshot_url option, or the
 # standard one. Its folder name is a hash of the L2 ids of a fixed root id, so
-# working it out needs access to the aedes chunkedgraph.
+# working it out needs access to the aedes chunkedgraph (done once a session).
 aedes_snapshot_url <- function() {
   url <- getOption("aedes.snapshot_url")
   if (!is.null(url) && nzchar(url)) return(url)
+  aedes_snapshot_url_cave()
+}
+
+aedes_snapshot_url_cave <- memoise::memoise(function() {
   l2 <- tryCatch(
     with_aedes(fafbseg::flywire_l2ids("648518347624785674", integer64 = TRUE)),
     error = function(e) stop("Could not work out the snapshot address, which ",
@@ -74,7 +112,7 @@ aedes_snapshot_url <- function() {
                              conditionMessage(e), call. = FALSE))
   paste0("https://flyemdev.mrc-lmb.cam.ac.uk/flyconnectome/aedes/",
          synsnap_l2_hash(l2), "/snapshot")
-}
+})
 
 # sha256 of the unique ids in numeric order as decimal strings, one per line
 # with no final newline

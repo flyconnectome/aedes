@@ -31,8 +31,9 @@ aedes_partner_summary("superclass:descending_neuron", partners = "inputs")
 ```
 
 The first time, `aedes_use_snapshot()` offers to download a snapshot (about
-2.3 GB). Run `aedes_download_snapshot()` now and then to fetch newer ones,
-normally just a few MB.
+2.3 GB). After that, new checkpoints (normally just a few MB) are downloaded
+automatically every few hours when you use the snapshot; a new base is only
+announced, so run `aedes_download_snapshot()` when asked.
 
 Read on for more details.
 
@@ -152,6 +153,12 @@ aedes CAVE datastack) and downloads any snapshots that you don't have yet, into
 download resumes after an interruption, so if anything goes wrong just run it
 again. Snapshots never change once made, so a later download only fetches
 new ones: normally a few small checkpoints, and occasionally a new base.
+
+`aedes_use_snapshot()` and queries for times after the chosen snapshot check
+for new checkpoints at most every 6 hours (set the
+`aedes.snapshot_check_hours` option to change this, or `Inf` to turn it off)
+and download them quietly. Failures are only reported once they have lasted a
+day.
 
 To bring a snapshot up to date yourself:
 

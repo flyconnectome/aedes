@@ -35,6 +35,11 @@
 #'   with [aedes_download_snapshot()] (in an interactive session) or get an
 #'   error saying how to.
 #'
+#'   Every few hours (the `aedes.snapshot_check_hours` option, default 6;
+#'   `Inf` turns this off) it also downloads any new checkpoints that have
+#'   been published. A new full snapshot is only announced, since it is
+#'   larger: fetch it with [aedes_download_snapshot()].
+#'
 #' @param snapshot The snapshot tag, or `"latest"` for the most recent
 #'   snapshot in `root`. The default (`NULL`) chooses one to match `version`,
 #'   `timestamp` or the `aedes.version` option.
@@ -62,7 +67,10 @@ aedes_use_snapshot <- function(snapshot = NULL, version = NULL, timestamp = NULL
   explicit <- !is.null(version) || !is.null(timestamp)
   if (!is.null(snapshot) && explicit)
     stop("Give either a snapshot or a version/timestamp, not both", call. = FALSE)
-  if (set) aedes_snapshot_check(root)
+  if (set) {
+    aedes_snapshot_check(root)
+    aedes_snapshot_refresh(root)
+  }
   if (is.null(snapshot)) {
     when <- partner_summary_local_time(version, timestamp)
     snapshot <- synsnap_at(root, when)

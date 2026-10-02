@@ -67,6 +67,11 @@ match the synapse data.
 If there is no snapshot in \code{root}, you are asked whether to download one
 with \code{\link[=aedes_download_snapshot]{aedes_download_snapshot()}} (in an interactive session) or get an
 error saying how to.
+
+Every few hours (the \code{aedes.snapshot_check_hours} option, default 6;
+\code{Inf} turns this off) it also downloads any new checkpoints that have
+been published. A new full snapshot is only announced, since it is
+larger: fetch it with \code{\link[=aedes_download_snapshot]{aedes_download_snapshot()}}.
 }
 \examples{
 \dontrun{

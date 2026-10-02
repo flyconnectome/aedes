@@ -103,6 +103,8 @@ aedes_partner_summary <- function(rootids,
     stop("No local synapse snapshot selected. See ?aedes_use_snapshot")
   if (!is.null(snap)) {
     when = partner_summary_local_time(version, timestamp)
+    if (identical(when, "now") || as.numeric(when) > as.numeric(snap$timestamp))
+      aedes_snapshot_refresh(snap$root)
     # start from the newest snapshot at or before the query time: an older one
     # than selected for an earlier time, a newer one for a later time or now
     tag = synsnap_at(snap$root,
