@@ -9,6 +9,21 @@ test_that("aedes_set_version updates package option", {
   expect_equal(getOption("aedes.version"), "now")
 })
 
+test_that("aedes_ids returns FlyTable ids as is unless given a time", {
+  got <- NULL
+  local_mocked_bindings(
+    aedes_get_version = function(...) list(version = 519L, timestamp = NULL),
+    aedes_meta = function(ids, version, timestamp, ...) {
+      got <<- list(version = version, timestamp = timestamp)
+      data.frame(root_id = "1")
+    })
+  withr::local_options(aedes.version = "now")
+  expect_equal(aedes_ids("class:x"), "1")
+  expect_equal(got, list(version = NULL, timestamp = NULL))
+  aedes_ids("class:x", version = "latest")
+  expect_equal(got, list(version = 519L, timestamp = NULL))
+})
+
 cam_meta_aedes <- function(...) {
   fafbseg::cam_meta(..., table = "aedes_main")
 }

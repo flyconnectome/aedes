@@ -132,12 +132,13 @@ aedes_partner_summary <- function(rootids,
       min_sv = getOption("aedes.synapse_head_min_sv", 5e4)))
   }
   # resolve the aedes.version option here: fafbseg treats no version or
-  # timestamp as a live query at the current time
+  # timestamp as a live query at the current time, and aedes_ids() would not
+  # update the ids. "now" becomes one timestamp for both.
   if (is.null(version) && is.null(timestamp)) {
     which = getOption("aedes.version", "latest")
     if (is.numeric(which) || identical(which, "latest"))
       version = aedes_get_version(version = which)$version
-    else if (!identical(which, "now")) timestamp = which
+    else timestamp = aedes_get_version(timestamp = which)$timestamp
   }
   rootids = aedes_ids(rootids, version = version, timestamp = timestamp)
   withr::with_options(choose_aedes(set = FALSE), {

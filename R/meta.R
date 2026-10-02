@@ -22,7 +22,8 @@
 #'   complete re-download of the table, ignoring any cache.
 #' @param ... Additional arguments passed to [fafbseg::cam_meta()].
 #' @return For `aedes_meta()`, a data.frame of metadata. For `aedes_ids()`, a
-#'   vector of root IDs.
+#'   vector of root IDs. Neither follows the `aedes.version` option: with no
+#'   `version` or `timestamp` both return FlyTable as is.
 #'
 #' @details When `version` or `timestamp` are specified, root ids in the
 #'   returned data frame will be mapped to the corresponding timepoint using the
@@ -115,9 +116,14 @@ aedes_get_version <- function(which = getOption("aedes.version", default = "now"
 aedes_ids <- function(ids, ignore.case = FALSE, fixed = FALSE, unique = FALSE,
                       version = NULL, timestamp = NULL,
                       expiry = 0, refresh = FALSE, ...) {
-  vi = aedes_get_version(timestamp = timestamp, version = version)
+  # like aedes_meta(), FlyTable as is unless a version or timestamp is given
+  if (!is.null(version) || !is.null(timestamp)) {
+    vi = aedes_get_version(timestamp = timestamp, version = version)
+    version = vi$version
+    timestamp = vi$timestamp
+  }
   am = aedes_meta(ids, ignore.case = ignore.case, fixed = fixed, unique = unique,
-                  version = vi$version, timestamp = vi$timestamp,
+                  version = version, timestamp = timestamp,
                   expiry = expiry, refresh = refresh, ...)
   am$root_id
 }

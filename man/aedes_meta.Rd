@@ -64,7 +64,8 @@ complete re-download of the table, ignoring any cache.}
 }
 \value{
 For \code{aedes_meta()}, a data.frame of metadata. For \code{aedes_ids()}, a
-vector of root IDs.
+vector of root IDs. Neither follows the \code{aedes.version} option: with no
+\code{version} or \code{timestamp} both return FlyTable as is.
 }
 \description{
 Return metadata about Aedes neurons from FlyTable
