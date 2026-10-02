@@ -152,10 +152,13 @@ test_that("the server job makes and fills in regular and version checkpoints", {
   }
   vv <- data.frame(version = 1:3,
                    timestamp = w$t0 + c(1.5, 2.7, 3) * day + 0.123456)
-  # no r20260103T000000: v1 is in the day before it
+  # by default regular checkpoints are at 20:00, skipped after v1 and v2
   expect_equal(synsnap_server_todo(w$root, now, vv)$tag,
+               c("r20260101T200000", "v1", "v2"))
+  # at midnight: no r20260103T000000, since v1 is in the day before it
+  expect_equal(synsnap_server_todo(w$root, now, vv, at = 0)$tag,
                c("r20260101T000000", "r20260102T000000", "v1", "v2"))
-  st <- synsnap_server_update(w$root, ctx, dest = pub, versions = vv)
+  st <- synsnap_server_update(w$root, ctx, dest = pub, versions = vv, at = 0)
   expect_equal(st$built, c("r20260101T000000", "r20260102T000000", "v1", "v2"))
   expect_equal(st$latest, "v2")
   expect_equal(synsnap_meta("v2", w$root)$timestamp, synsnap_parse_time(
@@ -163,18 +166,18 @@ test_that("the server job makes and fills in regular and version checkpoints", {
   expect_equal(synsnap_meta("v1", w$root)$parent, "r20260102T000000")
   expect_equal(synsnap_meta("v2", w$root)$parent, "v1")
   expect_true(jsonlite::read_json(file.path(pub, "status.json"))$ok)
-  expect_length(synsnap_server_todo(w$root, now, vv)$tag, 0)
+  expect_length(synsnap_server_todo(w$root, now, vv, at = 0)$tag, 0)
 
   # v3 is only made once it has settled. A failed run reports the error; the
   # next one fills in the gap
   now <- now + day
   fail <- TRUE
-  expect_error(synsnap_server_update(w$root, ctx, dest = pub, versions = vv),
+  expect_error(synsnap_server_update(w$root, ctx, dest = pub, versions = vv, at = 0),
                "v3: CAVE is down")
   expect_false(jsonlite::read_json(file.path(pub, "status.json"))$ok)
   fail <- FALSE
   now <- now + 2 * day
-  st <- synsnap_server_update(w$root, ctx, dest = pub, versions = vv)
+  st <- synsnap_server_update(w$root, ctx, dest = pub, versions = vv, at = 0)
   # v2 covers r20260104T000000 and v3 (just after midnight) r20260105T000000
   expect_equal(st$built, c("v3", "r20260106T000000"))
   tags <- synsnap_tags(w$root)

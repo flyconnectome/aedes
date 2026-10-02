@@ -277,18 +277,17 @@ different sizes are compared with a CAVE query at the same version. A
 snapshot that fails this check is moved aside rather than used.
 
 After that, `inst/scripts/synsnap-cron.sh` runs hourly from cron. Each run
-makes any missing checkpoints from the past week: one at the exact time of
-each materialisation version (e.g. `v519`), and one at midnight UTC on any
-day without a version in the 24 hours before (e.g. `r20261003T000000`), so
-there is about one a day. Each is made once an hour has passed, so that all
-edits are visible. It then publishes them (as `aedes_publish_snapshot()`
-does), hard linking the static data, the base and every checkpoint built on
-it into a folder served over https and writing `manifest.json` last.
-Finally it writes a `status.json` and exits with an error, so that cron
-sends an email, if anything failed or the newest snapshot is more than 36
-hours old. A run that fails or never happens is
-filled in by the next one. The comments at the top of the script say how to
-set it up.
+makes any missing checkpoints from the past week: one at the exact time of each
+materialisation version (e.g. `v519`, at about 14:12 UTC), and one at 20:00 UTC
+on any day without a version in the 24 hours before (e.g. `r20261002T200000`),
+so there is about one a day. Each is made once an hour has passed, so that all
+edits are visible. It then publishes them (as `aedes_publish_snapshot()` does),
+hard linking the static data, the base and every checkpoint built on it into a
+folder served over https and writing `manifest.json` last. Finally it writes a
+`status.json` and exits with an error, so that cron sends an email, if anything
+failed or the newest snapshot is more than 36 hours old. A run that fails or
+never happens is filled in by the next one. The comments at the top of the
+script say how to set it up.
 
 Reading a checkpoint gets slower as its chain back to the base grows, so
 every few months make a new base with
@@ -311,12 +310,12 @@ syn_snapshot/
   v519/              checkpoint at materialisation version 519
     meta.json        tag, timestamp, base = "v518", parent = "v518"
     log.parquet      id, t, new and old roots                about 1 MB
-  r20261003T000000/  checkpoint at midnight (no version on 2 Oct)
+  r20261002T200000/  checkpoint at 20:00 (no version on 2 Oct)
     meta.json        tag, timestamp, base = "v518", parent = "v519"
     log.parquet
   v521/              checkpoint at materialisation version 521
     meta.json        tag, timestamp, base = "v518",
-                     parent = "r20261003T000000"
+                     parent = "r20261002T200000"
     log.parquet
 ```
 

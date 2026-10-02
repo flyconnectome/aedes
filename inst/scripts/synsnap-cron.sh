@@ -13,7 +13,7 @@
 #   SYNSNAP_THREADS  DuckDB threads (optional)
 #
 # Each run makes any missing materialisation version checkpoints, and
-# midnight ones for days without a version, from the last week, publishes
+# 20:00 UTC ones for days without a version, from the last week, publishes
 # and writes status.json in SYNSNAP_DEST. It exits with an error (so cron
 # mails the output) if anything failed or the newest snapshot is more than
 # 36 hours old. flock skips a run while the

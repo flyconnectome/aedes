@@ -37,11 +37,11 @@
     <text x="232" y="233" fill="#444">~1 MB</text>
 
     <rect x="420" y="120" width="160" height="120" rx="6" fill="#fdf1dc" stroke="#c49a4a" stroke-width="1.5"/>
-    <text x="432" y="142" font-weight="bold" font-size="13">r20261003T000000</text>
-    <text x="432" y="160" fill="#444">checkpoint · midnight</text>
+    <text x="432" y="142" font-weight="bold" font-size="13">r20261002T200000</text>
+    <text x="432" y="160" fill="#444">checkpoint · 20:00 fallback</text>
     <text x="432" y="184" font-family="Menlo, monospace" font-size="11">log.parquet</text>
     <text x="432" y="201" fill="#444">no version on 2 Oct,</text>
-    <text x="432" y="217" fill="#444">so made at midnight</text>
+    <text x="432" y="217" fill="#444">so made at 20:00</text>
     <text x="432" y="233" fill="#444">~1 MB</text>
 
     <rect x="620" y="120" width="160" height="120" rx="6" fill="#fdf1dc" stroke="#c49a4a" stroke-width="1.5"/>
@@ -70,9 +70,9 @@
     <path d="M100,265 v10 M300,265 v10 M500,265 v10 M700,265 v10" stroke="#999"/>
     <text x="100" y="289">30 Sep 14:12</text>
     <text x="300" y="289">1 Oct 14:12</text>
-    <text x="500" y="289">3 Oct 00:00</text>
+    <text x="500" y="289">2 Oct 20:00</text>
     <text x="700" y="289">3 Oct 14:12</text>
   </g>
   <text x="20" y="316" fill="#444" font-size="12">Each checkpoint stores only the synapses whose root ids changed since its parent. There is one a day:</text>
-  <text x="20" y="333" fill="#444" font-size="12">at each new materialisation version, or at midnight after a day without one.</text>
+  <text x="20" y="333" fill="#444" font-size="12">at each new materialisation version, or at 20:00 UTC on a day without one.</text>
 </svg>
