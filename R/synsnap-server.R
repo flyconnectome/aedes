@@ -1,13 +1,16 @@
 # Unattended checkpoints for the server that publishes snapshots (run from
 # cron, see inst/scripts/synsnap-cron.sh). Dataset-agnostic like R/synsnap.R.
 
-# Checkpoints that should exist at `now`: one every `every` seconds (tag
-# rYYYYmmddTHHMMSS), the newest at least `settle` seconds old so that its
-# edits are all visible, and one at the exact time of each materialisation
-# version (tag v<N>) in `versions` (a data.frame with version, timestamp).
-# Both go back `catchup` seconds (but not before the oldest snapshot), so a
-# failed or missed run is filled in by the next one. Returns a data.frame of tag, timestamp (text), kind, version
-# for those that are missing, oldest first.
+# Checkpoints that should exist at `now`: one at the exact time of each
+# materialisation version (tag v<N>) in `versions` (a data.frame with
+# version, timestamp), and one every `every` seconds (tag rYYYYmmddTHHMMSS)
+# unless there is a version checkpoint in the `every` seconds before it. So
+# with a new version each day, the regular ones only fill in days without
+# one. Each is made once it is at least `settle` seconds old, so that its
+# edits are all visible. Both go back `catchup` seconds (but not before the
+# oldest snapshot), so a failed or missed run is filled in by the next one.
+# Returns a data.frame of tag, timestamp (text), kind, version for those that
+# are missing, oldest first.
 synsnap_server_todo <- function(root, now, versions = NULL, every = 86400,
                                 settle = 3600, catchup = 7 * 86400) {
   now <- as.numeric(now)
@@ -28,6 +31,12 @@ synsnap_server_todo <- function(root, now, versions = NULL, every = 86400,
   }
   have <- synsnap_tags(root, all = TRUE)
   if (!nrow(have)) stop("No synapse snapshots in ", root, call. = FALSE)
+  vt <- c(as.numeric(synsnap_parse_time(todo$timestamp[todo$kind == "version"])),
+          as.numeric(have$timestamp[have$kind %in% "version"]))
+  st <- as.numeric(synsnap_parse_time(todo$timestamp))
+  covered <- todo$kind == "regular" &
+    vapply(st, function(t) any(vt > t - every & vt <= t), logical(1))
+  todo <- todo[!covered, , drop = FALSE]
   todo <- todo[!todo$tag %in% have$tag & synsnap_parse_time(todo$timestamp) >=
                  min(have$timestamp), , drop = FALSE]
   todo <- todo[order(synsnap_parse_time(todo$timestamp)), , drop = FALSE]

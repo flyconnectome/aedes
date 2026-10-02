@@ -273,14 +273,16 @@ different sizes are compared with a CAVE query at the same version. A
 snapshot that fails this check is moved aside rather than used.
 
 After that, `inst/scripts/synsnap-cron.sh` runs hourly from cron. Each run
-makes any missing checkpoints from the past week: one a day at midnight UTC
-(once an hour has passed, so that all edits are visible) and one at the exact
-time of each materialisation version (e.g. `v519`). It then publishes them
-(as `aedes_publish_snapshot()` does), hard linking the static data, the base
-and every checkpoint built on it into a folder served over https and writing
-`manifest.json` last. Finally it writes a `status.json` and exits with an
-error, so that cron sends an email, if anything failed or the newest
-snapshot is more than 36 hours old. A run that fails or never happens is
+makes any missing checkpoints from the past week: one at the exact time of
+each materialisation version (e.g. `v519`), and one at midnight UTC on any
+day without a version in the 24 hours before (e.g. `r20261003T000000`), so
+there is about one a day. Each is made once an hour has passed, so that all
+edits are visible. It then publishes them (as `aedes_publish_snapshot()`
+does), hard linking the static data, the base and every checkpoint built on
+it into a folder served over https and writing `manifest.json` last.
+Finally it writes a `status.json` and exits with an error, so that cron
+sends an email, if anything failed or the newest snapshot is more than 36
+hours old. A run that fails or never happens is
 filled in by the next one. The comments at the top of the script say how to
 set it up.
 
