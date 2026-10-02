@@ -228,6 +228,24 @@ test_that("publish and download snapshots", {
   expect_equal(aedes_snapshot_url(), url)
 })
 
+test_that("aedes_synapse_data at a timestamp", {
+  skip_if_no_duckdb()
+  root <- make_snapshot(withr::local_tempdir())
+  w <- fake_world()
+  w$root <- root
+  local_mocked_bindings(aedes_synsnap_ctx = function() w$ctx)
+  n <- function(...) nrow(dplyr::collect(aedes_synapse_data(root = root, ...)))
+  # s1 is used as it is
+  expect_silent(n(timestamp = "2026-01-01 00:00:30"))
+  # otherwise a checkpoint is made, then reused
+  expect_message(n(timestamp = "now"), "Updating synapse snapshot 's1'")
+  expect_true("20260101T030000" %in% synsnap_tags(root)$tag)
+  expect_tag_matches(w, "20260101T030000", w$now)
+  w$now <- w$now + 30
+  expect_silent(n(timestamp = "now"))
+  expect_error(aedes_synapse_data(root = root, timestamp = "2025-01-01"), "as old as")
+})
+
 test_that("newly published checkpoints are fetched automatically", {
   skip_if_no_duckdb()
   skip_if(!nzchar(Sys.which("curl")))

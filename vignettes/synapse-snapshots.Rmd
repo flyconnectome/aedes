@@ -142,7 +142,9 @@ Root ids come back as `integer64` columns, but you can filter with the
 character ids that `aedes_ids()` returns. With `details = TRUE` the table
 also has supervoxel ids, the positions of the pre and postsynaptic points and
 the synapse size. Note that `aedes_synapse_data()` reads the selected
-snapshot exactly as it is; it does not apply later edits.
+snapshot exactly as it is; it does not apply later edits. To get the synapses
+at a particular time, give `timestamp` (e.g. `"now"`): if no snapshot is
+close enough, a local checkpoint is made first with `aedes_update_snapshot()`.
 
 ## Getting a Snapshot
 

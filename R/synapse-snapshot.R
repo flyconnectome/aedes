@@ -247,12 +247,20 @@ aedes_snapshot_active <- function(snapshot = getOption("aedes.synapse_snapshot")
 #'   also keep a copy sorted by `post_root`, which `side = "post"` reads. Use
 #'   [bit64::as.integer64()] for root ids in filters.
 #'
+#'   With `timestamp`, the snapshot is the newest one at or before that time.
+#'   If that is more than `getOption("aedes.synapse_max_age", 60)` seconds
+#'   older, a local checkpoint at `timestamp` is first made with
+#'   [aedes_update_snapshot()] (seconds to minutes of CAVE lookups), and reused
+#'   by later calls for nearby times.
+#'
 #' @param side `"post"` to read the copy sorted by `post_root` when the
 #'   snapshot has one. `NULL` (the default) and `"pre"` read the copy sorted by
 #'   `pre_root`.
 #' @param details Whether to add supervoxel, position and size columns.
 #' @param snapshot The snapshot tag, or `"latest"` for the most recent
 #'   snapshot in `root`. Defaults to the one chosen by [aedes_use_snapshot()].
+#' @param timestamp A time (including `"now"`) to get the synapses at, in
+#'   place of `snapshot`.
 #' @inheritParams aedes_use_snapshot
 #' @return A lazy `tbl`.
 #' @seealso [aedes_use_snapshot()]
@@ -268,10 +276,28 @@ aedes_snapshot_active <- function(snapshot = getOption("aedes.synapse_snapshot")
 #' }
 aedes_synapse_data <- function(side = NULL, details = FALSE,
                                snapshot = getOption("aedes.synapse_snapshot", "latest"),
-                               root = aedes_snapshot_root()) {
+                               root = aedes_snapshot_root(), timestamp = NULL) {
   if (!is.null(side)) side <- match.arg(side, c("pre", "post"))
-  if (identical(snapshot, "latest")) snapshot <- synsnap_latest(root)
+  if (!is.null(timestamp)) snapshot <- aedes_snapshot_at(timestamp, root)
+  else if (identical(snapshot, "latest")) snapshot <- synsnap_latest(root)
   synsnap_tbl(snapshot, root, side = side, static = details)
+}
+
+# tag of a snapshot at `timestamp` ("now" or a time): the newest one at or
+# before it, or a new local checkpoint if that is more than
+# aedes.synapse_max_age seconds older
+aedes_snapshot_at <- function(timestamp, root) {
+  aedes_snapshot_refresh(root)
+  when <- if (identical(timestamp, "now")) aedes_synsnap_ctx()$now()
+  else as.POSIXct(timestamp, tz = "UTC")
+  tag <- synsnap_at(root, when, tol = 0)
+  if (is.null(tag))
+    stop("No synapse snapshot in ", root, " is as old as ", format_utc(when),
+         call. = FALSE)
+  age <- as.numeric(when) - as.numeric(synsnap_meta(tag, root)$timestamp)
+  if (age > getOption("aedes.synapse_max_age", 60))
+    tag <- aedes_update_snapshot(when, from = tag, root = root, set = FALSE)$tag
+  tag
 }
 
 # CAVE access for synsnap_query_at() (see R/synsnap-live.R)
