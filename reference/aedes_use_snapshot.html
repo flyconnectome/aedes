@@ -101,10 +101,14 @@ with its supervoxels, positions and size) and one sub-folder per snapshot
 tag. A tag folder has a <code>meta.json</code> with the snapshot <code>timestamp</code> and
 either the full root id table (<code>by_pre.parquet</code>, sorted by presynaptic
 root, plus an optional <code>by_post.parquet</code> sorted by postsynaptic root) or,
-for a delta snapshot, a <code>delta.parquet</code> with the rows that differ from its
-full <code>base</code> snapshot. Queries use DuckDB (from
+for a checkpoint, a <code>log.parquet</code> with the synapses whose root ids changed
+since its <code>parent</code> snapshot. A checkpoint is read as its full <code>base</code>
+snapshot plus the logs of every checkpoint between them, so it is only
+used when all of those are present. Queries use DuckDB (from
 the suggested packages <span class="pkg">duckdb</span>, <span class="pkg">DBI</span> and <span class="pkg">dbplyr</span>) and only
-read the parts of the parquet files that they need.</p>
+read the parts of the parquet files that they need. DuckDB uses every
+core; set the <code>aedes.duckdb_threads</code> option before the first query to use
+fewer, e.g. on a shared machine.</p>
 <p>When no <code>snapshot</code> is given, the newest one at or before the requested
 time is used: <code>timestamp</code> or the time of <code>version</code> when given, otherwise
 the <code>aedes.version</code> option (see <code><a href="aedes_set_version.html">aedes_set_version()</a></code>). So by default

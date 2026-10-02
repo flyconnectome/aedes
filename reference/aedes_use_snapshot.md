@@ -54,10 +54,14 @@ its supervoxels, positions and size) and one sub-folder per snapshot
 tag. A tag folder has a `meta.json` with the snapshot `timestamp` and
 either the full root id table (`by_pre.parquet`, sorted by presynaptic
 root, plus an optional `by_post.parquet` sorted by postsynaptic root)
-or, for a delta snapshot, a `delta.parquet` with the rows that differ
-from its full `base` snapshot. Queries use DuckDB (from the suggested
-packages duckdb, DBI and dbplyr) and only read the parts of the parquet
-files that they need.
+or, for a checkpoint, a `log.parquet` with the synapses whose root ids
+changed since its `parent` snapshot. A checkpoint is read as its full
+`base` snapshot plus the logs of every checkpoint between them, so it is
+only used when all of those are present. Queries use DuckDB (from the
+suggested packages duckdb, DBI and dbplyr) and only read the parts of
+the parquet files that they need. DuckDB uses every core; set the
+`aedes.duckdb_threads` option before the first query to use fewer, e.g.
+on a shared machine.
 
 When no `snapshot` is given, the newest one at or before the requested
 time is used: `timestamp` or the time of `version` when given, otherwise

@@ -44,7 +44,7 @@ aedes_update_snapshot(
 
 - rebase:
 
-  Whether to save a full snapshot rather than a delta.
+  Whether to also save the new snapshot as a full snapshot.
 
 - set:
 
@@ -59,11 +59,15 @@ new snapshot.
 
 Only synapses on neurons that were edited since `from` are looked up in
 CAVE, so updating a day-old snapshot typically takes seconds to minutes.
-The new snapshot is saved as a small `delta.parquet` file of the
-synapses that differ from the full snapshot it is based on. Each delta
-holds all changes since that full snapshot, so deltas grow over time;
-use `rebase = TRUE` to save a full snapshot (about 0.6 GB) that later
-deltas start from.
+The new snapshot is saved as a checkpoint: a small `log.parquet` of the
+synapses whose root ids changed since `from` (typically about 1 MB per
+day of edits). Reading a checkpoint combines the logs back to the last
+full snapshot, which stays fast for months of edits; use `rebase = TRUE`
+to also save a full snapshot (about 0.6 GB) that later checkpoints start
+from.
+
+A `timestamp` given as a time is rounded down to a whole millisecond
+(the precision of CAVE edit times).
 
 ## See also
 

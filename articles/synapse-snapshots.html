@@ -146,9 +146,9 @@ time, named by a tag such as <code>v518</code>
 version</td>
 </tr>
 <tr class="odd">
-<td>delta</td>
-<td>a snapshot stored as just the synapses whose root ids differ from
-its base (a few MB to tens of MB)</td>
+<td>checkpoint</td>
+<td>a snapshot stored as just the synapses whose root ids changed since
+an earlier snapshot, its parent (about 1 MB per day of edits)</td>
 </tr>
 </tbody>
 </table>
@@ -179,9 +179,8 @@ the rest:</p>
 <code><a href="../reference/aedes_build_snapshot.html">aedes_build_snapshot()</a></code>
 </li>
 <li>
-<strong>make</strong> daily deltas and occasional new bases with
-<code><a href="../reference/aedes_update_snapshot.html">aedes_update_snapshot()</a></code>
-</li>
+<strong>make</strong> daily checkpoints and occasional new bases
+with a cron job (<code>inst/scripts/synsnap-cron.sh</code>)</li>
 <li>
 <strong>distribute</strong> them with
 <code><a href="../reference/aedes_download_snapshot.html">aedes_publish_snapshot()</a></code>
@@ -249,8 +248,8 @@ datastack) and downloads any snapshots that you don’t have yet, into
 <code><a href="../reference/aedes_snapshot_root.html">aedes_snapshot_root()</a></code>. Every file is checked against its
 md5 and the download resumes after an interruption, so if anything goes
 wrong just run it again. Snapshots never change once made, so a later
-download only fetches new ones: normally a small delta, and occasionally
-a new base.</p>
+download only fetches new ones: normally a few small checkpoints, and
+occasionally a new base.</p>
 <p>To bring a snapshot up to date yourself:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/aedes_update_snapshot.html">aedes_update_snapshot</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -286,16 +285,20 @@ the same <code>version</code> and it will carry on where it stopped.
 Before a new base is used, the synapses of 20 neurons of very different
 sizes are compared with a CAVE query at the same version. A snapshot
 that fails this check is moved aside rather than used.</p>
-<p>After that, a daily job makes a delta for the present and publishes
-it:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/aedes_update_snapshot.html">aedes_update_snapshot</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/aedes_download_snapshot.html">aedes_publish_snapshot</a></span><span class="op">(</span><span class="st">"/path/to/served/folder"</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="../reference/aedes_download_snapshot.html">aedes_publish_snapshot()</a></code> hard links the static data, the
-newest snapshot and its base into a folder served over https and writes
-<code>manifest.json</code> last. Deltas grow as proofreading continues,
-so every so often (e.g. at a new materialisation version) make a new
-base with
+<p>After that, <code>inst/scripts/synsnap-cron.sh</code> runs hourly
+from cron. Each run makes any missing checkpoints from the past week:
+one a day at midnight UTC (once an hour has passed, so that all edits
+are visible) and one at the exact time of each materialisation version
+(e.g. <code>v519</code>). It then publishes them with
+<code><a href="../reference/aedes_download_snapshot.html">aedes_publish_snapshot()</a></code>, which hard links the static data,
+the base and every checkpoint built on it into a folder served over
+https and writes <code>manifest.json</code> last. Finally it writes a
+<code>status.json</code> and exits with an error, so that cron sends an
+email, if anything failed or the newest snapshot is more than 36 hours
+old. A run that fails or never happens is filled in by the next one. The
+comments at the top of the script say how to set it up.</p>
+<p>Reading a checkpoint gets slower as its chain back to the base grows,
+so every few months make a new base with
 <code>aedes_update_snapshot("latest", rebase = TRUE)</code>.</p>
 </div>
 <div class="section level2">
@@ -312,9 +315,14 @@ snapshot:</p>
   v518/              base
     meta.json        tag, timestamp
     by_pre.parquet   id, pre_root, post_root                 0.55 GB
-  20261001T120000/   delta
-    meta.json        tag, timestamp, base = "v518"
-    delta.parquet    rows that differ from v518              a few MB</code></pre>
+  r20261001T000000/  checkpoint
+    meta.json        tag, timestamp, base = "v518",
+                     parent = "v518"
+    log.parquet      id, t, new and old roots                about 1 MB
+  r20261002T000000/  checkpoint
+    meta.json        tag, timestamp, base = "v518",
+                     parent = "r20261001T000000"
+    log.parquet                                              about 1 MB</code></pre>
 <p>The split follows how the data actually change. Supervoxels,
 positions and sizes are fixed once synapses have been detected;
 proofreading only changes which root id each supervoxel belongs to. So
@@ -329,14 +337,29 @@ postsynaptic root (<code>by_post.parquet</code>) speeds up input queries
 for small numbers of neurons.</p>
 </div>
 <div class="section level3">
-<h3 id="deltas">Deltas<a class="anchor" aria-label="anchor" href="#deltas"></a>
+<h3 id="checkpoints">Checkpoints<a class="anchor" aria-label="anchor" href="#checkpoints"></a>
 </h3>
-<p>A delta records every row that differs from its base, not just the
-changes since the previous delta. This means that reading any snapshot
-needs at most two files: the rows of the base whose <code>id</code> is
-not in the delta, plus the delta itself. It also means that you only
-ever need to download the newest delta. The price is that deltas grow as
-proofreading continues, until the next base.</p>
+<p>A checkpoint records only the synapses whose root ids changed since
+its parent: for each one the new root id of each side that changed, and
+the old one. Its parent is the newest snapshot at or before its own
+time, so the checkpoints form a chain back to the base. Reading a
+checkpoint reads the base and the logs of every checkpoint in its chain,
+keeping the newest root id for each synapse. DuckDB does this in a
+fraction of a second for a few neurons even with months of daily
+logs.</p>
+<p>Because each checkpoint only depends on its parent, missing ones are
+easy to deal with:</p>
+<ul>
+<li>a missed day just makes the next checkpoint a little bigger</li>
+<li>a checkpoint made later for an earlier time (e.g. a materialisation
+version, or a day that failed) starts a side branch from the newest
+snapshot before it, without changing any existing checkpoint</li>
+<li>a checkpoint whose chain is incomplete (e.g. a parent that failed to
+download) is not listed, and running the download again fills it in</li>
+</ul>
+<p>Edits sometimes become visible in CAVE a little after their
+timestamp, so regular checkpoints also look for edits in the 10 minutes
+before their parent.</p>
 </div>
 <div class="section level3">
 <h3 id="safety">Safety<a class="anchor" aria-label="anchor" href="#safety"></a>
@@ -354,8 +377,9 @@ half-written file never looks finished</li>
 which is saved in chunks of a million supervoxels) and downloads can
 resume after a failure</li>
 </ul>
-<p>There is no locking, so only one process should write to a snapshot
-folder at a time. Any number of R sessions can read from it.</p>
+<p>Only one process should write to a snapshot folder at a time (the
+cron job uses <code>flock</code> to make sure of this). Any number of R
+sessions can read from it.</p>
 </div>
 </div>
 <div class="section level2">
@@ -404,7 +428,7 @@ it can’t answer questions about the present (“now”).</p>
 </tr>
 <tr class="even">
 <td>Each new time</td>
-<td>a delta of a few MB to tens of MB</td>
+<td>a checkpoint of about 1 MB per day of edits</td>
 <td>a full copy of the table per version</td>
 </tr>
 <tr class="odd">
@@ -428,7 +452,7 @@ few hundred neurons. Many supervoxels then belong to new root ids, but
 only the synapses on those neurons change, a small fraction of the 111
 million rows, and the static columns are never touched. So after a
 one-time download of the static data and a base, each new time costs a
-small delta.</li>
+small checkpoint.</li>
 <li>
 <strong>there is a single writer.</strong> So the only guarantee we
 need is that readers never see a half-built snapshot, which staging plus

@@ -4,11 +4,11 @@
 snapshot into your snapshot folder and selects it with
 [`aedes_use_snapshot()`](aedes_use_snapshot.md). The first download
 fetches the static data (about 1.7 GB) and a full snapshot (about 0.6
-GB); later ones usually just fetch a small delta.
+GB); later ones usually just fetch a few small checkpoints.
 
 `aedes_publish_snapshot()` is for whoever maintains the snapshots: it
-makes the newest snapshot in `root` available for download from a folder
-served over https.
+makes the newest snapshot in `root`, and the earlier checkpoints it is
+built on, available for download from a folder served over https.
 
 ## Usage
 
@@ -66,10 +66,12 @@ is never mistaken for a snapshot; just run it again. Downloads use the
 
 Publishing hard links the files into `dest` when it is on the same
 filesystem as `root` (otherwise they are copied), so it takes no extra
-space. It includes the static data, the newest snapshot and, when that
-is a delta, its full base. `manifest.json` is written last. Files that
-are no longer listed are removed one publish later, so that a client
-that has just read the previous manifest can still finish.
+space. It includes the static data, the full snapshot that `snapshot` is
+built on and every complete checkpoint built on that full snapshot (see
+[`aedes_update_snapshot()`](aedes_update_snapshot.md)). `manifest.json`
+is written last. Files that are no longer listed are removed one publish
+later, so that a client that has just read the previous manifest can
+still finish.
 
 ## See also
 
