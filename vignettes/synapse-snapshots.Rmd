@@ -39,6 +39,10 @@ Read on for more details.
 
 ## Introduction
 
+```{r fig-overview, echo = FALSE, eval = TRUE, out.width = "100%"}
+knitr::include_graphics("synsnap-overview.svg")
+```
+
 The Aedes synapse table has about 111 million synapses. Querying it through
 CAVE is fine for a few neurons, but it is slow for tens to thousands of
 neurons, especially at the latest state of the dataset. A local synapse
@@ -304,14 +308,20 @@ syn_snapshot/
   v518/              base
     meta.json        tag, timestamp
     by_pre.parquet   id, pre_root, post_root                 0.55 GB
-  r20261001T000000/  checkpoint
-    meta.json        tag, timestamp, base = "v518",
-                     parent = "v518"
+  v519/              checkpoint at materialisation version 519
+    meta.json        tag, timestamp, base = "v518", parent = "v518"
     log.parquet      id, t, new and old roots                about 1 MB
-  r20261002T000000/  checkpoint
+  r20261003T000000/  checkpoint at midnight (no version on 2 Oct)
+    meta.json        tag, timestamp, base = "v518", parent = "v519"
+    log.parquet
+  v521/              checkpoint at materialisation version 521
     meta.json        tag, timestamp, base = "v518",
-                     parent = "r20261001T000000"
-    log.parquet                                              about 1 MB
+                     parent = "r20261003T000000"
+    log.parquet
+```
+
+```{r fig-chain, echo = FALSE, eval = TRUE, out.width = "100%"}
+knitr::include_graphics("synsnap-chain.svg")
 ```
 
 The split follows how the data actually change. Supervoxels, positions and
@@ -333,15 +343,19 @@ parent: for each one the new root id of each side that changed, and the old
 one. Its parent is the newest snapshot at or before its own time, so the
 checkpoints form a chain back to the base. Reading a checkpoint reads the
 base and the logs of every checkpoint in its chain, keeping the newest root
-id for each synapse. DuckDB does this in a fraction of a second for a few
+id for each synapse (below). DuckDB does this in a fraction of a second for a few
 neurons even with months of daily logs.
+
+```{r fig-read, echo = FALSE, eval = TRUE, out.width = "100%"}
+knitr::include_graphics("synsnap-read.svg")
+```
 
 Because each checkpoint only depends on its parent, missing ones are easy to
 deal with:
 
 * a missed day just makes the next checkpoint a little bigger
-* a checkpoint made later for an earlier time (e.g. a materialisation
-  version, or a day that failed) starts a side branch from the newest
+* a checkpoint made later for an earlier time (e.g. a day that failed
+  and was retried later) starts a side branch from the newest
   snapshot before it, without changing any existing checkpoint
 * a checkpoint whose chain is incomplete (e.g. a parent that failed to
   download) is not listed, and running the download again fills it in
