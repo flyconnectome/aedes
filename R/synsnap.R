@@ -132,7 +132,8 @@ synsnap_tags <- function(root, all = FALSE) {
   ok <- stats::setNames(logical(nrow(df)), df$tag)
   for (i in seq_len(nrow(df))) ok[i] <- is.na(df$base[i]) ||
     (!df$old_delta[i] && isTRUE(ok[df$parent[i]]) &&
-       (df$parent[i] == df$base[i] || identical(df$base[match(df$parent[i], df$tag)], df$base[i])))
+       identical(df$base[match(df$parent[i], df$tag)],
+                 if (df$parent[i] == df$base[i]) NA_character_ else df$base[i]))
   df$usable <- unname(ok)
   df$old_delta <- NULL
   rownames(df) <- NULL

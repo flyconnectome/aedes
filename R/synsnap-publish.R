@@ -96,13 +96,15 @@ synsnap_manifest_url <- function(url)
 # after the snapshot it is built on. Existing snapshots are never changed: a
 # tag already in `root` is skipped, and a different static.json is an error.
 # Each file is checked against its md5 and a snapshot's meta.json is placed
-# last. Returns the tags downloaded.
-synsnap_download <- function(url, root) {
+# last. With `full = FALSE`, full snapshots that `root` does not have yet
+# (and checkpoints built on them) are skipped. Returns the tags downloaded,
+# with the skipped full snapshots as attribute "skipped".
+synsnap_download <- function(url, root, full = TRUE) {
   url <- synsnap_manifest_url(url)
   m <- tryCatch({
     con <- url(url)
     on.exit(close(con))
-    jsonlite::fromJSON(paste(readLines(con, warn = FALSE), collapse = "\n"))
+    jsonlite::fromJSON(paste(suppressWarnings(readLines(con, warn = FALSE)), collapse = "\n"))
   }, error = function(e)
     stop("Could not read the snapshot manifest (",
          gsub(url, "<url>", conditionMessage(e), fixed = TRUE), ")", call. = FALSE))
@@ -135,12 +137,18 @@ synsnap_download <- function(url, root) {
            "use a new folder", call. = FALSE)
   } else get(c("static.parquet", "static.json"))
   snaps <- m$snapshots
-  have <- synsnap_tags(root)$tag
+  # a local tag only counts if it has the same base (it may since have been
+  # made a full snapshot on the server)
+  local <- synsnap_tags(root)
+  have <- local$tag[local$base %in% snaps$base[match(local$tag, snaps$tag)]]
   todo <- setdiff(snaps$tag, have)
+  skipped <- if (!full) todo[is.na(snaps$base[match(todo, snaps$tag)])]
+  todo <- setdiff(todo, skipped)
   done <- character()
   while (length(todo)) {
     i <- match(todo, snaps$tag)
     ready <- is.na(snaps$base[i]) | snaps$parent[i] %in% c(have, done)
+    if (!any(ready) && !full) break
     if (!any(ready))
       stop("The published snapshots ", paste(todo, collapse = ", "),
            " need snapshots that are not published", call. = FALSE)
@@ -149,5 +157,5 @@ synsnap_download <- function(url, root) {
     todo <- todo[!ready]
   }
   unlink(stage, recursive = TRUE)
-  invisible(done)
+  invisible(structure(done, skipped = skipped))
 }

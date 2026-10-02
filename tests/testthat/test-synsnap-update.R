@@ -185,11 +185,11 @@ test_that("publish and download snapshots", {
 
   # later checkpoints, including a backfill on a side branch, arrive after
   # their parents; an unfinished one is not published
-  add_cp <- function(tag, parent, time) {
+  add_cp <- function(tag, parent, time, base = "s1") {
     dir.create(file.path(root, tag))
     file.copy(file.path(root, "s2", "log.parquet"), file.path(root, tag))
     if (!is.null(time))
-      jsonlite::write_json(list(tag = tag, timestamp = time, base = "s1", parent = parent),
+      jsonlite::write_json(list(tag = tag, timestamp = time, base = base, parent = parent),
                            file.path(root, tag, "meta.json"), auto_unbox = TRUE)
   }
   add_cp("s4", "s2", "2026-01-04 00:00:00.000000 UTC")
@@ -226,6 +226,68 @@ test_that("publish and download snapshots", {
   expect_error(synsnap_download(url, other), "different static data")
   withr::local_options(aedes.snapshot_url = url)
   expect_equal(aedes_snapshot_url(), url)
+})
+
+test_that("aedes_synapse_data at a timestamp", {
+  skip_if_no_duckdb()
+  root <- make_snapshot(withr::local_tempdir())
+  w <- fake_world()
+  w$root <- root
+  local_mocked_bindings(aedes_synsnap_ctx = function() w$ctx)
+  n <- function(...) nrow(dplyr::collect(aedes_synapse_data(root = root, ...)))
+  # s1 is used as it is
+  expect_silent(n(timestamp = "2026-01-01 00:00:30"))
+  # otherwise a checkpoint is made, then reused
+  expect_message(n(timestamp = "now"), "Updating synapse snapshot 's1'")
+  expect_true("20260101T030000" %in% synsnap_tags(root)$tag)
+  expect_tag_matches(w, "20260101T030000", w$now)
+  w$now <- w$now + 30
+  expect_silent(n(timestamp = "now"))
+  expect_error(aedes_synapse_data(root = root, timestamp = "2025-01-01"), "as old as")
+})
+
+test_that("newly published checkpoints are fetched automatically", {
+  skip_if_no_duckdb()
+  skip_if(!nzchar(Sys.which("curl")))
+  root <- make_snapshot(withr::local_tempdir())
+  pub <- withr::local_tempdir()
+  synsnap_publish(root, pub)
+  local <- withr::local_tempdir()
+  url <- paste0("file://", normalizePath(pub))
+  withr::local_options(aedes.snapshot_url = url)
+  synsnap_download(url, local)
+  add_cp <- function(tag, parent, time, base = "s1") {
+    dir.create(file.path(root, tag))
+    file.copy(file.path(root, "s2", "log.parquet"), file.path(root, tag))
+    jsonlite::write_json(list(tag = tag, timestamp = time, base = base, parent = parent),
+                         file.path(root, tag, "meta.json"), auto_unbox = TRUE)
+    synsnap_publish(root, pub)
+  }
+  add_cp("s3", "s2", "2026-01-03 00:00:00.000000 UTC")
+  expect_equal(suppressMessages(aedes_snapshot_refresh(local, hours = 6)), "s3")
+  # not again within `hours`, even in a new session
+  add_cp("s4", "s3", "2026-01-04 00:00:00.000000 UTC")
+  expect_length(aedes_snapshot_refresh(local, hours = 6), 0)
+  expect_equal(suppressMessages(aedes_snapshot_refresh(local, hours = 0)), "s4")
+  expect_length(aedes_snapshot_refresh(local, hours = Inf), 0)
+  # a new full snapshot is only announced
+  synsnap_rebase("s4", root)
+  add_cp("s5", "s4", "2026-01-05 00:00:00.000000 UTC", base = "s4")
+  expect_message(res <- aedes_snapshot_refresh(local, hours = 0), "new full")
+  expect_length(res, 0)
+  expect_false("s5" %in% synsnap_tags(local, all = TRUE)$tag)
+  # failures are quiet for a day
+  withr::local_options(aedes.snapshot_url = paste0(url, "-missing"))
+  expect_silent(aedes_snapshot_refresh(local, hours = 0))
+  f <- file.path(local, ".last_check.json")
+  st <- jsonlite::read_json(f)
+  expect_false(is.null(st$failing_since))
+  st$failing_since <- "2026-01-01 00:00:00.000000 UTC"
+  jsonlite::write_json(st, f, auto_unbox = TRUE)
+  expect_message(aedes_snapshot_refresh(local, hours = 0), "Could not check")
+  withr::local_options(aedes.snapshot_url = url)
+  suppressMessages(aedes_snapshot_refresh(local, hours = 0))
+  expect_null(jsonlite::read_json(f)$failing_since)
 })
 
 test_that("synsnap_l2_hash", {

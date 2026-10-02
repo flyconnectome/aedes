@@ -8,7 +8,8 @@ aedes_synapse_data(
   side = NULL,
   details = FALSE,
   snapshot = getOption("aedes.synapse_snapshot", "latest"),
-  root = aedes_snapshot_root()
+  root = aedes_snapshot_root(),
+  timestamp = NULL
 )
 }
 \arguments{
@@ -23,6 +24,9 @@ snapshot in \code{root}. Defaults to the one chosen by \code{\link[=aedes_use_sn
 
 \item{root}{The snapshot folder. Defaults to
 \code{\link[=aedes_snapshot_root]{aedes_snapshot_root()}}.}
+
+\item{timestamp}{A time (including \code{"now"}) to get the synapses at, in
+place of \code{snapshot}.}
 }
 \value{
 A lazy \code{tbl}.
@@ -30,7 +34,8 @@ A lazy \code{tbl}.
 \description{
 Returns a lazy \pkg{dbplyr} table of every synapse in a local snapshot (see
 \code{\link[=aedes_use_snapshot]{aedes_use_snapshot()}}) for use with \pkg{dplyr} verbs. Nothing is read
-until you \code{\link[dplyr:collect]{dplyr::collect()}} the result.
+until you \code{\link[dplyr:collect]{dplyr::collect()}} the result. This needs a local snapshot; there
+is no CAVE equivalent.
 }
 \details{
 The table has columns \code{id}, \code{pre_root} and \code{post_root} (as
@@ -44,6 +49,12 @@ Rows are sorted by \code{pre_root}, so filtering on a few \code{pre_root} values
 lets DuckDB skip most of the file. Snapshots with a \code{by_post.parquet}
 also keep a copy sorted by \code{post_root}, which \code{side = "post"} reads. Use
 \code{\link[bit64:as.integer64]{bit64::as.integer64()}} for root ids in filters.
+
+With \code{timestamp}, the snapshot is the newest one at or before that time.
+If that is more than \code{getOption("aedes.synapse_max_age", 60)} seconds
+older, a local checkpoint at \code{timestamp} is first made with
+\code{\link[=aedes_update_snapshot]{aedes_update_snapshot()}} (seconds to minutes of CAVE lookups), and reused
+by later calls for nearby times.
 }
 \examples{
 \dontrun{
