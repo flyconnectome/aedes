@@ -403,7 +403,7 @@ test_that("aedes_use_snapshot without a snapshot", {
   root <- withr::local_tempdir()
   local_mocked_bindings(
     ask_yes_no = function(msg) TRUE,
-    aedes_download_snapshot = function(root, set) make_snapshot(root))
+    aedes_download_snapshot = function(root) make_snapshot(root))
   withr::local_options(aedes.synapse_snapshot_root = NULL,
                        aedes.synapse_snapshot = NULL, aedes.version = "now")
   expect_message(aedes_use_snapshot(root = root), "'s2'")

@@ -1,8 +1,8 @@
 #' Download or publish Aedes synapse snapshots
 #'
 #' @description `aedes_download_snapshot()` downloads the newest published
-#'   synapse snapshot into your snapshot folder and selects it with
-#'   [aedes_use_snapshot()]. The first download fetches the static data (about
+#'   synapse snapshots into your snapshot folder; select one with
+#'   [aedes_use_snapshot()] to use it. The first download fetches the static data (about
 #'   1.7 GB) and a full snapshot (about 0.6 GB); later ones usually just fetch
 #'   a few small checkpoints.
 #'
@@ -30,8 +30,6 @@
 #'   option if set, and otherwise the standard address, which needs access to
 #'   the aedes CAVE datastack to work out.
 #' @param root The local snapshot folder. Defaults to [aedes_snapshot_root()].
-#' @param set Whether to select a snapshot with [aedes_use_snapshot()]
-#'   afterwards.
 #' @return `aedes_download_snapshot()`: the tags downloaded, invisibly.
 #'   `aedes_publish_snapshot()`: the manifest, invisibly.
 #' @seealso [aedes_use_snapshot()], [aedes_update_snapshot()],
@@ -42,14 +40,13 @@
 #' aedes_download_snapshot()
 #' }
 aedes_download_snapshot <- function(url = NULL,
-                                    root = aedes_snapshot_root(create = TRUE),
-                                    set = TRUE) {
+                                    root = aedes_snapshot_root(create = TRUE)) {
   if (is.null(url)) url <- aedes_snapshot_url()
   tags <- synsnap_download(url, root)
   message(if (length(tags)) paste("Downloaded synapse snapshot(s)",
                                   paste(tags, collapse = ", "))
           else "Synapse snapshots are already up to date")
-  if (set) aedes_use_snapshot(root = root)
+  message("Use aedes_use_snapshot() to query them")
   invisible(tags)
 }
 

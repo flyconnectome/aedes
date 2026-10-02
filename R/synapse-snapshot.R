@@ -92,7 +92,7 @@ aedes_snapshot_check <- function(root) {
   msg <- paste0("No local synapse snapshot in ", root, ".")
   if (rlang::is_interactive() &&
       isTRUE(ask_yes_no(paste(msg, "Download one now (about 2.3 GB)?")))) {
-    aedes_download_snapshot(root = root, set = FALSE)
+    aedes_download_snapshot(root = root)
     return(invisible(TRUE))
   }
   stop(msg, " Download one with aedes_download_snapshot() (about 2.3 GB, ",

@@ -5,11 +5,7 @@
 \alias{aedes_publish_snapshot}
 \title{Download or publish Aedes synapse snapshots}
 \usage{
-aedes_download_snapshot(
-  url = NULL,
-  root = aedes_snapshot_root(create = TRUE),
-  set = TRUE
-)
+aedes_download_snapshot(url = NULL, root = aedes_snapshot_root(create = TRUE))
 
 aedes_publish_snapshot(dest, root = aedes_snapshot_root(), snapshot = "latest")
 }
@@ -20,9 +16,6 @@ option if set, and otherwise the standard address, which needs access to
 the aedes CAVE datastack to work out.}
 
 \item{root}{The local snapshot folder. Defaults to \code{\link[=aedes_snapshot_root]{aedes_snapshot_root()}}.}
-
-\item{set}{Whether to select a snapshot with \code{\link[=aedes_use_snapshot]{aedes_use_snapshot()}}
-afterwards.}
 
 \item{dest}{The folder to publish into.}
 
@@ -35,8 +28,8 @@ newest one in \code{root}.}
 }
 \description{
 \code{aedes_download_snapshot()} downloads the newest published
-synapse snapshot into your snapshot folder and selects it with
-\code{\link[=aedes_use_snapshot]{aedes_use_snapshot()}}. The first download fetches the static data (about
+synapse snapshots into your snapshot folder; select one with
+\code{\link[=aedes_use_snapshot]{aedes_use_snapshot()}} to use it. The first download fetches the static data (about
 1.7 GB) and a full snapshot (about 0.6 GB); later ones usually just fetch
 a few small checkpoints.
 

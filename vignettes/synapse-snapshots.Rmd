@@ -26,11 +26,13 @@ If you have access to the aedes CAVE datastack:
 
 ```{r tldr}
 library(aedes)
-aedes_download_snapshot()
+aedes_use_snapshot()
 aedes_partner_summary("superclass:descending_neuron", partners = "inputs")
 ```
 
-The first download is about 2.3 GB; later ones normally fetch just a few MB.
+The first time, `aedes_use_snapshot()` offers to download a snapshot (about
+2.3 GB). Run `aedes_download_snapshot()` now and then to fetch newer ones,
+normally just a few MB.
 
 Read on for more details.
 
