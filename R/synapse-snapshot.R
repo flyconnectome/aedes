@@ -10,10 +10,14 @@
 #'   tag. A tag folder has a `meta.json` with the snapshot `timestamp` and
 #'   either the full root id table (`by_pre.parquet`, sorted by presynaptic
 #'   root, plus an optional `by_post.parquet` sorted by postsynaptic root) or,
-#'   for a delta snapshot, a `delta.parquet` with the rows that differ from its
-#'   full `base` snapshot. Queries use DuckDB (from
+#'   for a checkpoint, a `log.parquet` with the synapses whose root ids changed
+#'   since its `parent` snapshot. A checkpoint is read as its full `base`
+#'   snapshot plus the logs of every checkpoint between them, so it is only
+#'   used when all of those are present. Queries use DuckDB (from
 #'   the suggested packages \pkg{duckdb}, \pkg{DBI} and \pkg{dbplyr}) and only
-#'   read the parts of the parquet files that they need.
+#'   read the parts of the parquet files that they need. DuckDB uses every
+#'   core; set the `aedes.duckdb_threads` option before the first query to use
+#'   fewer, e.g. on a shared machine.
 #'
 #'   When no `snapshot` is given, the newest one at or before the requested
 #'   time is used: `timestamp` or the time of `version` when given, otherwise
@@ -143,11 +147,15 @@ aedes_snapshot_root <- function(create = FALSE) {
 #'
 #' @details Only synapses on neurons that were edited since `from` are looked
 #'   up in CAVE, so updating a day-old snapshot typically takes seconds to
-#'   minutes. The new snapshot is saved as a small `delta.parquet` file of the
-#'   synapses that differ from the full snapshot it is based on. Each delta
-#'   holds all changes since that full snapshot, so deltas grow over time; use
-#'   `rebase = TRUE` to save a full snapshot (about 0.6 GB) that later deltas
-#'   start from.
+#'   minutes. The new snapshot is saved as a checkpoint: a small `log.parquet`
+#'   of the synapses whose root ids changed since `from` (typically about 1 MB
+#'   per day of edits). Reading a checkpoint combines the logs back to the last
+#'   full snapshot, which stays fast for months of edits; use `rebase = TRUE`
+#'   to also save a full snapshot (about 0.6 GB) that later checkpoints start
+#'   from.
+#'
+#'   A `timestamp` given as a time is rounded down to a whole millisecond (the
+#'   precision of CAVE edit times).
 #'
 #' @param timestamp The time for the new snapshot: `"now"` (the default),
 #'   `"latest"` for the time of the newest CAVE materialisation version, a
@@ -156,7 +164,7 @@ aedes_snapshot_root <- function(create = FALSE) {
 #'   most recent snapshot in `root` at or before `timestamp`.
 #' @param tag The name of the new snapshot. Defaults to the timestamp, e.g.
 #'   `"20261001T120000"`.
-#' @param rebase Whether to save a full snapshot rather than a delta.
+#' @param rebase Whether to also save the new snapshot as a full snapshot.
 #' @inheritParams aedes_use_snapshot
 #' @return The result of [aedes_use_snapshot()] for the new snapshot.
 #' @seealso [aedes_use_snapshot()]
@@ -191,7 +199,10 @@ aedes_update_snapshot <- function(timestamp = "now", from = "latest",
       tag <- format(timestamp, "%Y%m%dT%H%M%S", tz = "UTC")
     message("Updating synapse snapshot '", from, "' (", format_utc(ft), ") to ",
             format_utc(timestamp), if (!is.null(what)) paste0(" (", what, ")"))
-    synsnap_update(from, tag, timestamp, root = root, ctx = ctx)
+    # a version time is kept exactly; others are rounded down to the ms
+    synsnap_update(from, tag, if (identical(what, "latest materialisation"))
+      synsnap_format_time(timestamp) else timestamp,
+      root = root, ctx = ctx, kind = "local")
     if (rebase)
       synsnap_rebase(tag, root)
   }
@@ -300,12 +311,14 @@ def parallel_roots(cg, ids, timestamp, chunksize, threads):
 
 # roots expired (old) and created (new) between two times. Unlike
 # fafbseg:::cave_get_delta_roots this fails loudly, since an empty result would
-# silently leave stale rows.
+# silently leave stale rows. CAVE counts edits at or after `past` and before
+# `future`, but a root lookup at `future` already sees an edit made exactly
+# then, so the window is extended by 1 ms (edit times are whole ms).
 cave_delta_roots <- function(past, future) {
   fcc <- fafbseg::flywire_cave_client()
   res <- reticulate::py_call(fcc$chunkedgraph$get_delta_roots,
                              timestamp_past = fafbseg:::ts2pydatetime(past),
-                             timestamp_future = fafbseg:::ts2pydatetime(future))
+                             timestamp_future = fafbseg:::ts2pydatetime(future + 0.001))
   pyslice <- fafbseg:::pyslice()$pyslice
   ids <- function(i) bit64::as.integer64(fafbseg:::pyids2bit64(
     reticulate::py_call(pyslice, res, i)))

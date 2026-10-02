@@ -53,7 +53,7 @@ complete and has been checked: the synapses of \code{n_verify} neurons of
 different sizes are compared with a CAVE query at the same version, and a
 snapshot with any difference is moved to \verb{<root>/.failed} instead.
 
-Later snapshots are built as small deltas against this one by
+Later snapshots are built as small checkpoints on top of this one by
 \code{\link[=aedes_update_snapshot]{aedes_update_snapshot()}}.
 }
 \examples{

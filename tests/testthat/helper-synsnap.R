@@ -1,7 +1,9 @@
-# Offline tests on a small synthetic snapshot: full tag "s1" and delta "s2".
+# Offline tests on a small synthetic snapshot: full tag "s1" and checkpoint
+# "s2" (a log against s1, or with delta = TRUE the cumulative delta.parquet
+# written before logs).
 # layout "one" (by_pre only) and "both" (plus by_post) are made by the build
 # functions; "old" also has ids.parquet, as written before those existed.
-make_snapshot <- function(root, layout = c("one", "both", "old")) {
+make_snapshot <- function(root, layout = c("one", "both", "old"), delta = FALSE) {
   layout <- match.arg(layout)
   con <- synsnap_con()
   i64 <- bit64::as.integer64
@@ -14,8 +16,12 @@ make_snapshot <- function(root, layout = c("one", "both", "old")) {
   static <- data.frame(id = ids$id, pre_sv = i64(ids$id + 100),
                        post_sv = i64(ids$id + 200), size = 5L)
   # at s2 root 30 was split: synapses 4 and 7 now on root 40
-  delta <- data.frame(id = c(4L, 7L), pre_root = i64(c(10, 40)),
-                      post_root = i64(c(40, 10)))
+  d <- data.frame(id = c(4L, 7L), pre_root = i64(c(10, 40)),
+                  post_root = i64(c(40, 10)))
+  t2 <- "2026-01-02 12:00:00.500000"
+  lg <- data.frame(id = c(4L, 7L), t = as.POSIXct(t2, tz = "UTC"),
+                   pre_root = i64(c(NA, 40)), post_root = i64(c(40, NA)),
+                   old_pre = i64(c(NA, 30)), old_post = i64(c(30, NA)))
   write_pq <- function(df, f, order) {
     duckdb::duckdb_register(con, "tmpdf", df)
     on.exit(duckdb::duckdb_unregister(con, "tmpdf"))
@@ -37,8 +43,9 @@ make_snapshot <- function(root, layout = c("one", "both", "old")) {
                         root_id = c(ids$pre_root, ids$post_root))
     synsnap_build("s1", svmap, t1, root, by_post = layout == "both")
   }
-  write_pq(delta, "s2/delta.parquet", "id")
-  jsonlite::write_json(list(tag = "s2", timestamp = "2026-01-02 12:00:00.5 UTC",
+  if (delta) write_pq(d, "s2/delta.parquet", "id")
+  else write_pq(lg, "s2/log.parquet", "id")
+  jsonlite::write_json(list(tag = "s2", timestamp = paste(t2, "UTC"),
                             base = "s1", parent = "s1"),
                        file.path(root, "s2", "meta.json"), auto_unbox = TRUE)
   root

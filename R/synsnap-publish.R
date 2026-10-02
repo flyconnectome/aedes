@@ -3,11 +3,13 @@
 # files plus manifest.json, which lists them with sizes and md5s and is always
 # written last.
 
-# Files (relative paths) that make up snapshot `tag`: its data files, then
-# meta.json, which must be placed last
+# Files (relative paths) that make up snapshot `tag`: its root id files (a
+# full snapshot) or log (a checkpoint), then meta.json, which must be placed
+# last
 synsnap_tag_files <- function(tag, root) {
   d <- synsnap_path(root, tag)
-  data <- sort(list.files(d, pattern = "\\.parquet$"))
+  data <- if (is.na(synsnap_meta(tag, root)$base))
+    sort(list.files(d, pattern = "^by_.*\\.parquet$")) else "log.parquet"
   file.path(tag, c(data, "meta.json"))
 }
 
@@ -30,18 +32,23 @@ synsnap_place <- function(src, dest) {
   invisible(TRUE)
 }
 
-# Publish the newest snapshot in `root` (`tags`), its full base when it is a
-# delta, and the static files to `dest`. The md5s of unchanged files are
-# reused from the previous manifest. Files only listed by the manifest before
-# the previous one are removed, so a client that has just read the previous
-# manifest can still finish downloading.
-synsnap_publish <- function(root, dest, tags = synsnap_latest(root)) {
+# Publish snapshot `latest` from `root` to `dest`, with every usable
+# checkpoint built on the same full snapshot, that full snapshot and the
+# static files. The md5s of unchanged files are reused from the previous
+# manifest. Files only listed by the manifest before the previous one are
+# removed, so a client that has just read the previous manifest can still
+# finish downloading.
+synsnap_publish <- function(root, dest, latest = synsnap_latest(root)) {
   if (!dir.exists(dest)) stop("No folder at ", dest, call. = FALSE)
-  bases <- vapply(tags, function(t) {
-    b <- synsnap_meta(t, root)$base
-    if (is.na(b)) NA_character_ else as.character(b)
-  }, "")
-  tags <- unique(c(stats::na.omit(bases), tags))
+  synsnap_chain(latest, root)
+  snaps <- synsnap_tags(root)
+  base <- snaps$base[match(latest, snaps$tag)]
+  if (is.na(base)) base <- latest
+  # in time order with the full snapshot first, so parents come before
+  # their children
+  snaps <- snaps[snaps$usable & (snaps$tag == base | snaps$base %in% base), , drop = FALSE]
+  snaps <- snaps[order(snaps$tag != base), , drop = FALSE]
+  tags <- snaps$tag
   files <- c("static.parquet", "static.json",
              unlist(lapply(tags, synsnap_tag_files, root = root)))
   mf <- file.path(dest, "manifest.json")
@@ -60,14 +67,12 @@ synsnap_publish <- function(root, dest, tags = synsnap_latest(root)) {
   md5[is.na(md5)] <- unname(tools::md5sum(src[is.na(md5)]))
   for (i in seq_along(files)) synsnap_place(src[i], file.path(dest, files[i]))
 
-  snaps <- synsnap_tags(root)
-  snaps <- snaps[snaps$tag %in% tags, , drop = FALSE]
   manifest <- list(
-    format = 1L,
+    format = 2L,
     created = format_utc(Sys.time()),
-    latest = tags[length(tags)],
-    snapshots = data.frame(tag = snaps$tag, timestamp = format_utc(snaps$timestamp, 6),
-                           base = snaps$base),
+    latest = latest,
+    snapshots = data.frame(tag = snaps$tag, timestamp = synsnap_format_time(snaps$timestamp),
+                           base = snaps$base, parent = snaps$parent, kind = snaps$kind),
     files = data.frame(path = files, size = info$size, md5 = md5, mtime = mtime),
     keep = if (!is.null(old)) setdiff(old$files$path, files) else character())
   tmp <- paste0(mf, ".tmp")
@@ -87,10 +92,11 @@ synsnap_publish <- function(root, dest, tags = synsnap_latest(root)) {
 synsnap_manifest_url <- function(url)
   if (grepl("\\.json$", url)) url else paste0(sub("/+$", "", url), "/manifest.json")
 
-# Download the snapshots listed in the manifest at `url` into `root`. Existing
-# snapshots are never changed: a tag already in `root` is skipped, and a
-# different static.json is an error. Each file is checked against its md5 and
-# a snapshot's meta.json is placed last. Returns the tags downloaded.
+# Download the snapshots listed in the manifest at `url` into `root`, each
+# after the snapshot it is built on. Existing snapshots are never changed: a
+# tag already in `root` is skipped, and a different static.json is an error.
+# Each file is checked against its md5 and a snapshot's meta.json is placed
+# last. Returns the tags downloaded.
 synsnap_download <- function(url, root) {
   url <- synsnap_manifest_url(url)
   m <- tryCatch({
@@ -100,7 +106,7 @@ synsnap_download <- function(url, root) {
   }, error = function(e)
     stop("Could not read the snapshot manifest (",
          gsub(url, "<url>", conditionMessage(e), fixed = TRUE), ")", call. = FALSE))
-  if (!identical(as.integer(m$format), 1L))
+  if (!identical(as.integer(m$format), 2L))
     stop("Unsupported snapshot manifest format", call. = FALSE)
   base <- sub("[^/]*$", "", url)
   files <- m$files
@@ -128,11 +134,20 @@ synsnap_download <- function(url, root) {
       stop("The snapshots in ", root, " were built from different static data; ",
            "use a new folder", call. = FALSE)
   } else get(c("static.parquet", "static.json"))
+  snaps <- m$snapshots
   have <- synsnap_tags(root)$tag
-  todo <- setdiff(m$snapshots$tag, have)
-  # bases before the deltas that need them
-  todo <- todo[order(!is.na(m$snapshots$base[match(todo, m$snapshots$tag)]))]
-  for (t in todo) get(files$path[startsWith(files$path, paste0(t, "/"))])
+  todo <- setdiff(snaps$tag, have)
+  done <- character()
+  while (length(todo)) {
+    i <- match(todo, snaps$tag)
+    ready <- is.na(snaps$base[i]) | snaps$parent[i] %in% c(have, done)
+    if (!any(ready))
+      stop("The published snapshots ", paste(todo, collapse = ", "),
+           " need snapshots that are not published", call. = FALSE)
+    for (t in todo[ready]) get(files$path[startsWith(files$path, paste0(t, "/"))])
+    done <- c(done, todo[ready])
+    todo <- todo[!ready]
+  }
   unlink(stage, recursive = TRUE)
-  invisible(todo)
+  invisible(done)
 }

@@ -37,12 +37,12 @@ newest one in \code{root}.}
 \code{aedes_download_snapshot()} downloads the newest published
 synapse snapshot into your snapshot folder and selects it with
 \code{\link[=aedes_use_snapshot]{aedes_use_snapshot()}}. The first download fetches the static data (about
-1.7 GB) and a full snapshot (about 0.6 GB); later ones usually just fetch a
-small delta.
+1.7 GB) and a full snapshot (about 0.6 GB); later ones usually just fetch
+a few small checkpoints.
 
 \code{aedes_publish_snapshot()} is for whoever maintains the snapshots: it
-makes the newest snapshot in \code{root} available for download from a folder
-served over https.
+makes the newest snapshot in \code{root}, and the earlier checkpoints it is
+built on, available for download from a folder served over https.
 }
 \details{
 Snapshots are published with a \code{manifest.json} that lists every
@@ -54,8 +54,9 @@ use the \code{curl} command line tool and resume partial files.
 
 Publishing hard links the files into \code{dest} when it is on the same
 filesystem as \code{root} (otherwise they are copied), so it takes no extra
-space. It includes the static data, the newest snapshot and, when that is
-a delta, its full base. \code{manifest.json} is written last. Files that are
+space. It includes the static data, the full snapshot that \code{snapshot} is
+built on and every complete checkpoint built on that full snapshot (see
+\code{\link[=aedes_update_snapshot]{aedes_update_snapshot()}}). \code{manifest.json} is written last. Files that are
 no longer listed are removed one publish later, so that a client that has
 just read the previous manifest can still finish.
 }

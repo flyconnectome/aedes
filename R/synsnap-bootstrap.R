@@ -6,11 +6,13 @@
 # md5 (hex, or base64 as GCS reports it). Uses `gcloud storage cp` (parallel
 # sliced download, resumable) when `gcloud` is available and works, otherwise
 # the curl command line tool, resuming a partial download. The url is never
-# printed and the tools run silently, since it may point at data that should
-# not be advertised.
+# printed, since it may point at data that should not be advertised: gcloud
+# runs silently (its output names the source), while curl shows just a
+# progress bar when `progress` is TRUE.
 synsnap_fetch_source <- function(url, dest, md5,
                                  method = c("auto", "gcloud", "curl"),
-                                 gcloud = Sys.which("gcloud")) {
+                                 gcloud = Sys.which("gcloud"),
+                                 progress = interactive()) {
   method <- match.arg(method)
   # the tools get a quoted path, so ~ must be expanded here
   dest <- path.expand(dest)
@@ -20,9 +22,10 @@ synsnap_fetch_source <- function(url, dest, md5,
     status <- if (method == "gcloud")
       system2(gcloud, c("storage", "cp", shQuote(url), shQuote(part)),
               stdout = FALSE, stderr = FALSE)
-    else system2("curl", c("-fsSL", "-C", "-", "-o", shQuote(part),
+    else system2("curl", c(if (progress) "-fL --progress-bar" else "-fsL",
+                           "-C", "-", "-o", shQuote(part),
                            shQuote(synsnap_https_url(url))),
-                 stdout = FALSE, stderr = FALSE)
+                 stdout = FALSE, stderr = if (progress) "" else FALSE)
     identical(as.integer(status), 0L)
   }
   # auto: gcloud if it is installed and works, otherwise curl
