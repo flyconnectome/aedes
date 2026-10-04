@@ -70,6 +70,9 @@ aedes_meta <- function(ids = NULL, ignore.case = FALSE, fixed = FALSE, version =
 }
 
 #' Set default version selection for Aedes helpers
+#'
+#' @details The package sets `"now"` when it loads, unless the `aedes.version`
+#'   option is already set (e.g. in your `.Rprofile`).
 #' @param which One of `"now"` or `"latest"` (or explicit selector).
 #' @export
 aedes_set_version <- function(which = c("now", "latest")) {
@@ -84,9 +87,9 @@ aedes_set_version <- function(which = c("now", "latest")) {
 #' @param timestamp Optional explicit timestamp.
 #' @return A list with `version` and `timestamp`.
 #' @export
-aedes_get_version <- function(which = getOption("aedes.version", default = "latest"), version = NULL, timestamp = NULL) {
+aedes_get_version <- function(which = getOption("aedes.version", default = "now"), version = NULL, timestamp = NULL) {
   if (is.null(which))
-    which = getOption("aedes.version", default = "latest")
+    which = getOption("aedes.version", default = "now")
   if (!is.null(version)) {
     if (!is.null(timestamp)) {
       warning("ignoring timestamp since version was provided")

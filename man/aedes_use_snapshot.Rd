@@ -55,8 +55,8 @@ fewer, e.g. on a shared machine.
 When no \code{snapshot} is given, the newest one at or before the requested
 time is used: \code{timestamp} or the time of \code{version} when given, otherwise
 the \code{aedes.version} option (see \code{\link[=aedes_set_version]{aedes_set_version()}}). So by default
-(\code{"latest"}) this is the snapshot of the newest materialisation version,
-while for \code{"now"} it is the newest snapshot. \code{\link[=aedes_partner_summary]{aedes_partner_summary()}}
+(\code{"now"}) this is the newest snapshot, while for \code{"latest"} it is the
+snapshot of the newest materialisation version. \code{\link[=aedes_partner_summary]{aedes_partner_summary()}}
 answers queries for later times by fetching the edits made since the
 snapshot from CAVE (see its details).
 

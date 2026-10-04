@@ -5,7 +5,7 @@
 \title{Resolve Aedes materialisation version and timestamp}
 \usage{
 aedes_get_version(
-  which = getOption("aedes.version", default = "latest"),
+  which = getOption("aedes.version", default = "now"),
   version = NULL,
   timestamp = NULL
 )

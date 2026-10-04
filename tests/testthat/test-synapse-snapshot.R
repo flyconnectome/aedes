@@ -85,18 +85,18 @@ test_that("aedes_use_snapshot sets options", {
   skip_if_no_duckdb()
   root <- make_snapshot(withr::local_tempdir())
   withr::local_options(aedes.synapse_snapshot_root = root,
-                       aedes.synapse_snapshot = NULL, aedes.version = NULL)
+                       aedes.synapse_snapshot = NULL, aedes.version = "latest")
   t1 <- synsnap_meta("s1", root)$timestamp
   local_mocked_bindings(aedes_version_timestamp = function(version) t1 + 3600)
   info <- aedes_use_snapshot("s1", set = FALSE)
   expect_equal(info$tag, "s1")
   expect_error(aedes_use_snapshot("s1", version = 1), "not both")
 
-  # default "latest": the snapshot of the newest version; option untouched
+  # "latest": the snapshot of the newest version; option untouched
   op <- expect_message(aedes_use_snapshot(), "'s1'")
   expect_null(op$aedes.synapse_snapshot)
   expect_equal(getOption("aedes.synapse_snapshot"), "s1")
-  expect_null(getOption("aedes.version"))
+  expect_equal(getOption("aedes.version"), "latest")
   expect_equal(aedes_snapshot_active()$tag, "s1")
 
   # explicit times pick the newest snapshot at or before them and set the option

@@ -159,7 +159,7 @@ aedes_partner_summary <- function(rootids,
 # "now" is kept as is, since updates to now are cached differently.
 partner_summary_local_time <- function(version = NULL, timestamp = NULL) {
   if (is.null(version) && is.null(timestamp)) {
-    which = getOption("aedes.version", "latest")
+    which = getOption("aedes.version", "now")
     if (is.numeric(which) || identical(which, "latest")) version = which
     else timestamp = which
   }
