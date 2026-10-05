@@ -22,8 +22,8 @@
 #'   When no `snapshot` is given, the newest one at or before the requested
 #'   time is used: `timestamp` or the time of `version` when given, otherwise
 #'   the `aedes.version` option (see [aedes_set_version()]). So by default
-#'   (`"latest"`) this is the snapshot of the newest materialisation version,
-#'   while for `"now"` it is the newest snapshot. [aedes_partner_summary()]
+#'   (`"now"`) this is the newest snapshot, while for `"latest"` it is the
+#'   snapshot of the newest materialisation version. [aedes_partner_summary()]
 #'   answers queries for later times by fetching the edits made since the
 #'   snapshot from CAVE (see its details).
 #'
@@ -216,7 +216,7 @@ aedes_update_snapshot <- function(timestamp = "now", from = "latest",
   }
   res <- aedes_use_snapshot(tag, root = root, set = set)
   if (set && identical(what, "now") &&
-      !identical(getOption("aedes.version", "latest"), "now"))
+      !identical(getOption("aedes.version", "now"), "now"))
     message("Partner queries follow the aedes.version option; ",
             "use aedes_set_version(\"now\") to query this snapshot by default")
   res

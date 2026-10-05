@@ -26,3 +26,27 @@ test_that("aedes_partner_summary summarises downstream partners", {
   expect_true(all(strong$weight > 4))
   expect_lte(nrow(strong), nrow(ps))
 })
+
+test_that("CAVE partner queries follow the aedes.version option", {
+  got <- NULL
+  local_mocked_bindings(
+    aedes_get_version = function(version = NULL, timestamp = NULL, ...)
+      list(version = if (!is.null(version)) 519L,
+           timestamp = if (!is.null(timestamp)) "T1"),
+    aedes_ids = function(ids, ...) ids)
+  local_mocked_bindings(
+    flywire_version = function(version, ...) version,
+    flywire_latestid = function(rootids, ...) rootids,
+    flywire_timestamp = function(timestamp, ...) timestamp,
+    flywire_partner_summary = function(rootids, version, timestamp, ...)
+      got <<- list(version = version, timestamp = timestamp),
+    .package = "fafbseg")
+  q <- function(which) withr::with_options(list(aedes.version = which), {
+    aedes_partner_summary("1", method = "cave")
+    got
+  })
+  expect_equal(q("latest"), list(version = 519L, timestamp = NULL))
+  expect_equal(q(518), list(version = 519L, timestamp = NULL))
+  # "now" becomes a single timestamp
+  expect_equal(q("now"), list(version = NULL, timestamp = "T1"))
+})

@@ -7,15 +7,15 @@
 #' @return Invisible `NULL`.
 #'
 #' @details
-#' The aedes dataset is continually evolving. You three two main choices for how
-#' to handle this.
+#' The aedes dataset is continually evolving. You have three main choices for
+#' how to handle this.
 #'
 #' 1. use a specific numeric version (aka materialisation) of the segmentation.
 #' 2. use the latest materialisation version (`version='latest'`)
 #' 3. map ids to the current time (`version='now'`)
 #'
-#' Option 2 is the default since this can make queries somewhat faster and
-#' stable but note that 'latest' can be several days old.
+#' Option 3 is the default (see [aedes_set_version()]). Option 2 can make
+#' queries more stable, but note that 'latest' can be several days old.
 #'
 #' Metadata returned for aedes neurons includes a `pgroup` column from
 #' [aedes_predict_group()], which can be used to group partner neurons when
@@ -102,16 +102,63 @@ aedes_cfids <- function(ids = NULL, ignore.case = FALSE, fixed = FALSE,
                          version = NULL, timestamp = NULL,
                          unique = FALSE, ...) {
   vi = aedes_get_version(which, timestamp = timestamp, version = version)
-  ii = aedes_ids(ids, ignore.case = ignore.case, fixed = fixed, unique = unique,
-                  version = vi$version, timestamp = vi$timestamp, ...)
+  inids = aedes_explicit_ids(ids)
+  ii = aedes_ids(if (is.null(inids)) ids else inids, ignore.case = ignore.case,
+                 fixed = fixed, unique = unique,
+                 version = vi$version, timestamp = vi$timestamp, ...)
+  # Mapping to "now" only ever brings ids forward; to an earlier version or
+  # timestamp it can silently swap them for older roots, so say which.
+  now = is.null(version) && (identical(timestamp, "now") || (is.null(timestamp)
+    && identical(which %||% getOption("aedes.version", "now"), "now")))
+  if (!now && length(inids) && length(ii) == length(inids))
+    aedes_report_replaced(inids, ii, vi)
   ii
+}
+
+# Explicit root ids (character) in `ids`, or NULL for a query. Mirrors the
+# parsing in fafbseg::cam_meta() so the result lines up 1:1 with its output.
+aedes_explicit_ids <- function(ids) {
+  if (is.character(ids) && length(ids) == 1 && !is.na(ids)) {
+    if (grepl("^https?://", ids))
+      ids = fafbseg::ngl_segments(ids, must_work = FALSE)
+    else if (grepl("^[\\s,0-9]+$", ids, perl = TRUE))
+      ids = strsplit(trimws(ids), "[\\s,]+", perl = TRUE)[[1]]
+    else return(NULL)
+  }
+  if (!length(ids)) return(NULL)
+  fafbseg::flywire_ids(ids, integer64 = FALSE, unique = TRUE)
+}
+
+aedes_report_replaced <- function(old, new, vi, max_show = 10L) {
+  changed = !is.na(new) & old != new
+  if (!any(changed)) return(invisible())
+  when = if (!is.null(vi$version)) paste("version", vi$version)
+  else format(vi$timestamp, "%Y-%m-%d %H:%M:%S %Z")
+  pairs = paste(old[changed], "->", new[changed])
+  if (length(pairs) > max_show)
+    pairs = c(pairs[seq_len(max_show)], sprintf("... and %d more", length(pairs) - max_show))
+  message("Replaced ", sum(changed), "/", length(old), " ids to match ", when,
+          " (see aedes_set_version()):\n  ", paste(pairs, collapse = "\n  "))
 }
 
 #' @noRd
 aedes_cfpartners <- function(ids, partners = c("outputs", "inputs"),
                                  threshold = 1, ...) {
-  vi = aedes_get_version()
   partners = match.arg(partners)
-  aedes_partner_summary(ids, partners = partners, threshold = threshold - 1L,
-                        version = vi$version, timestamp = vi$timestamp, ...)
+  # resolve the time once (so "now" is one timestamp) and add the partners'
+  # metadata at that time, as coconatfly would otherwise look it up later
+  vi = aedes_get_version()
+  pp = aedes_partner_summary(ids, partners = partners,
+                             threshold = threshold - 1L,
+                             version = vi$version, timestamp = vi$timestamp,
+                             ...)
+  if (!nrow(pp)) return(pp)
+  pcol = if (partners == "outputs") "post_id" else "pre_id"
+  meta = aedes_cfmeta(as.character(unique(pp[[pcol]])),
+                      version = vi$version, timestamp = vi$timestamp)
+  # as coconatfly's cf_meta()
+  meta$group = fafbseg::flywire_ids(meta$group, integer64 = FALSE)
+  colnames(meta)[colnames(meta) == "id"] = pcol
+  pp[[pcol]] = as.character(pp[[pcol]])
+  dplyr::left_join(pp, meta, by = pcol)
 }

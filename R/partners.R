@@ -131,6 +131,15 @@ aedes_partner_summary <- function(rootids,
       f = getOption("aedes.synapse_head_ratio", 0.3),
       min_sv = getOption("aedes.synapse_head_min_sv", 5e4)))
   }
+  # resolve the aedes.version option here: fafbseg treats no version or
+  # timestamp as a live query at the current time, and aedes_ids() would not
+  # update the ids. "now" becomes one timestamp for both.
+  if (is.null(version) && is.null(timestamp)) {
+    which = getOption("aedes.version", "now")
+    if (is.numeric(which) || identical(which, "latest"))
+      version = aedes_get_version(version = which)$version
+    else timestamp = aedes_get_version(timestamp = which)$timestamp
+  }
   rootids = aedes_ids(rootids, version = version, timestamp = timestamp)
   withr::with_options(choose_aedes(set = FALSE), {
     if (!is.null(version)) {
@@ -159,7 +168,7 @@ aedes_partner_summary <- function(rootids,
 # "now" is kept as is, since updates to now are cached differently.
 partner_summary_local_time <- function(version = NULL, timestamp = NULL) {
   if (is.null(version) && is.null(timestamp)) {
-    which = getOption("aedes.version", "latest")
+    which = getOption("aedes.version", "now")
     if (is.numeric(which) || identical(which, "latest")) version = which
     else timestamp = which
   }

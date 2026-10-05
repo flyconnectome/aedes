@@ -12,3 +12,7 @@ aedes_set_version(which = c("now", "latest"))
 \description{
 Set default version selection for Aedes helpers
 }
+\details{
+The package sets \code{"now"} when it loads, unless the \code{aedes.version}
+option is already set (e.g. in your \code{.Rprofile}).
+}

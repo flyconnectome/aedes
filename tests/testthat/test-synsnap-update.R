@@ -136,7 +136,7 @@ test_that("aedes_update_snapshot", {
   w$root <- root
   local_mocked_bindings(aedes_synsnap_ctx = function() w$ctx)
   withr::local_options(aedes.synapse_snapshot_root = NULL,
-                       aedes.synapse_snapshot = NULL, aedes.version = NULL)
+                       aedes.synapse_snapshot = NULL, aedes.version = "latest")
   expect_message(s <- aedes_update_snapshot(from = "s1", root = root, set = FALSE),
                  "to 2026-01-01 03:00:00 UTC \\(now\\)")
   expect_equal(s$tag, "20260101T030000")
