@@ -3,8 +3,10 @@
 #'
 #'   \item{\code{aedes.version}} Default materialisation selector used by
 #'   \code{\link{aedes_get_version}} (and, transitively, everything that pins a
-#'   timestamp -- \code{\link{aedes_meta}}, \code{\link{aedes_add_neurons}},
-#'   \code{\link{aedes_set_meta}}, \code{\link{aedes_set_group}}). Accepts
+#'   timestamp -- \code{\link{aedes_partner_summary}},
+#'   \code{\link{aedes_use_snapshot}} and the coconatfly functions).
+#'   \code{\link{aedes_meta}} and \code{\link{aedes_ids}} do not use it: by
+#'   default they return exactly what is in FlyTable. Accepts
 #'   \code{"now"} (set when the package loads, unless already set),
 #'   \code{"latest"}, an integer materialisation version or an explicit
 #'   timestamp. Set with \code{\link{aedes_set_version}} or

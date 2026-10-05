@@ -7,15 +7,15 @@
 #' @return Invisible `NULL`.
 #'
 #' @details
-#' The aedes dataset is continually evolving. You three two main choices for how
-#' to handle this.
+#' The aedes dataset is continually evolving. You have three main choices for
+#' how to handle this.
 #'
 #' 1. use a specific numeric version (aka materialisation) of the segmentation.
 #' 2. use the latest materialisation version (`version='latest'`)
 #' 3. map ids to the current time (`version='now'`)
 #'
-#' Option 2 is the default since this can make queries somewhat faster and
-#' stable but note that 'latest' can be several days old.
+#' Option 3 is the default (see [aedes_set_version()]). Option 2 can make
+#' queries more stable, but note that 'latest' can be several days old.
 #'
 #' Metadata returned for aedes neurons includes a `pgroup` column from
 #' [aedes_predict_group()], which can be used to group partner neurons when

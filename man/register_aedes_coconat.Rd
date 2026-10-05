@@ -17,16 +17,16 @@ Register \code{aedes} dataset adapters for use with
 \href{https://natverse.org/coconatfly}{coconatfly}.
 }
 \details{
-The aedes dataset is continually evolving. You three two main choices for how
-to handle this.
+The aedes dataset is continually evolving. You have three main choices for
+how to handle this.
 \enumerate{
 \item use a specific numeric version (aka materialisation) of the segmentation.
 \item use the latest materialisation version (\code{version='latest'})
 \item map ids to the current time (\code{version='now'})
 }
 
-Option 2 is the default since this can make queries somewhat faster and
-stable but note that 'latest' can be several days old.
+Option 3 is the default (see \code{\link[=aedes_set_version]{aedes_set_version()}}). Option 2 can make
+queries more stable, but note that 'latest' can be several days old.
 
 Metadata returned for aedes neurons includes a \code{pgroup} column from
 \code{\link[=aedes_predict_group]{aedes_predict_group()}}, which can be used to group partner neurons when

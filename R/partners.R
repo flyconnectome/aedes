@@ -135,7 +135,7 @@ aedes_partner_summary <- function(rootids,
   # timestamp as a live query at the current time, and aedes_ids() would not
   # update the ids. "now" becomes one timestamp for both.
   if (is.null(version) && is.null(timestamp)) {
-    which = getOption("aedes.version", "latest")
+    which = getOption("aedes.version", "now")
     if (is.numeric(which) || identical(which, "latest"))
       version = aedes_get_version(version = which)$version
     else timestamp = aedes_get_version(timestamp = which)$timestamp

@@ -64,18 +64,22 @@ complete re-download of the table, ignoring any cache.}
 }
 \value{
 For \code{aedes_meta()}, a data.frame of metadata. For \code{aedes_ids()}, a
-vector of root IDs. Neither follows the \code{aedes.version} option: with no
-\code{version} or \code{timestamp} both return FlyTable as is.
+vector of root IDs.
 }
 \description{
-Return metadata about Aedes neurons from FlyTable
+By default \code{aedes_meta()} and \code{aedes_ids()} tell you exactly
+what is in FlyTable: its rows and root ids as stored there. Unlike most
+aedes functions they do not follow the \code{aedes.version} option (see
+\code{\link[=aedes_set_version]{aedes_set_version()}}). You can still time travel by giving a \code{version}
+(e.g. \code{"latest"}) or a \code{timestamp} (e.g. \code{"now"}), which maps the root
+ids to that time.
 }
 \details{
 When \code{version} or \code{timestamp} are specified, root ids in the
 returned data frame will be mapped to the corresponding timepoint using the
 \code{supervoxel_id} column. When no version/timestamp is specified then ids
 will be simply as returned by the flytable (which updates them every half
-hour). If you want to be sure that ids match the most up to date state of
+hour, so they can lag recent edits). If you want to be sure that ids match the most up to date state of
 the segmentation possible then you can ask for \code{timestamp='now'}.
 
 For a \strong{query string} the match happens against that mapped table, so no
