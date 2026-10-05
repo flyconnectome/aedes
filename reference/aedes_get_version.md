@@ -6,7 +6,7 @@ Resolve Aedes materialisation version and timestamp
 
 ``` r
 aedes_get_version(
-  which = getOption("aedes.version", default = "latest"),
+  which = getOption("aedes.version", default = "now"),
   version = NULL,
   timestamp = NULL
 )

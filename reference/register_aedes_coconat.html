@@ -65,12 +65,12 @@ coconatfly."></head><body>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>The aedes dataset is continually evolving. You three two main choices for how
-to handle this.</p><ol><li><p>use a specific numeric version (aka materialisation) of the segmentation.</p></li>
+    <p>The aedes dataset is continually evolving. You have three main choices for
+how to handle this.</p><ol><li><p>use a specific numeric version (aka materialisation) of the segmentation.</p></li>
 <li><p>use the latest materialisation version (<code>version='latest'</code>)</p></li>
 <li><p>map ids to the current time (<code>version='now'</code>)</p></li>
-</ol><p>Option 2 is the default since this can make queries somewhat faster and
-stable but note that 'latest' can be several days old.</p>
+</ol><p>Option 3 is the default (see <code><a href="aedes_set_version.html">aedes_set_version()</a></code>). Option 2 can make
+queries more stable, but note that 'latest' can be several days old.</p>
 <p>Metadata returned for aedes neurons includes a <code>pgroup</code> column from
 <code><a href="aedes_predict_group.html">aedes_predict_group()</a></code>, which can be used to group partner neurons when
 clustering by connectivity, e.g. <code>cf_cosine_plot(ids, group = "pgroup")</code>.

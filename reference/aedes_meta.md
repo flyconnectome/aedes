@@ -1,6 +1,11 @@
 # Return metadata about Aedes neurons from FlyTable
 
-Return metadata about Aedes neurons from FlyTable
+By default `aedes_meta()` and `aedes_ids()` tell you exactly what is in
+FlyTable: its rows and root ids as stored there. Unlike most aedes
+functions they do not follow the `aedes.version` option (see
+[`aedes_set_version()`](aedes_set_version.md)). You can still time
+travel by giving a `version` (e.g. `"latest"`) or a `timestamp` (e.g.
+`"now"`), which maps the root ids to that time.
 
 ## Usage
 
@@ -99,9 +104,9 @@ When `version` or `timestamp` are specified, root ids in the returned
 data frame will be mapped to the corresponding timepoint using the
 `supervoxel_id` column. When no version/timestamp is specified then ids
 will be simply as returned by the flytable (which updates them every
-half hour). If you want to be sure that ids match the most up to date
-state of the segmentation possible then you can ask for
-`timestamp='now'`.
+half hour, so they can lag recent edits). If you want to be sure that
+ids match the most up to date state of the segmentation possible then
+you can ask for `timestamp='now'`.
 
 For a **query string** the match happens against that mapped table, so
 no further work is needed. For **explicit root `ids`** the join is by

@@ -1,9 +1,12 @@
 # Local Synapse Snapshots
 
 This vignette explains how to use a local copy of the Aedes synapse
-table, how to get one and keep it up to date, and how it is organised.
-None of the code is run when the package is built, since it needs a
-snapshot on disk and access to the aedes CAVE datastack.
+table in order to enable connectivity queries that can reflect edits up
+to the latest second but are still very fast (think one second to find
+the partners of hundreds of neurons vs 5 minutes via CAVE). The catch is
+a one time download of about 2 GB of data onto the user’s machine. You
+also have access to the full synapse table including the location of
+every synapse.
 
 ## Quick Start
 
@@ -13,16 +16,24 @@ If you have access to the aedes CAVE datastack:
 
 library(aedes)
 aedes_use_snapshot()
-aedes_partner_summary("superclass:descending_neuron", partners = "inputs")
+aedes_set_version('now')
+dn.now <- aedes_partner_summary("superclass:descending_neuron", partners = "inputs")
+aedes_set_version('latest')
+dn.lat <- aedes_partner_summary("superclass:descending_neuron", partners = "inputs")
 ```
 
 The first time,
 [`aedes_use_snapshot()`](../reference/aedes_use_snapshot.md) offers to
-download a snapshot (about 2.3 GB). After that, new checkpoints
-(normally just a few MB) are downloaded automatically every few hours
-when you use the snapshot; a new base is only announced, so run
-[`aedes_download_snapshot()`](../reference/aedes_download_snapshot.md)
-when asked.
+download a snapshot (consisting of about 1.5 GB of static synapse data
+that never changes and 0.5 GB of materialisation informatino that
+matches synapses to current root_ids). After that, new checkpoints (a
+few MB) are downloaded automatically every day when you use the snapshot
+and deltas up to the current time can be computed on your machine.
+Collectively this allows time travel to arbitrary timepoints in the
+evolving connectome connectivity graph. In particular this allows user
+to access both the most recent CAVE materialisation version (e.g. 519)
+and the current time (“now”) for up to the second queries - very useful
+during simultaneous proofreading and typing.
 
 Read on for more details.
 
@@ -94,18 +105,18 @@ You select a snapshot once per session. The snapshot folder is found by
 library(aedes)
 library(dplyr)
 aedes_use_snapshot()
-#> Using synapse snapshot 'v518' (2026-09-30 14:12:29 UTC)
+#> Using synapse snapshot '20261001T200000' (2026-10-01 20:00:00 UTC)
 ```
 
 [`aedes_use_snapshot()`](../reference/aedes_use_snapshot.md) respects
 the version you have chosen for other aedes functions (see
 [`aedes_set_version()`](../reference/aedes_set_version.md)). By default
-this is `"latest"`, the newest CAVE materialisation version, so you get
-the snapshot made at that version. With `aedes_set_version("now")` you
-get the newest snapshot, which is then brought up to the present on the
-fly. You can also ask for a specific `version` or `timestamp`; this also
-changes the default for the other aedes functions so that metadata and
-connectivity match.
+this is `"now"` (the package says so when it loads), so you get the
+newest snapshot, which is then brought up to the present on the fly.
+With `aedes_set_version("latest")` you get the snapshot made at the
+newest CAVE materialisation version instead. You can also ask for a
+specific `version` or `timestamp`; this also changes the default for the
+other aedes functions so that metadata and connectivity match.
 
 ``` r
 
