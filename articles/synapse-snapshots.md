@@ -72,10 +72,13 @@ which aedes queries with [DuckDB](https://duckdb.org). This gives you:
   impractical with live CAVE queries.
 - **fast partner summaries**. Thousands of neurons take seconds.
 - **the full synapse table**, including the positions of the pre and
-  postsynaptic points and the synapse size, for your own dplyr queries
-  with [`aedes_synapse_data()`](../reference/aedes_synapse_data.md).
-  This is only possible with a snapshot; there is no equivalent CAVE
-  query.
+  postsynaptic points and the synapse size, for your own `dplyr` queries
+  with [`aedes_synapse_data()`](../reference/aedes_synapse_data.md). The
+  root_ids can be at any time including “now”. Only needs the standard
+  downloaded snapshot. Although it is possible to download the whole
+  synapse table from CAVE at a specific materialisation version, it
+  takes about an hour multi-threaded and the devs will not like it if
+  you make a habit of this.
 - **a fast local cache of a materialisation version**. CAVE (via the
   chunkedgraph) already lets you go back to any time; a snapshot makes
   repeating an analysis at one particular version fast.
