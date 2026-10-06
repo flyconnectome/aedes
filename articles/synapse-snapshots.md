@@ -25,14 +25,14 @@ dn.lat <- aedes_partner_summary("superclass:descending_neuron", partners = "inpu
 The first time,
 [`aedes_use_snapshot()`](../reference/aedes_use_snapshot.md) offers to
 download a snapshot (consisting of about 1.5 GB of static synapse data
-that never changes and 0.5 GB of materialisation informatino that
+that never changes and 0.5 GB of materialisation information that
 matches synapses to current root_ids). After that, new checkpoints (a
 few MB) are downloaded automatically every day when you use the snapshot
 and deltas up to the current time can be computed on your machine.
 Collectively this allows time travel to arbitrary timepoints in the
-evolving connectome connectivity graph. In particular this allows user
+evolving connectome connectivity graph. In particular this allows users
 to access both the most recent CAVE materialisation version (e.g. 519)
-and the current time (“now”) for up to the second queries - very useful
+and the current time (“now”) for up-to-the-second queries - very useful
 during simultaneous proofreading and typing.
 
 ## Key Points
@@ -54,7 +54,9 @@ times after the newest snapshot work.
 
 ## Introduction
 
-![](synsnap-overview.svg)
+![How a local snapshot is used alongside CAVE](synsnap-overview.svg)
+
+How a local snapshot is used alongside CAVE
 
 The Aedes synapse table has about 111 million synapses. Querying it
 through CAVE is fine for a few neurons, but it is slow for tens to
@@ -309,7 +311,10 @@ published snapshot and makes a small table in memory of the synapses on
 neurons edited since then, with their root ids at that time. Together
 these give the synapses at that time.
 
-![](synsnap-time.svg)
+![Answering a query for a time after the newest
+snapshot](synsnap-time.svg)
+
+Answering a query for a time after the newest snapshot
 
 [`aedes_partner_summary()`](../reference/aedes_partner_summary.md) keeps
 one of these tables and moves it forward with each later query, so it
@@ -332,7 +337,9 @@ while (usually seconds, occasionally minutes) before the edit is listed.
 So reading the edits up to a very recent time can miss some, and
 anything that started from that point would go on missing them.
 
-![](synsnap-late.svg)
+![Edits that become visible late](synsnap-late.svg)
+
+Edits that become visible late
 
 aedes avoids this in three ways:
 
@@ -415,7 +422,9 @@ snapshot:
                          parent = "r20261002T200000"
         log.parquet
 
-![](synsnap-chain.svg)
+![The chain of checkpoints back to the base](synsnap-chain.svg)
+
+The chain of checkpoints back to the base
 
 The split follows how the data actually change. Supervoxels, positions
 and sizes are fixed once synapses have been detected; proofreading only
@@ -440,7 +449,9 @@ reads the base and the logs of every checkpoint in its chain, keeping
 the newest root id for each synapse (below). DuckDB does this in a
 fraction of a second for a few neurons even with months of daily logs.
 
-![](synsnap-read.svg)
+![Reading a checkpoint through its chain](synsnap-read.svg)
+
+Reading a checkpoint through its chain
 
 Because each checkpoint only depends on its parent, missing ones are
 easy to deal with:
@@ -470,7 +481,7 @@ read from it.
 
 ## Comparison with the CAVE Delta Lake Export
 
-The CAVE materialization engine can now export a materialisation version
+The CAVE materialisation engine can now export a materialisation version
 as a [Delta Lake](https://delta.io) table
 ([MaterializationEngine#220](https://github.com/CAVEconnectome/MaterializationEngine/pull/220);
 see the `deltalake_query` notebook in
