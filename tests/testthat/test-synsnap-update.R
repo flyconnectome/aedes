@@ -257,18 +257,40 @@ test_that("publish and download snapshots", {
 test_that("aedes_synapse_data at a timestamp", {
   skip_if_no_duckdb()
   root <- make_snapshot(withr::local_tempdir())
+  withr::defer(synsnap_state_reset())
   w <- fake_world()
   w$root <- root
+  h <- 3600
+  t0 <- as.POSIXct("2026-01-01", tz = "UTC")
   local_mocked_bindings(aedes_synsnap_ctx = function() w$ctx)
-  n <- function(...) nrow(dplyr::collect(aedes_synapse_data(root = root, ...)))
+  tags <- synsnap_tags(root, all = TRUE)$tag
+  d <- function(...) aedes_synapse_data(root = root, ...)
+  key <- function(x) sort(paste(x$pre_root, x$post_root, x$weight))
+  matches <- function(x, T) {
+    x <- dplyr::collect(dplyr::count(x, .data$pre_root, .data$post_root,
+                                     name = "weight"))
+    tr <- w$truth(c(0, 10, 20, 30, 40, 41, 42, 43, 50), "pre", T)
+    expect_equal(key(x), key(tr))
+  }
   # s1 is used as it is
-  expect_silent(n(timestamp = "2026-01-01 00:00:30"))
-  # otherwise a checkpoint is made, then reused
-  expect_message(n(timestamp = "now"), "Updating synapse snapshot 's1'")
-  expect_true("20260101T030000" %in% synsnap_tags(root)$tag)
-  expect_tag_matches(w, "20260101T030000", w$now)
+  expect_silent(n <- nrow(dplyr::collect(d(timestamp = "2026-01-01 00:00:30"))))
+  expect_equal(n, 10)
+  # otherwise the edits since are looked up and kept in memory, not on disk
+  matches(d(timestamp = "now"), w$now)
+  matches(d("post", details = TRUE, timestamp = "now"), w$now)
+  expect_equal(synsnap_tags(root, all = TRUE)$tag, tags)
+  # and reused for later times within max_age, "now" or not
+  calls <- w$calls
   w$now <- w$now + 30
-  expect_silent(n(timestamp = "now"))
+  matches(d(timestamp = "now"), w$now)
+  matches(d(timestamp = w$now + 20), w$now)
+  expect_equal(w$calls, calls)
+
+  # a lazy table stays valid when the partner head moves on
+  synsnap_query_at(10, "pre", "s1", root, t0 + 1.5 * h, w$ctx)
+  x <- d(timestamp = t0 + 1.6 * h)
+  synsnap_query_at(10, "pre", "s1", root, t0 + 2.2 * h, w$ctx)
+  matches(x, t0 + 1.6 * h)
   expect_error(aedes_synapse_data(root = root, timestamp = "2025-01-01"), "as old as")
 })
 

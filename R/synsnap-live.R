@@ -62,8 +62,10 @@ synsnap_state <- function(tag, root) {
 
 synsnap_state_reset <- function(tag = NULL, root = NULL) {
   keys <- names(.synsnap$states)
-  if (!is.null(tag))
-    keys <- keys[keys == paste(normalizePath(root, mustWork = TRUE), tag, sep = "|")]
+  if (!is.null(tag)) {
+    k <- paste(normalizePath(root, mustWork = TRUE), tag, sep = "|")
+    keys <- keys[keys == k | startsWith(keys, paste0(k, "|"))]
+  }
   con <- .synsnap$con
   for (k in keys) {
     tb <- .synsnap$states[[k]]$table
@@ -178,6 +180,46 @@ synsnap_advance <- function(st, chg, T, ctx, con) {
   }
   st$t <- T
   invisible(st)
+}
+
+# A head for snapshot `tag` at time T, for reading every synapse (see
+# aedes_synapse_data()). Unlike the head that synsnap_query_at() advances,
+# these are fixed in time and kept until synsnap_state_reset(), so lazy tables
+# made from them stay valid. One within max_age seconds before T is reused;
+# a new one starts from a copy of the advancing head when that is not after T.
+# Shares the advancing head's cached log.
+synsnap_head_at <- function(tag, root, T, ctx, max_age = 60) {
+  st <- synsnap_state(tag, root)
+  T <- as.POSIXct(T, tz = "UTC")
+  if (as.numeric(T) < as.numeric(st$t0) - 1)
+    stop("requested time is before snapshot '", tag, "'")
+  if (T < st$t0) T <- st$t0
+  prefix <- paste(normalizePath(root, mustWork = TRUE), tag, "t", sep = "|")
+  keys <- names(.synsnap$states)
+  heads <- .synsnap$states[keys[startsWith(keys, prefix)]]
+  age <- as.numeric(T) - vapply(heads, function(h) as.numeric(h$t), numeric(1))
+  ok <- age >= 0 & age <= max_age
+  if (any(ok)) return(heads[[which(ok)[which.min(age[ok])]]])
+
+  con <- synsnap_con()
+  h <- new.env(parent = emptyenv())
+  h$tag <- tag
+  h$root <- root
+  h$t0 <- st$t0
+  h$t <- st$t0
+  h$table <- NULL
+  if (!is.null(st$table) && st$t <= T) {
+    h$table <- synsnap_tmpname("synsnap_head_")
+    DBI::dbExecute(con, sprintf("CREATE TEMP TABLE %s AS SELECT * FROM %s",
+                                h$table, st$table))
+    h$t <- st$t
+  }
+  if (T > h$t) {
+    chg <- synsnap_changed(h, synsnap_log_range(st, h$t, T, ctx)$old, con)
+    synsnap_advance(h, chg, T, ctx, con)
+  }
+  .synsnap$states[[paste0(prefix, format(as.numeric(T), nsmall = 3))]] <- h
+  h
 }
 
 # Rows for query roots q at T, updating only what this query needs.

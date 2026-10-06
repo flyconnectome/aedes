@@ -265,9 +265,9 @@ synsnap_query <- function(roots, side = c("pre", "post"), tag, root,
 }
 
 # lazy dbplyr table of all synapses in a snapshot
-synsnap_tbl <- function(tag, root, side = NULL, static = FALSE) {
+synsnap_tbl <- function(tag, root, side = NULL, static = FALSE,
+                        rows = synsnap_rows_sql(tag, root, side = side)) {
   con <- synsnap_con()
-  rows <- synsnap_rows_sql(tag, root, side = side)
   if (static)
     rows <- sprintf("SELECT b.pre_root, b.post_root, s.* FROM (%s) b JOIN %s s USING (id)",
                     rows, synsnap_sql_str(synsnap_path(root, file = "static.parquet")))
