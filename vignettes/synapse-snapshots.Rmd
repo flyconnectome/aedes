@@ -35,7 +35,21 @@ automatically every day when you use the snapshot and deltas up to the current t
 allows user to access both the most recent CAVE materialisation version (e.g. 519) and the current time ("now") for up to the second queries - very useful during
 simultaneous proofreading and typing.
 
-Read on for more details.
+## Key Points
+
+* Snapshots are made on a lab server and downloaded automatically: one full
+  base, plus a small checkpoint each day and at each materialisation version.
+* For `"now"`, or any time after the newest snapshot, aedes fetches the edits
+  made since that snapshot from CAVE. The result is kept in memory for the
+  rest of the R session, so only the first query is slow. Nothing is written
+  to disk.
+* Root ids only make sense at one time, so fix the time once
+  (`now <- Sys.time()`) and use it for every call.
+* Each materialisation version has its own snapshot (e.g. `v519`), so
+  repeating an analysis at a version needs no CAVE lookups.
+
+Read on for more details, and see [More Details](#more-details) for how
+times after the newest snapshot work.
 
 ## Introduction
 
@@ -122,9 +136,9 @@ aedes_partner_summary("superclass:descending_neuron", partners = "inputs")
 
 You can ask about later times than the snapshot, including
 `timestamp = "now"`. In this case `aedes_partner_summary()` fetches just the
-edits made since the snapshot from CAVE and looks up new root ids for the
-synapses that they affect. The update is kept for the rest of the session, so
-only the first query after a long gap is slow.
+edits made since the newest snapshot from CAVE and looks up new root ids for
+the synapses that they affect. The update is kept for the rest of the
+session, so only the first query after a long gap is slow.
 
 ```{r}
 aedes_partner_summary("superclass:descending_neuron", partners = "inputs",
@@ -153,10 +167,10 @@ the synapse size.
 ### Synapses at a Particular Time
 
 By default `aedes_synapse_data()` reads the selected snapshot exactly as it
-is. To get the synapses at another time, give `timestamp`. It uses the newest
-snapshot at or before that time. If that snapshot is more than a minute older
-(the `aedes.synapse_max_age` option), it first makes a small local checkpoint
-with `aedes_update_snapshot()`, which later calls for nearby times reuse.
+is. To get the synapses at another time, give `timestamp`. This works just
+like `aedes_partner_summary()`: the edits since the newest snapshot are
+looked up in CAVE and kept in memory. So the result only works in the current
+R session; `collect()` it there.
 
 Root ids only mean something at one time, so look up the neurons you are
 interested in at the same time as the synapses. Fixing the time once makes
@@ -169,7 +183,6 @@ aedes_synapse_data("post", timestamp = now) %>%
   filter(post_root %in% dns) %>%
   count(pre_root, sort = TRUE) %>%
   collect()
-#> Updating synapse snapshot 'r20261002T000000' (2026-10-02 00:00:00 UTC) to 2026-10-02 04:08:28 UTC
 ```
 
 ### Repeating an Analysis at a Materialisation Version
@@ -237,7 +250,9 @@ for new checkpoints at most every 6 hours (set the
 and download them quietly. Failures are only reported once they have lasted a
 day.
 
-To bring a snapshot up to date yourself:
+You rarely need to make a snapshot yourself, since queries for later times
+work without one. But you can keep the synapses at one time on disk for later
+sessions (e.g. the `now` of an analysis you want to repeat):
 
 ```{r}
 aedes_update_snapshot()
@@ -245,10 +260,57 @@ aedes_update_snapshot()
 #> 2026-10-01 12:00:00 UTC (now)
 ```
 
-This only looks up synapses on neurons that have been edited since the
-snapshot, so a daily update takes seconds to minutes. Use
+This writes a local checkpoint, which takes seconds to minutes. Use
 `aedes_update_snapshot("latest")` for the time of the newest materialisation
-version instead.
+version instead. A local checkpoint is only used when you ask for exactly its
+time (see [More Details](#more-details)).
+
+## More Details
+
+You don't need this section to use snapshots, but it explains what happens
+for times after the newest snapshot.
+
+### Times After the Newest Snapshot
+
+For a time after the newest snapshot, aedes starts from the newest published
+snapshot and makes a small table in memory of the synapses on neurons edited
+since then, with their root ids at that time. Together these give the
+synapses at that time.
+
+```{r fig-time, echo = FALSE, eval = TRUE, out.width = "100%"}
+knitr::include_graphics("synsnap-time.svg")
+```
+
+`aedes_partner_summary()` keeps one of these tables and moves it forward
+with each later query, so it only fetches the edits since the last one.
+`aedes_synapse_data(timestamp =)` keeps one table for each time you ask for.
+These never change, so a lazy table gives the same answer whenever you
+`collect()` it, but each new time (more than a minute after the last one,
+the `aedes.synapse_max_age` option) adds another table to the session.
+
+Local checkpoints made with `aedes_update_snapshot()` are only used for
+exactly their own time. Later times always start from a published snapshot,
+for the reason below.
+
+### Edits That Become Visible Late
+
+CAVE lists each edit with the time it was made, but it can take a little
+while (usually seconds, occasionally minutes) before the edit is listed. So
+reading the edits up to a very recent time can miss some, and anything that
+started from that point would go on missing them.
+
+```{r fig-late, echo = FALSE, eval = TRUE, out.width = "100%"}
+knitr::include_graphics("synsnap-late.svg")
+```
+
+aedes avoids this in three ways:
+
+* the lab server only makes a checkpoint an hour after its time, by which
+  point every edit has been listed
+* every update re-reads the edits from 10 minutes before the time it starts
+  from, and edits read too soon are read again by the next query
+* local checkpoints can't wait an hour, so they are never used as a starting
+  point
 
 ## Building and Publishing Snapshots
 
@@ -358,10 +420,6 @@ deal with:
   snapshot before it, without changing any existing checkpoint
 * a checkpoint whose chain is incomplete (e.g. a parent that failed to
   download) is not listed, and running the download again fills it in
-
-Edits sometimes become visible in CAVE a little after their timestamp, so
-regular checkpoints also look for edits in the 10 minutes before their
-parent.
 
 ### Safety
 

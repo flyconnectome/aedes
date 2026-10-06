@@ -170,11 +170,19 @@ synsnap_latest <- function(root) {
 }
 
 # newest snapshot at or before `when` (a time, or "now" for the newest
-# snapshot), allowing `tol` seconds for rounding; NULL if there is none
-synsnap_at <- function(root, when, tol = 1) {
+# snapshot), allowing `tol` seconds for rounding; NULL if there is none. With
+# `locals = FALSE`, local checkpoints only count at `when` itself: they are
+# made without waiting for late edits to become visible, so anything worked
+# out for a later time should start from a published (or full) snapshot.
+synsnap_at <- function(root, when, tol = 1, locals = TRUE) {
   tags <- synsnap_tags(root)
   if (!identical(when, "now"))
     tags <- tags[as.numeric(tags$timestamp) <= as.numeric(when) + tol, , drop = FALSE]
+  if (!locals) {
+    exact <- if (identical(when, "now")) FALSE
+      else as.numeric(when) - as.numeric(tags$timestamp) <= tol
+    tags <- tags[!(tags$kind %in% "local" & !is.na(tags$base)) | exact, , drop = FALSE]
+  }
   if (nrow(tags)) tags$tag[nrow(tags)]
 }
 
@@ -257,9 +265,9 @@ synsnap_query <- function(roots, side = c("pre", "post"), tag, root,
 }
 
 # lazy dbplyr table of all synapses in a snapshot
-synsnap_tbl <- function(tag, root, side = NULL, static = FALSE) {
+synsnap_tbl <- function(tag, root, side = NULL, static = FALSE,
+                        rows = synsnap_rows_sql(tag, root, side = side)) {
   con <- synsnap_con()
-  rows <- synsnap_rows_sql(tag, root, side = side)
   if (static)
     rows <- sprintf("SELECT b.pre_root, b.post_root, s.* FROM (%s) b JOIN %s s USING (id)",
                     rows, synsnap_sql_str(synsnap_path(root, file = "static.parquet")))

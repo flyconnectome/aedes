@@ -73,9 +73,12 @@ fake_world <- function(t0 = as.POSIXct("2026-01-01", tz = "UTC")) {
          sv = c(201, 202, 203, 105, 106, 107, 204), root = rep(50, 7)),
     list(t = t0 + 2.5 * h, old = 41, new = 42, sv = 110, root = 42),
     list(t = t0 + 2.6 * h, old = 42, new = 43, sv = 110, root = 43))
-  map_at <- function(T) {
+  # edits are only visible `lag` seconds after their time, as of env$now
+  seen <- function(e) as.numeric(e$t) + env$lag <= as.numeric(env$now)
+  map_at <- function(T, all = FALSE) {
     m <- base
-    for (e in events) if (e$t <= T) m[match(i64(e$sv), sv)] <- i64(e$root)
+    for (e in events) if (e$t <= T && (all || seen(e)))
+      m[match(i64(e$sv), sv)] <- i64(e$root)
     m
   }
   created <- function(r) {
@@ -86,11 +89,12 @@ fake_world <- function(t0 = as.POSIXct("2026-01-01", tz = "UTC")) {
   env$calls <- list(delta_roots = 0L, rootid = 0L, leaves = 0L, is_latest = 0L,
                     latest_id = 0L)
   env$now <- t0 + 3 * h
+  env$lag <- 0
   count <- function(f) env$calls[[f]] <- env$calls[[f]] + 1L
   env$ctx <- list(
     delta_roots = function(past, future) {
       count("delta_roots")
-      ee <- Filter(function(e) e$t > past && e$t <= future, events)
+      ee <- Filter(function(e) e$t > past && e$t <= future && seen(e), events)
       list(old = i64(unlist(lapply(ee, `[[`, "old"))),
            new = i64(unlist(lapply(ee, `[[`, "new"))))
     },
@@ -118,7 +122,7 @@ fake_world <- function(t0 = as.POSIXct("2026-01-01", tz = "UTC")) {
     now = function() env$now)
   # brute force truth: weights for roots q on one side at T
   env$truth <- function(q, side, T) {
-    m <- map_at(T)
+    m <- map_at(T, all = TRUE)
     pre <- m[match(i64(100 + 1:10), sv)]
     post <- m[match(i64(200 + 1:10), sv)]
     d <- dplyr::tibble(pre_root = pre, post_root = post)

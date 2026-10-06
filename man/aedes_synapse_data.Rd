@@ -50,11 +50,12 @@ lets DuckDB skip most of the file. Snapshots with a \code{by_post.parquet}
 also keep a copy sorted by \code{post_root}, which \code{side = "post"} reads. Use
 \code{\link[bit64:as.integer64]{bit64::as.integer64()}} for root ids in filters.
 
-With \code{timestamp}, the snapshot is the newest one at or before that time.
-If that is more than \code{getOption("aedes.synapse_max_age", 60)} seconds
-older, a local checkpoint at \code{timestamp} is first made with
-\code{\link[=aedes_update_snapshot]{aedes_update_snapshot()}} (seconds to minutes of CAVE lookups), and reused
-by later calls for nearby times.
+With \code{timestamp}, the synapses are those of the newest snapshot at or
+before that time when it is at most \code{getOption("aedes.synapse_max_age", 60)} seconds older. Otherwise the edits made since the newest published
+snapshot are looked up in CAVE (seconds to minutes) and kept in memory
+for the rest of the session, where later calls for times up to
+\code{max_age} seconds later reuse them. Nothing is written to disk; use
+\code{\link[=aedes_update_snapshot]{aedes_update_snapshot()}} to keep a checkpoint for later sessions.
 }
 \examples{
 \dontrun{

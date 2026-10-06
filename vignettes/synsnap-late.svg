@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" font-family="Helvetica, Arial, sans-serif" font-size="13">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+  </defs>
+  <rect width="800" height="320" fill="#fff"/>
+  <text x="20" y="24" font-weight="bold">Edits that become visible late</text>
+
+  <!-- the edit and its lag -->
+  <g fill="#c07a1a" font-size="11" text-anchor="middle">
+    <text x="390" y="62">edit made</text>
+    <text x="560" y="62">listed by CAVE</text>
+    <text x="475" y="80">lag</text>
+  </g>
+  <path d="M390,88 L560,88" stroke="#c07a1a" stroke-width="1.5" stroke-dasharray="5 3" fill="none"/>
+  <path d="M390,82 v12 M560,82 v12" stroke="#c07a1a" stroke-width="1.5"/>
+
+  <!-- time axis -->
+  <path d="M230,135 L780,135" stroke="#999" stroke-width="1.5" marker-end="url(#a)"/>
+  <g fill="#666" font-size="11" text-anchor="middle">
+    <path d="M300,130 v10 M470,130 v10 M720,130 v10" stroke="#999"/>
+    <text x="300" y="122">T1 − 10 min</text>
+    <text x="470" y="122">T1</text>
+    <text x="720" y="122">T2</text>
+  </g>
+  <circle cx="390" cy="135" r="6" fill="#c07a1a"/>
+  <circle cx="560" cy="135" r="4" fill="#fff" stroke="#c07a1a" stroke-width="1.5"/>
+  <path d="M390,141 L390,262" stroke="#c07a1a" stroke-dasharray="3 3"/>
+
+  <!-- rows -->
+  <g font-size="12">
+    <text x="20" y="174">query at T1</text>
+    <rect x="240" y="160" width="230" height="20" fill="#eef2f7" stroke="#8a9bb3"/>
+    <text x="250" y="175" fill="#444" font-size="11">reads edits up to T1: this one not listed yet</text>
+
+    <text x="20" y="209">next query at T2,</text>
+    <text x="20" y="223" fill="#666" font-size="11">reading from T1</text>
+    <rect x="470" y="198" width="250" height="20" fill="#f7e6e6" stroke="#b55"/>
+    <text x="480" y="213" fill="#b55" font-size="11">✕ edit missed, and never revisited</text>
+
+    <text x="20" y="247">next query at T2,</text>
+    <text x="20" y="261" fill="#666" font-size="11">10 min overlap</text>
+    <rect x="300" y="236" width="420" height="20" fill="#e3f0e3" stroke="#5f8f5f"/>
+    <text x="410" y="251" fill="#3f6f3f" font-size="11">✓ re-reads from T1 − 10 min: edit caught</text>
+  </g>
+
+  <text x="20" y="292" fill="#444" font-size="12">Each step re-reads the 10 minutes before it starts. Published checkpoints are only made an hour after their</text>
+  <text x="20" y="309" fill="#444" font-size="12">time, so every edit is listed; local ones can't wait, so later work never starts from them.</text>
+</svg>
