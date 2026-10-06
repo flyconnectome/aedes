@@ -90,10 +90,10 @@ changes and 0.5 GB of materialisation information that matches synapses
 to current root_ids). After that, new checkpoints (a few MB) are
 downloaded automatically every day when you use the snapshot and deltas
 up to the current time can be computed on your machine. Collectively
-this allows time travel to arbitrary timepoints in the evolving
+this allowsr rapid time travel to arbitrary timepoints in the evolving
 connectome connectivity graph. In particular this allows users to access
-both the most recent CAVE materialisation version (e.g. 519) and the
-current time (“now”) for up-to-the-second queries - very useful during
+both the latest CAVE materialisation version (e.g. 519) and the current
+time (“now”) for up-to-the-second queries - very useful during
 simultaneous proofreading and typing.</p>
 </div>
 <div class="section level2">
@@ -101,20 +101,21 @@ simultaneous proofreading and typing.</p>
 </h2>
 <ul>
 <li>Snapshots are made on a lab server and downloaded automatically: one
-full base, plus a small checkpoint each day and at each materialisation
+full base, plus a small checkpoint each day at each materialisation
 version.</li>
-<li>For <code>"now"</code>, or any time after the newest snapshot, aedes
+<li>For <code>"now"</code>, or any time after the latest snapshot, aedes
 fetches the edits made since that snapshot from CAVE. The result is kept
 in memory for the rest of the R session, so only the first query is
 slow. Nothing is written to disk.</li>
 <li>Root ids only make sense at one time, so fix the time once
-(<code>now &lt;- Sys.time()</code>) and use it for every call.</li>
+(<code>now &lt;- Sys.time()</code>) and use it for every call in an
+analysis block.</li>
 <li>Each materialisation version has its own snapshot
 (e.g. <code>v519</code>), so repeating an analysis at a version needs no
 CAVE lookups.</li>
 </ul>
-<p>Read on for more details, and see <a href="#more-details">More
-Details</a> for how times after the newest snapshot work.</p>
+<p>Read on for more details, and see <a href="#handling-recent-edits">Handling recent edits</a> for how times
+after the newest snapshot work.</p>
 </div>
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
@@ -372,11 +373,10 @@ want to repeat):</p>
 <p>This writes a local checkpoint, which takes seconds to minutes. Use
 <code>aedes_update_snapshot("latest")</code> for the time of the newest
 materialisation version instead. A local checkpoint is only used when
-you ask for exactly its time (see <a href="#more-details">More
-Details</a>).</p>
+you ask for exactly its time (see <a href="#handling-recent-edits">Handling recent edits</a>).</p>
 </div>
 <div class="section level2">
-<h2 id="more-details">More Details<a class="anchor" aria-label="anchor" href="#more-details"></a>
+<h2 id="handling-recent-edits">Handling recent edits<a class="anchor" aria-label="anchor" href="#handling-recent-edits"></a>
 </h2>
 <p>You don’t need this section to use snapshots, but it explains what
 happens for times after the newest snapshot.</p>

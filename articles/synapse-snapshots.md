@@ -29,28 +29,29 @@ that never changes and 0.5 GB of materialisation information that
 matches synapses to current root_ids). After that, new checkpoints (a
 few MB) are downloaded automatically every day when you use the snapshot
 and deltas up to the current time can be computed on your machine.
-Collectively this allows time travel to arbitrary timepoints in the
-evolving connectome connectivity graph. In particular this allows users
-to access both the most recent CAVE materialisation version (e.g. 519)
+Collectively this allowsr rapid time travel to arbitrary timepoints in
+the evolving connectome connectivity graph. In particular this allows
+users to access both the latest CAVE materialisation version (e.g. 519)
 and the current time (“now”) for up-to-the-second queries - very useful
 during simultaneous proofreading and typing.
 
 ## Key Points
 
 - Snapshots are made on a lab server and downloaded automatically: one
-  full base, plus a small checkpoint each day and at each
-  materialisation version.
-- For `"now"`, or any time after the newest snapshot, aedes fetches the
+  full base, plus a small checkpoint each day at each materialisation
+  version.
+- For `"now"`, or any time after the latest snapshot, aedes fetches the
   edits made since that snapshot from CAVE. The result is kept in memory
   for the rest of the R session, so only the first query is slow.
   Nothing is written to disk.
 - Root ids only make sense at one time, so fix the time once
-  (`now <- Sys.time()`) and use it for every call.
+  (`now <- Sys.time()`) and use it for every call in an analysis block.
 - Each materialisation version has its own snapshot (e.g. `v519`), so
   repeating an analysis at a version needs no CAVE lookups.
 
-Read on for more details, and see [More Details](#more-details) for how
-times after the newest snapshot work.
+Read on for more details, and see [Handling recent
+edits](#handling-recent-edits) for how times after the newest snapshot
+work.
 
 ## Introduction
 
@@ -297,9 +298,10 @@ aedes_update_snapshot()
 This writes a local checkpoint, which takes seconds to minutes. Use
 `aedes_update_snapshot("latest")` for the time of the newest
 materialisation version instead. A local checkpoint is only used when
-you ask for exactly its time (see [More Details](#more-details)).
+you ask for exactly its time (see [Handling recent
+edits](#handling-recent-edits)).
 
-## More Details
+## Handling recent edits
 
 You don’t need this section to use snapshots, but it explains what
 happens for times after the newest snapshot.
