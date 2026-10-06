@@ -89,6 +89,30 @@ test_that("now queries honour max_age", {
   expect_gt(w$calls$delta_roots, n)
 })
 
+test_that("edits that become visible late are caught", {
+  # 30 -> 40, 41 at +1h, visible 2 min later; synapse 4 is 10 -> 30 (40)
+  T1 <- t0 + h + 30
+  T2 <- t0 + h + 200
+  for (m in c("head", "query")) for (overlap in c(600, 0)) {
+    w <- local_world()
+    w$lag <- 120
+    q <- function(T) {
+      w$now <- T
+      r <- synsnap_query_at(10, "pre", "s1", w$root, "now", w$ctx,
+                            overlap = overlap, min_sv = if (m == "query") -1 else 5e4,
+                            f = if (m == "query") 1e9 else 0.3)
+      # without the overlap, T2 sees no edits so there is nothing to choose
+      if (overlap && identical(T, T2)) expect_equal(attr(r, "method"), m)
+      r
+    }
+    q(T1)
+    r <- q(T2)
+    key <- function(d) sort(paste(d$pre_root, d$post_root, d$weight))
+    if (overlap) expect_equal(key(r), key(w$truth(10, "pre", T2)))
+    else expect_false(identical(key(r), key(w$truth(10, "pre", T2))))
+  }
+})
+
 test_that("out of date query ids are updated", {
   w <- local_world()
   # 30 expired at +1h; its largest part (40) merged into 50 at +2h

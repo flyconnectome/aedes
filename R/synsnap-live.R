@@ -4,6 +4,12 @@
 # directly. Changes since the snapshot come from a log of expired/created roots
 # (chunkedgraph get_delta_roots), cached per session in chunks.
 #
+# Edits can become visible in CAVE some time after their timestamp, so a log
+# fetched up to a recent time may miss some. Each step therefore re-reads the
+# log from `overlap` seconds before the time it starts from, and cached chunks
+# that ended less than `overlap` seconds before they were fetched are fetched
+# again once they are more than `refresh` seconds old.
+#
 # Two ways to answer a query at time T:
 #   head:  advance a per-session in-memory "head" (the snapshot with the rows
 #          of every synapse on an expired root updated) to T, then read from it.
@@ -54,7 +60,9 @@ synsnap_state <- function(tag, root) {
     st$t <- t0      # head time
     st$table <- NULL
     st$log <- list()
-    st$log_t <- t0  # end of cached log
+    st$log_from <- t0  # start of cached log
+    st$log_t <- t0     # end of cached log
+    st$last_t <- NULL  # time used for the last "now" query
     .synsnap$states[[key]] <- st
   }
   st
@@ -93,11 +101,26 @@ synsnap_fetch_log <- function(from, to, ctx, max_interval = 86400) {
 }
 
 # roots expired (old) and created (new) between from and to. Extends the
-# cached log when `to` is later than its end; gaps at either end of the cached
-# chunks are fetched without caching.
-synsnap_log_range <- function(st, from, to, ctx) {
+# cached log to cover both ends, after dropping chunks that were unsettled
+# when fetched (see the top of this file); gaps at either end of the cached
+# chunks within the range are fetched without caching.
+synsnap_log_range <- function(st, from, to, ctx, overlap = 600, refresh = 60) {
+  now <- as.numeric(ctx$now())
+  unsettled <- vapply(st$log, function(x) x$fetched - as.numeric(x$t1) < overlap &&
+                        now - x$fetched > refresh, logical(1))
+  if (any(unsettled)) {
+    i <- which(unsettled)[1]
+    st$log_t <- st$log[[i]]$t0
+    st$log <- st$log[seq_len(i - 1)]
+  }
+  fetch <- function(from, to)
+    lapply(synsnap_fetch_log(from, to, ctx), function(x) c(x, fetched = now))
+  if (from < st$log_from) {
+    st$log <- c(fetch(from, st$log_from), st$log)
+    st$log_from <- from
+  }
   if (to > st$log_t) {
-    st$log <- c(st$log, synsnap_fetch_log(st$log_t, to, ctx))
+    st$log <- c(st$log, fetch(st$log_t, to))
     st$log_t <- to
   }
   ch <- Filter(function(x) x$t0 >= from && x$t1 <= to, st$log)
@@ -188,7 +211,7 @@ synsnap_advance <- function(st, chg, T, ctx, con) {
 # made from them stay valid. One within max_age seconds before T is reused;
 # a new one starts from a copy of the advancing head when that is not after T.
 # Shares the advancing head's cached log.
-synsnap_head_at <- function(tag, root, T, ctx, max_age = 60) {
+synsnap_head_at <- function(tag, root, T, ctx, max_age = 60, overlap = 600) {
   st <- synsnap_state(tag, root)
   T <- as.POSIXct(T, tz = "UTC")
   if (as.numeric(T) < as.numeric(st$t0) - 1)
@@ -215,7 +238,9 @@ synsnap_head_at <- function(tag, root, T, ctx, max_age = 60) {
     h$t <- st$t
   }
   if (T > h$t) {
-    chg <- synsnap_changed(h, synsnap_log_range(st, h$t, T, ctx)$old, con)
+    lg <- synsnap_log_range(st, h$t - overlap, T, ctx, overlap = overlap,
+                            refresh = max_age)
+    chg <- synsnap_changed(h, lg$old, con)
     synsnap_advance(h, chg, T, ctx, con)
   }
   .synsnap$states[[paste0(prefix, format(as.numeric(T), nsmall = 3))]] <- h
@@ -266,27 +291,32 @@ synsnap_rows_query <- function(q, side, st, use_head, lg, T, ctx, con) {
 # Synapse connection weights for roots on one side at time T (a POSIXct or
 # "now"). Returns pre_root, post_root, weight with timestamp/method attributes.
 synsnap_query_at <- function(roots, side = c("pre", "post"), tag, root, timestamp,
-                             ctx, max_age = 60, f = 0.3, min_sv = 5e4,
-                             leaf_cost = 1e4) {
+                             ctx, max_age = 60, overlap = 600, f = 0.3,
+                             min_sv = 5e4, leaf_cost = 1e4) {
   side <- match.arg(side)
   sidecol <- paste0(side, "_root")
   con <- synsnap_con()
   st <- synsnap_state(tag, root)
   T <- if (identical(timestamp, "now")) {
     tn <- ctx$now()
-    if (as.numeric(tn) - as.numeric(st$log_t) <= max_age) st$log_t else tn
+    st$last_t <- if (!is.null(st$last_t) &&
+                     as.numeric(tn) - as.numeric(st$last_t) <= max_age) st$last_t else tn
   } else as.POSIXct(timestamp, tz = "UTC")
   if (as.numeric(T) < as.numeric(st$t0) - 1)
     stop("requested time is before snapshot '", tag, "'")
   if (T < st$t0) T <- st$t0
   use_head <- T >= st$t
-  from <- if (use_head) st$t else st$t0
-  lg <- synsnap_log_range(st, from, T, ctx)
+  logs <- function(from) synsnap_log_range(st, from - overlap, T, ctx,
+                                           overlap = overlap, refresh = max_age)
+  # nothing to re-read when the head is already at T
+  lg <- if (use_head && T == st$t)
+    list(old = bit64::integer64(), new = bit64::integer64())
+  else logs(if (use_head) st$t else st$t0)
 
   q <- unique(bit64::as.integer64(roots))
   q <- q[!is.na(q) & q != 0]
   # query roots that expired since the snapshot
-  expired <- synsnap_log_range(st, st$t0, T, ctx)$old
+  expired <- logs(st$t0)$old
   bad <- q %in% expired
   if (any(bad))
     q <- unique(c(q[!bad], bit64::as.integer64(ctx$latest_id(q[bad], T))))
