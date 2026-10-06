@@ -108,11 +108,12 @@ synapse.</p>
 lets DuckDB skip most of the file. Snapshots with a <code>by_post.parquet</code>
 also keep a copy sorted by <code>post_root</code>, which <code>side = "post"</code> reads. Use
 <code><a href="https://bit64.r-lib.org/reference/as.integer64.character.html" class="external-link">bit64::as.integer64()</a></code> for root ids in filters.</p>
-<p>With <code>timestamp</code>, the snapshot is the newest one at or before that time.
-If that is more than <code>getOption("aedes.synapse_max_age", 60)</code> seconds
-older, a local checkpoint at <code>timestamp</code> is first made with
-<code><a href="aedes_update_snapshot.html">aedes_update_snapshot()</a></code> (seconds to minutes of CAVE lookups), and reused
-by later calls for nearby times.</p>
+<p>With <code>timestamp</code>, the synapses are those of the newest snapshot at or
+before that time when it is at most <code>getOption("aedes.synapse_max_age", 60)</code> seconds older. Otherwise the edits made since the newest published
+snapshot are looked up in CAVE (seconds to minutes) and kept in memory
+for the rest of the session, where later calls for times up to
+<code>max_age</code> seconds later reuse them. Nothing is written to disk; use
+<code><a href="aedes_update_snapshot.html">aedes_update_snapshot()</a></code> to keep a checkpoint for later sessions.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

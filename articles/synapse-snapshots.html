@@ -95,7 +95,26 @@ connectome connectivity graph. In particular this allows user to access
 both the most recent CAVE materialisation version (e.g. 519) and the
 current time (“now”) for up to the second queries - very useful during
 simultaneous proofreading and typing.</p>
-<p>Read on for more details.</p>
+</div>
+<div class="section level2">
+<h2 id="key-points">Key Points<a class="anchor" aria-label="anchor" href="#key-points"></a>
+</h2>
+<ul>
+<li>Snapshots are made on a lab server and downloaded automatically: one
+full base, plus a small checkpoint each day and at each materialisation
+version.</li>
+<li>For <code>"now"</code>, or any time after the newest snapshot, aedes
+fetches the edits made since that snapshot from CAVE. The result is kept
+in memory for the rest of the R session, so only the first query is
+slow. Nothing is written to disk.</li>
+<li>Root ids only make sense at one time, so fix the time once
+(<code>now &lt;- Sys.time()</code>) and use it for every call.</li>
+<li>Each materialisation version has its own snapshot
+(e.g. <code>v519</code>), so repeating an analysis at a version needs no
+CAVE lookups.</li>
+</ul>
+<p>Read on for more details, and see <a href="#more-details">More
+Details</a> for how times after the newest snapshot work.</p>
 </div>
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
@@ -232,9 +251,9 @@ aedes functions so that metadata and connectivity match.</p>
 <p>You can ask about later times than the snapshot, including
 <code>timestamp = "now"</code>. In this case
 <code><a href="../reference/aedes_partner_summary.html">aedes_partner_summary()</a></code> fetches just the edits made since
-the snapshot from CAVE and looks up new root ids for the synapses that
-they affect. The update is kept for the rest of the session, so only the
-first query after a long gap is slow.</p>
+the newest snapshot from CAVE and looks up new root ids for the synapses
+that they affect. The update is kept for the rest of the session, so
+only the first query after a long gap is slow.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/aedes_partner_summary.html">aedes_partner_summary</a></span><span class="op">(</span><span class="st">"superclass:descending_neuron"</span>, partners <span class="op">=</span> <span class="st">"inputs"</span>,</span>
 <span>                      timestamp <span class="op">=</span> <span class="st">"now"</span><span class="op">)</span></span></code></pre></div>
@@ -259,11 +278,10 @@ positions of the pre and postsynaptic points and the synapse size.</p>
 </h3>
 <p>By default <code><a href="../reference/aedes_synapse_data.html">aedes_synapse_data()</a></code> reads the selected
 snapshot exactly as it is. To get the synapses at another time, give
-<code>timestamp</code>. It uses the newest snapshot at or before that
-time. If that snapshot is more than a minute older (the
-<code>aedes.synapse_max_age</code> option), it first makes a small local
-checkpoint with <code><a href="../reference/aedes_update_snapshot.html">aedes_update_snapshot()</a></code>, which later calls
-for nearby times reuse.</p>
+<code>timestamp</code>. This works just like
+<code><a href="../reference/aedes_partner_summary.html">aedes_partner_summary()</a></code>: the edits since the newest
+snapshot are looked up in CAVE and kept in memory. So the result only
+works in the current R session; <code><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect()</a></code> it there.</p>
 <p>Root ids only mean something at one time, so look up the neurons you
 are interested in at the same time as the synapses. Fixing the time once
 makes sure that they match:</p>
@@ -273,8 +291,7 @@ makes sure that they match:</p>
 <span><span class="fu"><a href="../reference/aedes_synapse_data.html">aedes_synapse_data</a></span><span class="op">(</span><span class="st">"post"</span>, timestamp <span class="op">=</span> <span class="va">now</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">post_root</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">dns</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">count</a></span><span class="op">(</span><span class="va">pre_root</span>, sort <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Updating synapse snapshot 'r20261002T000000' (2026-10-02 00:00:00 UTC) to 2026-10-02 04:08:28 UTC</span></span></code></pre></div>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="repeating-an-analysis-at-a-materialisation-version">Repeating an Analysis at a Materialisation Version<a class="anchor" aria-label="anchor" href="#repeating-an-analysis-at-a-materialisation-version"></a>
@@ -341,15 +358,64 @@ chosen snapshot check for new checkpoints at most every 6 hours (set the
 <code>aedes.snapshot_check_hours</code> option to change this, or
 <code>Inf</code> to turn it off) and download them quietly. Failures are
 only reported once they have lasted a day.</p>
-<p>To bring a snapshot up to date yourself:</p>
+<p>You rarely need to make a snapshot yourself, since queries for later
+times work without one. But you can keep the synapses at one time on
+disk for later sessions (e.g. the <code>now</code> of an analysis you
+want to repeat):</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/aedes_update_snapshot.html">aedes_update_snapshot</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Updating synapse snapshot 'v518' (2026-09-30 14:12:29 UTC) to</span></span>
 <span><span class="co">#&gt; 2026-10-01 12:00:00 UTC (now)</span></span></code></pre></div>
-<p>This only looks up synapses on neurons that have been edited since
-the snapshot, so a daily update takes seconds to minutes. Use
+<p>This writes a local checkpoint, which takes seconds to minutes. Use
 <code>aedes_update_snapshot("latest")</code> for the time of the newest
-materialisation version instead.</p>
+materialisation version instead. A local checkpoint is only used when
+you ask for exactly its time (see <a href="#more-details">More
+Details</a>).</p>
+</div>
+<div class="section level2">
+<h2 id="more-details">More Details<a class="anchor" aria-label="anchor" href="#more-details"></a>
+</h2>
+<p>You don’t need this section to use snapshots, but it explains what
+happens for times after the newest snapshot.</p>
+<div class="section level3">
+<h3 id="times-after-the-newest-snapshot">Times After the Newest Snapshot<a class="anchor" aria-label="anchor" href="#times-after-the-newest-snapshot"></a>
+</h3>
+<p>For a time after the newest snapshot, aedes starts from the newest
+published snapshot and makes a small table in memory of the synapses on
+neurons edited since then, with their root ids at that time. Together
+these give the synapses at that time.</p>
+<p><img src="synsnap-time.svg" class="r-plt" alt="" width="100%"></p>
+<p><code><a href="../reference/aedes_partner_summary.html">aedes_partner_summary()</a></code> keeps one of these tables and
+moves it forward with each later query, so it only fetches the edits
+since the last one. <code>aedes_synapse_data(timestamp =)</code> keeps
+one table for each time you ask for. These never change, so a lazy table
+gives the same answer whenever you <code><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect()</a></code> it, but each
+new time (more than a minute after the last one, the
+<code>aedes.synapse_max_age</code> option) adds another table to the
+session.</p>
+<p>Local checkpoints made with <code><a href="../reference/aedes_update_snapshot.html">aedes_update_snapshot()</a></code> are
+only used for exactly their own time. Later times always start from a
+published snapshot, for the reason below.</p>
+</div>
+<div class="section level3">
+<h3 id="edits-that-become-visible-late">Edits That Become Visible Late<a class="anchor" aria-label="anchor" href="#edits-that-become-visible-late"></a>
+</h3>
+<p>CAVE lists each edit with the time it was made, but it can take a
+little while (usually seconds, occasionally minutes) before the edit is
+listed. So reading the edits up to a very recent time can miss some, and
+anything that started from that point would go on missing them.</p>
+<p><img src="synsnap-late.svg" class="r-plt" alt="" width="100%"></p>
+<p>aedes avoids this in three ways:</p>
+<ul>
+<li>the lab server only makes a checkpoint an hour after its time, by
+which point every edit has been listed</li>
+<li>every update re-reads the edits from 10 minutes before the time it
+starts from, and edits read too soon are read again by the next
+query</li>
+<li>local checkpoints can’t wait an hour, so they are never used as a
+starting point</li>
+</ul>
+</div>
 </div>
 <div class="section level2">
 <h2 id="building-and-publishing-snapshots">Building and Publishing Snapshots<a class="anchor" aria-label="anchor" href="#building-and-publishing-snapshots"></a>
@@ -455,9 +521,6 @@ before it, without changing any existing checkpoint</li>
 <li>a checkpoint whose chain is incomplete (e.g. a parent that failed to
 download) is not listed, and running the download again fills it in</li>
 </ul>
-<p>Edits sometimes become visible in CAVE a little after their
-timestamp, so regular checkpoints also look for edits in the 10 minutes
-before their parent.</p>
 </div>
 <div class="section level3">
 <h3 id="safety">Safety<a class="anchor" aria-label="anchor" href="#safety"></a>

@@ -30,7 +30,9 @@ aedes_update_snapshot(
 - from:
 
   The snapshot to start from, or `"latest"` (the default) for the most
-  recent snapshot in `root` at or before `timestamp`.
+  recent published or full snapshot in `root` at or before `timestamp`.
+  Local checkpoints are skipped, so each new one is a single step from a
+  published snapshot.
 
 - tag:
 

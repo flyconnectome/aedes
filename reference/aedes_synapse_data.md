@@ -64,11 +64,15 @@ also keep a copy sorted by `post_root`, which `side = "post"` reads. Use
 [`bit64::as.integer64()`](https://bit64.r-lib.org/reference/as.integer64.character.html)
 for root ids in filters.
 
-With `timestamp`, the snapshot is the newest one at or before that time.
-If that is more than `getOption("aedes.synapse_max_age", 60)` seconds
-older, a local checkpoint at `timestamp` is first made with
-[`aedes_update_snapshot()`](aedes_update_snapshot.md) (seconds to
-minutes of CAVE lookups), and reused by later calls for nearby times.
+With `timestamp`, the synapses are those of the newest snapshot at or
+before that time when it is at most
+`getOption("aedes.synapse_max_age", 60)` seconds older. Otherwise the
+edits made since the newest published snapshot are looked up in CAVE
+(seconds to minutes) and kept in memory for the rest of the session,
+where later calls for times up to `max_age` seconds later reuse them.
+Nothing is written to disk; use
+[`aedes_update_snapshot()`](aedes_update_snapshot.md) to keep a
+checkpoint for later sessions.
 
 ## See also
 

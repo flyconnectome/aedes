@@ -73,7 +73,9 @@ POSIXct or a string accepted by <code><a href="https://rdrr.io/r/base/as.POSIXlt
 
 <dt id="arg-from">from<a class="anchor" aria-label="anchor" href="#arg-from"></a></dt>
 <dd><p>The snapshot to start from, or <code>"latest"</code> (the default) for the
-most recent snapshot in <code>root</code> at or before <code>timestamp</code>.</p></dd>
+most recent published or full snapshot in <code>root</code> at or before
+<code>timestamp</code>. Local checkpoints are skipped, so each new one is a single
+step from a published snapshot.</p></dd>
 
 
 <dt id="arg-tag">tag<a class="anchor" aria-label="anchor" href="#arg-tag"></a></dt>
