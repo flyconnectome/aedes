@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-This vignette explains how to use a local copy of the Aedes synapse table in order to enable connectivity queries that can reflect edits up to the latest second but are still very fast (think one second to find the partners of hundreds of neurons vs 5 minutes via CAVE). The catch is a one time download of about 2 GB of data onto the user's machine. You also have access to the full synapse table including the location of every synapse.
+This vignette explains how to use a local copy of the Aedes synapse table to enable connectivity queries that can reflect edits up to the latest second but are still very fast (think one second to find the partners of hundreds of neurons vs 5 minutes via CAVE). The catch is a one time download of about 2 GB of data onto the user's machine. You also have access to the full synapse table including the location of every synapse.
 
 ## Quick Start
 
@@ -30,10 +30,10 @@ aedes_set_version('latest')
 dn.lat <- aedes_partner_summary("superclass:descending_neuron", partners = "inputs")
 ```
 
-The first time, `aedes_use_snapshot()` offers to download a snapshot (consisting of about 1.5 GB of static synapse data that never changes and 0.5 GB of materialisation information that matches synapses to current root_ids). After that, new checkpoints (a few MB) are downloaded
-automatically every day when you use the snapshot and deltas up to the current time can be computed on your machine. Collectively this allowsr rapid time travel to arbitrary timepoints in the evolving connectome connectivity graph. In particular this
-allows users to access both the latest CAVE materialisation version (e.g. 519) and the current time ("now") for up-to-the-second queries - very useful during
-simultaneous proofreading and typing.
+The first time, `aedes_use_snapshot()` offers to download a snapshot (consisting of about 1.5 GB of static synapse data (e.g. XYZ locations) that never changes and 0.5 GB of materialisation information that matches each row of that synapse table to current root_ids). After that, new checkpoints (a few MB) are downloaded
+automatically every day when you use the snapshot and deltas up to the current time can be computed on your machine. Collectively this allows rapid time travel to arbitrary timepoints in the evolving connectome connectivity graph. 
+In particular this allows users to access both the latest CAVE materialisation version (e.g. `519`) and the current time (`"now"`) for up-to-the-second queries.
+We find this very useful during simultaneous proofreading and typing.
 
 ## Key Points
 
