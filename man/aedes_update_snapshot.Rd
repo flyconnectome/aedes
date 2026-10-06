@@ -19,7 +19,9 @@ aedes_update_snapshot(
 POSIXct or a string accepted by \code{\link[=as.POSIXct]{as.POSIXct()}}.}
 
 \item{from}{The snapshot to start from, or \code{"latest"} (the default) for the
-most recent snapshot in \code{root} at or before \code{timestamp}.}
+most recent published or full snapshot in \code{root} at or before
+\code{timestamp}. Local checkpoints are skipped, so each new one is a single
+step from a published snapshot.}
 
 \item{tag}{The name of the new snapshot. Defaults to the timestamp, e.g.
 \code{"20261001T120000"}.}

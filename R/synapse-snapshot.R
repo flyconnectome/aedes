@@ -73,7 +73,7 @@ aedes_use_snapshot <- function(snapshot = NULL, version = NULL, timestamp = NULL
   }
   if (is.null(snapshot)) {
     when <- partner_summary_local_time(version, timestamp)
-    snapshot <- synsnap_at(root, when)
+    snapshot <- synsnap_at(root, when, locals = FALSE)
     if (is.null(snapshot)) {
       snapshot <- synsnap_tags(root)$tag[1]
       message("No synapse snapshot is as old as ", format_utc(when),
@@ -169,7 +169,9 @@ aedes_snapshot_root <- function(create = FALSE) {
 #'   `"latest"` for the time of the newest CAVE materialisation version, a
 #'   POSIXct or a string accepted by [as.POSIXct()].
 #' @param from The snapshot to start from, or `"latest"` (the default) for the
-#'   most recent snapshot in `root` at or before `timestamp`.
+#'   most recent published or full snapshot in `root` at or before
+#'   `timestamp`. Local checkpoints are skipped, so each new one is a single
+#'   step from a published snapshot.
 #' @param tag The name of the new snapshot. Defaults to the timestamp, e.g.
 #'   `"20261001T120000"`.
 #' @param rebase Whether to also save the new snapshot as a full snapshot.
@@ -193,7 +195,7 @@ aedes_update_snapshot <- function(timestamp = "now", from = "latest",
   else if (identical(timestamp, "latest")) aedes_version_timestamp("latest")
   else as.POSIXct(timestamp, tz = "UTC")
   if (identical(from, "latest")) {
-    from <- synsnap_at(root, timestamp)
+    from <- synsnap_at(root, timestamp, locals = FALSE)
     if (is.null(from))
       stop("No synapse snapshot in ", root, " is as old as ",
            format_utc(timestamp), call. = FALSE)
@@ -210,7 +212,7 @@ aedes_update_snapshot <- function(timestamp = "now", from = "latest",
     # a version time is kept exactly; others are rounded down to the ms
     synsnap_update(from, tag, if (identical(what, "latest materialisation"))
       synsnap_format_time(timestamp) else timestamp,
-      root = root, ctx = ctx, kind = "local")
+      root = root, ctx = ctx, kind = "local", overlap = 600)
     if (rebase)
       synsnap_rebase(tag, root)
   }
@@ -297,7 +299,7 @@ aedes_snapshot_at <- function(timestamp, root) {
          call. = FALSE)
   age <- as.numeric(when) - as.numeric(synsnap_meta(tag, root)$timestamp)
   if (age > getOption("aedes.synapse_max_age", 60))
-    tag <- aedes_update_snapshot(when, from = tag, root = root, set = FALSE)$tag
+    tag <- aedes_update_snapshot(when, root = root, set = FALSE)$tag
   tag
 }
 

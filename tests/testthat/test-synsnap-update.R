@@ -160,6 +160,32 @@ test_that("aedes_update_snapshot", {
   expect_error(aedes_update_snapshot("2025-01-01", root = root), "as old as")
 })
 
+test_that("new local checkpoints start from a published one", {
+  skip_if_no_duckdb()
+  root <- make_snapshot(withr::local_tempdir())
+  w <- fake_world()
+  w$root <- root
+  h <- 3600
+  t0 <- as.POSIXct("2026-01-01", tz = "UTC")
+  local_mocked_bindings(aedes_synsnap_ctx = function() w$ctx)
+  synsnap_update("s1", "l1", t0 + 1.5 * h, root, w$ctx, kind = "local")
+  synsnap_update("s1", "r1", t0 + 0.5 * h, root, w$ctx, kind = "regular")
+  # locals only count at their own time
+  expect_equal(synsnap_at(root, t0 + 2 * h), "l1")
+  expect_equal(synsnap_at(root, t0 + 2 * h, locals = FALSE), "r1")
+  expect_equal(synsnap_at(root, t0 + 1.5 * h, locals = FALSE), "l1")
+  expect_equal(synsnap_at(root, "now", locals = FALSE), "s2")
+  # a full (rebased) local is a fine start
+  synsnap_update("s1", "f1", t0 + 1.6 * h, root, w$ctx, kind = "local")
+  synsnap_rebase("f1", root)
+  expect_equal(synsnap_at(root, t0 + 2 * h, locals = FALSE), "f1")
+  unlink(file.path(root, "f1"), recursive = TRUE)
+
+  s <- aedes_update_snapshot(t0 + 2.7 * h, root = root, set = FALSE)
+  expect_equal(synsnap_meta(s$tag, root)$parent, "r1")
+  expect_tag_matches(w, s$tag, t0 + 2.7 * h)
+})
+
 test_that("publish and download snapshots", {
   skip_if_no_duckdb()
   skip_if(!nzchar(Sys.which("curl")))

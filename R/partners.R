@@ -108,7 +108,8 @@ aedes_partner_summary <- function(rootids,
     # start from the newest snapshot at or before the query time: an older one
     # than selected for an earlier time, a newer one for a later time or now
     tag = synsnap_at(snap$root,
-                     if (identical(when, "now")) aedes_synsnap_ctx()$now() else when)
+                     if (identical(when, "now")) aedes_synsnap_ctx()$now() else when,
+                     locals = FALSE)
     if (!is.null(tag) && !identical(tag, snap$tag))
       snap = aedes_use_snapshot(tag, root = snap$root, set = FALSE)
     why = partner_summary_local_problem(snap, when, ...)
