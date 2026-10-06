@@ -53,9 +53,7 @@ times after the newest snapshot work.
 
 ## Introduction
 
-```{r fig-overview, echo = FALSE, eval = TRUE, out.width = "100%"}
-knitr::include_graphics("synsnap-overview.svg")
-```
+![How a local snapshot is used alongside CAVE](synsnap-overview.svg){width=100%}
 
 The Aedes synapse table has about 111 million synapses. Querying it through
 CAVE is fine for a few neurons, but it is slow for tens to thousands of
@@ -277,9 +275,7 @@ snapshot and makes a small table in memory of the synapses on neurons edited
 since then, with their root ids at that time. Together these give the
 synapses at that time.
 
-```{r fig-time, echo = FALSE, eval = TRUE, out.width = "100%"}
-knitr::include_graphics("synsnap-time.svg")
-```
+![Answering a query for a time after the newest snapshot](synsnap-time.svg){width=100%}
 
 `aedes_partner_summary()` keeps one of these tables and moves it forward
 with each later query, so it only fetches the edits since the last one.
@@ -299,9 +295,7 @@ while (usually seconds, occasionally minutes) before the edit is listed. So
 reading the edits up to a very recent time can miss some, and anything that
 started from that point would go on missing them.
 
-```{r fig-late, echo = FALSE, eval = TRUE, out.width = "100%"}
-knitr::include_graphics("synsnap-late.svg")
-```
+![Edits that become visible late](synsnap-late.svg){width=100%}
 
 aedes avoids this in three ways:
 
@@ -381,9 +375,7 @@ syn_snapshot/
     log.parquet
 ```
 
-```{r fig-chain, echo = FALSE, eval = TRUE, out.width = "100%"}
-knitr::include_graphics("synsnap-chain.svg")
-```
+![The chain of checkpoints back to the base](synsnap-chain.svg){width=100%}
 
 The split follows how the data actually change. Supervoxels, positions and
 sizes are fixed once synapses have been detected; proofreading only changes
@@ -407,9 +399,7 @@ base and the logs of every checkpoint in its chain, keeping the newest root
 id for each synapse (below). DuckDB does this in a fraction of a second for a few
 neurons even with months of daily logs.
 
-```{r fig-read, echo = FALSE, eval = TRUE, out.width = "100%"}
-knitr::include_graphics("synsnap-read.svg")
-```
+![Reading a checkpoint through its chain](synsnap-read.svg){width=100%}
 
 Because each checkpoint only depends on its parent, missing ones are easy to
 deal with:
