@@ -30,9 +30,9 @@ aedes_set_version('latest')
 dn.lat <- aedes_partner_summary("superclass:descending_neuron", partners = "inputs")
 ```
 
-The first time, `aedes_use_snapshot()` offers to download a snapshot (consisting of about 1.5 GB of static synapse data that never changes and 0.5 GB of materialisation informatino that matches synapses to current root_ids). After that, new checkpoints (a few MB) are downloaded
+The first time, `aedes_use_snapshot()` offers to download a snapshot (consisting of about 1.5 GB of static synapse data that never changes and 0.5 GB of materialisation information that matches synapses to current root_ids). After that, new checkpoints (a few MB) are downloaded
 automatically every day when you use the snapshot and deltas up to the current time can be computed on your machine. Collectively this allows time travel to arbitrary timepoints in the evolving connectome connectivity graph. In particular this
-allows user to access both the most recent CAVE materialisation version (e.g. 519) and the current time ("now") for up to the second queries - very useful during
+allows users to access both the most recent CAVE materialisation version (e.g. 519) and the current time ("now") for up-to-the-second queries - very useful during
 simultaneous proofreading and typing.
 
 ## Key Points
@@ -429,7 +429,7 @@ it.
 
 ## Comparison with the CAVE Delta Lake Export
 
-The CAVE materialization engine can now export a materialisation version as
+The CAVE materialisation engine can now export a materialisation version as
 a [Delta Lake](https://delta.io) table
 ([MaterializationEngine#220](https://github.com/CAVEconnectome/MaterializationEngine/pull/220);
 see the `deltalake_query` notebook in
