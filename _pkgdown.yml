@@ -23,6 +23,7 @@ reference:
   - aedes_xyz2id
   - aedes_mirror
   - aedes_point_side
+  - aedes_neck_side
 
 - title: Reading neurons
   desc: Pull skeletons and pick annotation points.
@@ -36,6 +37,7 @@ reference:
   desc: Bulk add or update FlyTable rows.
   contents:
   - aedes_add_neurons
+  - aedes_add_ans
   - aedes_set_meta
   - aedes_set_group
 
