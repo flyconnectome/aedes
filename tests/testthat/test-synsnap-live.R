@@ -145,3 +145,11 @@ test_that("partner summary at a time", {
   expect_equal(ps$weight, 4L)
   expect_equal(attr(ps, "timestamp"), t0 + 2 * h)
 })
+
+test_that("i64_in copes with empty inputs", {
+  i64 <- bit64::as.integer64
+  expect_equal(i64_in(i64(c(1, 2)), bit64::integer64()), c(FALSE, FALSE))
+  expect_equal(i64_in(bit64::integer64(), i64(1)), logical())
+  expect_equal(i64_in(i64(c("576460752756918415", "2")), "576460752756918415"),
+               c(TRUE, FALSE))
+})
