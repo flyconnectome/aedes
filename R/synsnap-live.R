@@ -47,6 +47,14 @@ synsnap_register <- function(con, df, env = parent.frame()) {
 i64_union <- function(l)
   unique(do.call(c, c(list(bit64::integer64()), lapply(l, bit64::as.integer64))))
 
+# integer64 %in% that copes with empty x or table, which some older versions
+# of bit64 fail on
+i64_in <- function(x, table) {
+  if (!length(x)) return(logical())
+  if (!length(table)) return(rep(FALSE, length(x)))
+  bit64::as.integer64(x) %in% bit64::as.integer64(table)
+}
+
 # per-session state for one snapshot: head time, head rows table, root log
 synsnap_state <- function(tag, root) {
   key <- paste(normalizePath(root, mustWork = TRUE), tag, sep = "|")
@@ -253,8 +261,8 @@ synsnap_rows_query <- function(q, side, st, use_head, lg, T, ctx, con) {
   other <- if (side == "pre") "post" else "pre"
   sidecol <- paste0(side, "_root")
   othercol <- paste0(other, "_root")
-  fresh <- q[q %in% lg$new & !q %in% lg$old]
-  known <- q[!q %in% fresh]
+  fresh <- q[i64_in(q, lg$new) & !i64_in(q, lg$old)]
+  known <- q[!i64_in(q, fresh)]
   rows <- if (length(known)) {
     where <- synsnap_where(known, side, con)
     if (!is.null(attr(where, "table")))
@@ -276,7 +284,7 @@ synsnap_rows_query <- function(q, side, st, use_head, lg, T, ctx, con) {
       rows <- rbind_i64(rows, fr[c("id", "pre_root", "post_root")])
     }
   }
-  stale <- rows[[othercol]] %in% lg$old
+  stale <- i64_in(rows[[othercol]], lg$old)
   if (any(stale)) {
     sid <- synsnap_register(con, data.frame(id = rows$id[stale]))
     sv <- DBI::dbGetQuery(con, sprintf("SELECT id, %s_sv AS sv FROM %s WHERE id IN (SELECT id FROM %s)",
@@ -317,7 +325,7 @@ synsnap_query_at <- function(roots, side = c("pre", "post"), tag, root, timestam
   q <- q[!is.na(q) & q != 0]
   # query roots that expired since the snapshot
   expired <- logs(st$t0)$old
-  bad <- q %in% expired
+  bad <- i64_in(q, expired)
   if (any(bad))
     q <- unique(c(q[!bad], bit64::as.integer64(ctx$latest_id(q[bad], T))))
 
@@ -325,7 +333,7 @@ synsnap_query_at <- function(roots, side = c("pre", "post"), tag, root, timestam
   if (use_head) {
     chg <- synsnap_changed(st, lg$old, con)
     est_q <- if (chg$nsv > min_sv) {
-      nfresh <- sum(q %in% lg$new & !q %in% lg$old)
+      nfresh <- sum(i64_in(q, lg$new) & !i64_in(q, lg$old))
       where <- synsnap_where(q, side, con)
       if (!is.null(attr(where, "table")))
         on.exit(duckdb::duckdb_unregister(con, attr(where, "table")), add = TRUE)
@@ -362,12 +370,12 @@ synsnap_query_at <- function(roots, side = c("pre", "post"), tag, root, timestam
 
   # query roots with no synapses may be out of date ids from before the
   # snapshot; check those with CAVE
-  unk <- q[!q %in% res[[sidecol]] & !q %in% lg$new]
+  unk <- q[!i64_in(q, res[[sidecol]]) & !i64_in(q, lg$new)]
   if (length(unk)) {
     il <- as.logical(ctx$is_latest(unk, T))
     if (any(!il)) {
       q2 <- bit64::as.integer64(ctx$latest_id(unk[!il], T))
-      q2 <- q2[!q2 %in% q]
+      q2 <- q2[!i64_in(q2, q)]
       if (length(q2)) res <- rbind_i64(res, counts(q2))
     }
   }

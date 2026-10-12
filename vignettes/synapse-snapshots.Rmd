@@ -209,12 +209,75 @@ midway between the pre and postsynaptic points (in raw voxel coordinates):
 
 ```{r}
 aedes_synapse_data(details = TRUE, timestamp = now) %>%
-  filter(pre_root %in% dns[1]) %>%
+  filter(pre_root %in% !!dns[1]) %>%
   mutate(x = (pre_x + post_x) / 2, y = (pre_y + post_y) / 2,
          z = (pre_z + post_z) / 2) %>%
   select(id, post_root, x, y, z, size) %>%
   collect()
 ```
+
+Note the `!!` in `filter()`. dplyr translates the code inside `filter()` into
+SQL, so `dns[1]` would otherwise be turned into an SQL expression instead of
+being evaluated in R; `!!` evaluates it in R first and inserts the result. You
+don't need it for a plain variable like `dns`.
+
+### Assigning Synapses to Brain Regions
+
+Synapse positions can be combined with meshes to work out where each synapse
+is. For example, which descending neurons get the most input in the optic
+lobes? The `aedes_ol_meshes` neuroglancer layer has meshes for the central
+brain (`CB`), each optic lobe (`OL_L`, `OL_R`) and their neuropils. They are
+stored in neuroglancer's legacy precomputed format, which we can read with a
+small helper using code from the malevnc package:
+
+```{r}
+read_ol_meshes <- function(names, base = "https://flyemdev.mrc-lmb.cam.ac.uk/flyconnectome/rclone/aedes_ol_meshes") {
+  sp <- jsonlite::fromJSON(file.path(base, "segment_properties/info"))
+  ids <- setNames(sp$inline$ids, sp$inline$properties$values[[1]])
+  bad <- setdiff(names, names(ids))
+  if (length(bad)) stop("Unknown mesh name(s): ", toString(bad),
+                        ". Choose from: ", toString(names(ids)))
+  lapply(ids[names], \(id) {
+    frags <- jsonlite::fromJSON(paste0(base, "/", id, ":0"))$fragments
+    Reduce(merge, lapply(file.path(base, frags), malevnc:::read_neuroglancer_mesh))
+  })
+}
+meshes <- read_ol_meshes(c("CB", "OL_L", "OL_R"))
+```
+
+Now fetch the position of every input synapse onto the descending neurons and
+test which mesh each one is inside. Synapse positions are in raw voxels, but
+the meshes are in nm, so convert with `aedes_raw2nm()` first:
+
+```{r}
+syn <- aedes_synapse_data(details = TRUE, timestamp = now) %>%
+  filter(post_root %in% dns) %>%
+  select(id, pre_root, post_root, post_x, post_y, post_z) %>%
+  collect()
+xyz <- aedes_raw2nm(as.matrix(select(syn, post_x, post_y, post_z)))
+inside <- as_tibble(lapply(meshes, \(m) nat::pointsinside(xyz, m)))
+```
+
+This takes a couple of seconds for about 1.5 million synapses. Then count the
+synapses in each region for each neuron. A few synapses are outside all three
+meshes and are counted as `other`:
+
+```{r}
+dn_regions <- syn %>%
+  bind_cols(inside) %>%
+  mutate(region = case_when(CB ~ "CB", OL_L ~ "OL_L", OL_R ~ "OL_R",
+                            .default = "other")) %>%
+  count(post_root, region) %>%
+  tidyr::pivot_wider(names_from = region, values_from = n, values_fill = 0) %>%
+  mutate(OL = OL_L + OL_R, OL_vs_CB = OL / CB)
+
+dn_regions %>%
+  slice_max(OL_vs_CB, n = 4)
+```
+
+Almost all descending neuron input is in the central brain: only a handful of
+neurons get any input in the optic lobes, and each from one side only. Use
+`count(pre_root, region)` instead to summarise by presynaptic partner.
 
 ### Comparing Two Times
 
