@@ -24,7 +24,7 @@ dn.lat <- aedes_partner_summary("superclass:descending_neuron", partners = "inpu
 
 The first time,
 [`aedes_use_snapshot()`](../reference/aedes_use_snapshot.md) offers to
-download a snapshot (consisting of about 1.5 GB of static synapse data
+download a snapshot (consisting of about 1.6 GB of static synapse data
 (e.g. XYZ locations) that never changes and 0.5 GB of materialisation
 information that matches each row of that synapse table to current
 root_ids). After that, new checkpoints (a few MB) are downloaded
@@ -88,7 +88,7 @@ which aedes queries with [DuckDB](https://duckdb.org). This gives you:
 | Term | Meaning |
 |----|----|
 | synapse table | the CAVE table with every synapse in the dataset |
-| static data | the columns of the synapse table that never change: synapse id, pre and postsynaptic supervoxels, positions and size (`static.parquet`, 1.7 GB) |
+| static data | the columns of the synapse table that never change: synapse id, pre and postsynaptic supervoxels, positions and size (`static.parquet`, 1.6 GB) |
 | snapshot | the root ids of both partners of every synapse at one moment in time, named by a tag such as `v518` |
 | base | a full snapshot (0.55 GB), usually at a CAVE materialisation version |
 | checkpoint | a snapshot stored as just the synapses whose root ids changed since an earlier snapshot, its parent (about 1 MB per day of edits) |
@@ -127,7 +127,7 @@ You select a snapshot once per session. The snapshot folder is found by
 library(aedes)
 library(dplyr)
 aedes_use_snapshot()
-#> Using synapse snapshot '20261001T200000' (2026-10-01 20:00:00 UTC)
+#> Using synapse snapshot 'r20261001T200000' (2026-10-01 20:00:00 UTC)
 ```
 
 [`aedes_use_snapshot()`](../reference/aedes_use_snapshot.md) respects
@@ -143,7 +143,7 @@ other aedes functions so that metadata and connectivity match.
 ``` r
 
 aedes_use_snapshot(timestamp = "now")
-aedes_use_snapshot(version = 513)
+aedes_use_snapshot(version = 519)
 ```
 
 Partner summaries are now answered locally:
@@ -449,7 +449,7 @@ This does two things:
     materialisation version to make the first base, e.g. `v518`.
 
 It takes a few hours and needs about 25 GB of free space while it runs,
-but only 2.3 GB once it has finished. If you have the Google Cloud CLI
+but only 2.1 GB once it has finished. If you have the Google Cloud CLI
 (`gcloud`) installed the download is quicker; otherwise `curl` is used.
 If anything goes wrong just run it again with the same `version` and it
 will carry on where it stopped. Before a new base is used, the synapses
@@ -484,7 +484,7 @@ A snapshot folder holds the static data and a small folder for each
 snapshot:
 
     syn_snapshot/
-      static.parquet     id, pre_sv, post_sv, positions, size    1.7 GB
+      static.parquet     id, pre_sv, post_sv, positions, size    1.6 GB
       static.json        source table and md5
       v518/              base
         meta.json        tag, timestamp
@@ -580,7 +580,7 @@ answer questions about the present (“now”).
 |  | aedes snapshots | CAVE Delta Lake export |
 |----|----|----|
 | Where queries run | locally, after a download | remotely (range reads) or locally |
-| Up front | 1.7 GB static data once, plus a 0.55 GB base | nothing for remote queries |
+| Up front | 1.6 GB static data once, plus a 0.55 GB base | nothing for remote queries |
 | Times available | snapshot times, and “now” via CAVE edits | materialisation versions |
 | Each new time | a checkpoint of about 1 MB per day of edits | a full copy of the table per version |
 | Unchanged columns | stored once in `static.parquet` | rewritten with every version |
