@@ -137,6 +137,9 @@ synsnap_download <- function(url, root, full = TRUE) {
            "use a new folder", call. = FALSE)
   } else get(c("static.parquet", "static.json"))
   snaps <- m$snapshots
+  # the json omits NA fields, so with only full snapshots these are missing
+  for (col in c("base", "parent"))
+    if (is.null(snaps[[col]])) snaps[[col]] <- NA_character_
   # a local tag only counts if it has the same base (it may since have been
   # made a full snapshot on the server)
   local <- synsnap_tags(root)
