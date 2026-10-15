@@ -5,7 +5,12 @@
 \alias{last_aedes_edit}
 \title{Use binary search to find the last edit operation ID for a CAVE dataset}
 \usage{
-last_chunkedgraph_edit(datastack_name, start = 1e+05, stop = 1e+06)
+last_chunkedgraph_edit(
+  datastack_name,
+  start = 1e+05,
+  stop = 1e+06,
+  window = 100
+)
 
 last_aedes_edit(...)
 }
@@ -15,12 +20,20 @@ last_aedes_edit(...)
 \item{start}{Start index for search (must exist).}
 
 \item{stop}{Finish index for search (must not exist).}
+
+\item{window}{Number of consecutive ids checked at each probe point. Must
+be larger than the biggest gap between existing operation ids.}
 }
 \value{
 An integer operation ID.
 }
 \description{
 Use binary search to find the last edit operation ID for a CAVE dataset
+}
+\details{
+Operation ids are not contiguous (gaps of up to ~20 ids are seen in
+practice), so the search asks whether \emph{any} operation exists in a window
+of \code{window} ids starting at each probe point.
 }
 \section{Functions}{
 \itemize{
