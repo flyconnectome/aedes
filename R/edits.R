@@ -169,7 +169,8 @@ populate_chunkedgraph_ops_cache <- function(
     ll <- pbapply::pblapply(sops, .chunkedgraph_operation_details, acc = acc,
                             chunksize = Inf, return.data.frame = FALSE,
                             pyjson = pyjson, ...)
-    l2 <- unlist(ll, recursive = FALSE, use.names = TRUE)
+    # unname so that operation ids are not prefixed with chunk ids
+    l2 <- unlist(unname(ll), recursive = FALSE, use.names = TRUE)
     if (return.data.frame) {
       return(.operation_details_list_to_df(l2))
     } else {
