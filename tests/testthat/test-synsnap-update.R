@@ -209,6 +209,15 @@ test_that("publish and download snapshots", {
     dplyr::collect(dplyr::arrange(synsnap_tbl("s2", root, static = TRUE), id)))
   expect_length(synsnap_download(paste0(url, "/manifest.json"), local), 0)
 
+  # a full snapshot on its own
+  root1 <- withr::local_tempdir()
+  file.copy(file.path(synsnap_path(root), c("static.parquet", "static.json", "s1")),
+            synsnap_path(root1), recursive = TRUE)
+  pub1 <- withr::local_tempdir()
+  synsnap_publish(root1, pub1)
+  expect_equal(synsnap_download(paste0("file://", normalizePath(pub1)),
+                                withr::local_tempdir()), "s1")
+
   # later checkpoints, including a backfill on a side branch, arrive after
   # their parents; an unfinished one is not published
   add_cp <- function(tag, parent, time, base = "s1") {
