@@ -16,6 +16,9 @@ points on the neuron, soma location, side of brain etc.
   that also has a normal row is matched to that row, while one with only such
   rows is skipped with a message (and not re-added). These rows no longer count
   as group members either.
+* `aedes_set_group(group = "<query>")` resolves the example neurons at the
+  same pinned timestamp as the rest of the call, so recently edited examples
+  are found.
 * New `aedes_set_meta()` bulk-updates existing flytable rows. (#10)
 * New `aedes_set_group()` sets group to lowest serial_id (but maintains selected
   serial number if joining an existing group in the table). (#10)

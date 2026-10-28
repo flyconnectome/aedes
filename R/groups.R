@@ -148,9 +148,11 @@ aedes_set_group <- function(ids, group = NULL, join_existing = NA,
              "). Use `group = NA` to ungroup.", call. = FALSE)
       target <- gint
     } else {
-      # join-by-example: adopt the group of the neuron(s) the query matches
-      exg <- am_group[match(as.character(aedes_ids(group)),
-                            as.character(am$root_id))]
+      # join-by-example: adopt the group of the neuron(s) the query matches.
+      # Resolve them at the pinned time: `am` is mapped to it, whereas the root
+      # ids stored in FlyTable can lag recent edits and would fail to match.
+      exids <- aedes_ids(group, timestamp = ts$timestamp)
+      exg <- am_group[match(as.character(exids), as.character(am$root_id))]
       exg <- exg[!is.na(exg)]
       if (!length(exg))
         stop("The `group` reference neuron(s) have no group to join.",

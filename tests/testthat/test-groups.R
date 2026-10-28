@@ -105,3 +105,23 @@ test_that("aedes_set_group skips unusable rows and ignores them as members", {
                        annotator = FALSE)
   expect_identical(p$group_old, as.integer(g_ok[[m[1]]]))
 })
+
+test_that("join-by-example resolves the example neurons at the pinned time", {
+  # FlyTable stores root ids as of its last sync. An example neuron edited
+  # since then only matches the pinned (remapped) table if the query is also
+  # resolved at the pinned time.
+  stored <- try(aedes_meta(), silent = TRUE)
+  skip_if(inherits(stored, "try-error"), "aedes_meta() unavailable")
+  live <- live_aedes_main()
+  am <- live$am[!live$am$unusable & !is.na(live$am$group), , drop = FALSE]
+  old <- as.character(stored$root_id[match(am[["_id"]], stored[["_id"]])])
+  ex <- am[!is.na(old) & old != am$root_id, , drop = FALSE]
+  ungrouped <- live$single[is.na(live_usable_row(live, live$single)$group)]
+  skip_if(!nrow(ex) || !length(ungrouped),
+          "no example with a stale stored root id to exercise")
+
+  p <- aedes_set_group(ungrouped[1], group = paste0("serial_id:",
+                                                    ex$serial_id[1]),
+                       join_existing = TRUE, dryrun = TRUE, annotator = FALSE)
+  expect_identical(p$group_new, as.integer(ex$group[1]))
+})
