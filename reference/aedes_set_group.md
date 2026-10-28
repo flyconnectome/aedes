@@ -103,6 +103,10 @@ update engine that also backs [`aedes_set_meta()`](aedes_set_meta.md);
 the same pinned table snapshot is reused so the returned preview matches
 what is written.
 
+Rows with status `duplicate`, `bad_nucleus` or `not_a_neuron` are never
+written and do not count as group members; neurons with only such rows
+are skipped with a message.
+
 ## See also
 
 [`aedes_set_meta()`](aedes_set_meta.md) for arbitrary metadata updates;

@@ -151,6 +151,9 @@ whose other members were not supplied emits a warning, since it splits that
 group. Only the <code>group</code> column is written, via the shared update engine that
 also backs <code><a href="aedes_set_meta.html">aedes_set_meta()</a></code>; the same pinned table snapshot is reused so
 the returned preview matches what is written.</p>
+<p>Rows with status <code>duplicate</code>, <code>bad_nucleus</code> or <code>not_a_neuron</code> are never
+written and do not count as group members; neurons with only such rows are
+skipped with a message.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

@@ -19,6 +19,20 @@ brain etc.
   [`fafbseg::flywire_ids()`](https://rdrr.io/pkg/fafbseg/man/flywire_ids.html)
   on the group column, which preserves an `integer64` `NA` yet maps a
   numeric/character `NA` to `"0"`.)
+- [`aedes_set_meta()`](../reference/aedes_set_meta.md),
+  [`aedes_set_group()`](../reference/aedes_set_group.md) and
+  [`aedes_add_neurons()`](../reference/aedes_add_neurons.md) never
+  update rows marked `duplicate`, `bad_nucleus` or `not_a_neuron`: a
+  neuron that also has a normal row is matched to that row, while one
+  with only such rows is skipped with a message (and not re-added).
+  These rows no longer count as group members either.
+- `aedes_set_group(group = "<query>")` resolves the example neurons at
+  the same pinned timestamp as the rest of the call, so recently edited
+  examples are found.
+- `aedes_add_neurons(soma=)` also accepts an
+  [`aedes_soma_position()`](../reference/aedes_soma_position.md) method
+  name, e.g. `soma = "nucleus"` to fill soma/nucleus only from the
+  nucleus table.
 - New [`aedes_set_meta()`](../reference/aedes_set_meta.md) bulk-updates
   existing flytable rows.
   ([\#10](https://github.com/flyconnectome/aedes/issues/10))

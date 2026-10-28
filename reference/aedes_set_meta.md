@@ -76,11 +76,12 @@ written), keyed by FlyTable `_id`.
 
 ## Details
 
-Rows with status `bad_nucleus`, `duplicate` or `not_a_neuron` are
-dropped before updating; any remaining `root_id` not found in
-`aedes_main` is an error (nothing is written). Writes go through the
-shared update engine, which pins a single timestamp so join-by-`root_id`
-is reliable.
+Rows with status `bad_nucleus`, `duplicate` or `not_a_neuron` are never
+updated: a neuron that also has a normal row is matched to that row, and
+one whose only rows have these statuses is skipped with a message. Any
+remaining `root_id` not found in `aedes_main` is an error (nothing is
+written). Writes go through the shared update engine, which pins a
+single timestamp so join-by-`root_id` is reliable.
 
 ## See also
 

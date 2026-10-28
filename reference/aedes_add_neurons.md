@@ -58,7 +58,11 @@ aedes_add_neurons(
 - soma:
 
   If `TRUE` (the default), auto-fill `soma_xyz` and `nucleus_id` from
-  [`aedes_soma_position()`](aedes_soma_position.md).
+  [`aedes_soma_position()`](aedes_soma_position.md) using its `"auto"`
+  cascade. A method name (e.g. `soma = "nucleus"`) restricts the
+  auto-fill to that method, so that neurons without a nucleus match are
+  left blank rather than given an L2-derived estimate. `FALSE` disables
+  the auto-fill.
 
 - side:
 
@@ -138,6 +142,11 @@ warning naming the affected ids is issued.
 Auto-fill columns (`soma_xyz`, `nucleus_id`, `side`, `point_xyz`) never
 overwrite a non-NA value on an existing row. Values passed via `...`
 always win over the auto-fill and always overwrite on existing rows.
+
+Rows with status `duplicate`, `bad_nucleus` or `not_a_neuron` are never
+updated: a neuron that also has a normal row is matched to that row, and
+one whose only rows have these statuses is skipped with a message rather
+than added again.
 
 Computing a new row's `supervoxel_id` needs a `point_xyz` (the auto key
 point, or one supplied by the caller). Any new id for which no key point

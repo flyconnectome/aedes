@@ -125,7 +125,10 @@ below.</p></dd>
 
 <dt id="arg-soma">soma<a class="anchor" aria-label="anchor" href="#arg-soma"></a></dt>
 <dd><p>If <code>TRUE</code> (the default), auto-fill <code>soma_xyz</code> and <code>nucleus_id</code>
-from <code><a href="aedes_soma_position.html">aedes_soma_position()</a></code>.</p></dd>
+from <code><a href="aedes_soma_position.html">aedes_soma_position()</a></code> using its <code>"auto"</code> cascade. A method name
+(e.g. <code>soma = "nucleus"</code>) restricts the auto-fill to that method, so that
+neurons without a nucleus match are left blank rather than given an
+L2-derived estimate. <code>FALSE</code> disables the auto-fill.</p></dd>
 
 
 <dt id="arg-side">side<a class="anchor" aria-label="anchor" href="#arg-side"></a></dt>
@@ -204,6 +207,10 @@ a warning naming the affected ids is issued.</p>
 <p>Auto-fill columns (<code>soma_xyz</code>, <code>nucleus_id</code>, <code>side</code>, <code>point_xyz</code>) never
 overwrite a non-NA value on an existing row. Values passed via <code>...</code>
 always win over the auto-fill and always overwrite on existing rows.</p>
+<p>Rows with status <code>duplicate</code>, <code>bad_nucleus</code> or <code>not_a_neuron</code> are never
+updated: a neuron that also has a normal row is matched to that row, and
+one whose only rows have these statuses is skipped with a message rather
+than added again.</p>
 <p>Computing a new row's <code>supervoxel_id</code> needs a <code>point_xyz</code> (the auto key
 point, or one supplied by the caller). Any new id for which no key point
 could be computed and none was supplied is still added, but with a warning
