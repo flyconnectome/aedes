@@ -136,3 +136,23 @@ test_that("aedes_meta and cam_meta unique mode agree on row ids", {
 
   expect_setequal(as.character(got$root_id), as.character(ref$root_id))
 })
+
+test_that("aedes_set_meta skips ids whose only rows are unusable", {
+  live <- live_aedes_main()
+  skip_if(!length(live$single) || !length(live$only),
+          "no usable/unusable rows to exercise")
+  a <- live$single[1]
+  u <- live$only[1]
+  expect_message(
+    res <- aedes_set_meta(data.frame(root_id = c(a, u), class = "DNp"),
+                          annotator = FALSE),
+    "Skipping 1 id")
+  expect_identical(res[["_id"]], live_usable_row(live, a)[["_id"]])
+
+  # nothing left to write is not an error
+  expect_message(
+    res <- aedes_set_meta(data.frame(root_id = u, class = "DNp"),
+                          annotator = FALSE),
+    "Skipping 1 id")
+  expect_equal(nrow(res), 0L)
+})

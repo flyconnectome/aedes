@@ -82,6 +82,10 @@ whose other members were not supplied emits a warning, since it splits that
 group. Only the \code{group} column is written, via the shared update engine that
 also backs \code{\link[=aedes_set_meta]{aedes_set_meta()}}; the same pinned table snapshot is reused so
 the returned preview matches what is written.
+
+Rows with status \code{duplicate}, \code{bad_nucleus} or \code{not_a_neuron} are never
+written and do not count as group members; neurons with only such rows are
+skipped with a message.
 }
 \examples{
 \dontrun{

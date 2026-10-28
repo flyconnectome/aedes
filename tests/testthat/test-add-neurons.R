@@ -117,3 +117,22 @@ test_that("aedes_add_neurons collapses ids that resolve to one neuron", {
           if (is.character(vec)) vec else "Skipping: no error raised")
   expect_match(vec, "per-id values")
 })
+
+test_that("aedes_add_neurons never updates or re-adds unusable-only ids", {
+  live <- live_aedes_main()
+  skip_if(!length(live$single) || !length(live$only),
+          "no usable/unusable rows to exercise")
+  a <- live$single[1]
+  u <- live$only[1]
+  common <- list(dryrun = TRUE, superclass = "descending_neuron",
+                 status = "to_review", initials = "XX", annotator = FALSE,
+                 soma = FALSE, side = FALSE)
+  expect_message(res <- do.call(aedes_add_neurons, c(list(u), common)),
+                 "Skipping 1 id")
+  expect_identical(res, list())
+
+  expect_message(res <- do.call(aedes_add_neurons, c(list(c(a, u)), common)),
+                 "Skipping 1 id")
+  expect_identical(res$up[["_id"]], live_usable_row(live, a)[["_id"]])
+  expect_null(res$new)
+})

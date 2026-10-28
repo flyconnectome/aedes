@@ -11,6 +11,11 @@ points on the neuron, soma location, side of brain etc.
   shared feature column. (An `NA` group already came out of `aedes_meta()`, but
   coconatfly re-runs `fafbseg::flywire_ids()` on the group column, which
   preserves an `integer64` `NA` yet maps a numeric/character `NA` to `"0"`.)
+* `aedes_set_meta()`, `aedes_set_group()` and `aedes_add_neurons()` never
+  update rows marked `duplicate`, `bad_nucleus` or `not_a_neuron`: a neuron
+  that also has a normal row is matched to that row, while one with only such
+  rows is skipped with a message (and not re-added). These rows no longer count
+  as group members either.
 * New `aedes_set_meta()` bulk-updates existing flytable rows. (#10)
 * New `aedes_set_group()` sets group to lowest serial_id (but maintains selected
   serial number if joining an existing group in the table). (#10)

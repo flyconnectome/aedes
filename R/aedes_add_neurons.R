@@ -26,6 +26,11 @@
 #'   overwrite a non-NA value on an existing row. Values passed via `...`
 #'   always win over the auto-fill and always overwrite on existing rows.
 #'
+#'   Rows with status `duplicate`, `bad_nucleus` or `not_a_neuron` are never
+#'   updated: a neuron that also has a normal row is matched to that row, and
+#'   one whose only rows have these statuses is skipped with a message rather
+#'   than added again.
+#'
 #'   Computing a new row's `supervoxel_id` needs a `point_xyz` (the auto key
 #'   point, or one supplied by the caller). Any new id for which no key point
 #'   could be computed and none was supplied is still added, but with a warning
@@ -278,7 +283,7 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
   if (!is.null(extra[["status"]])) {
     st <- extra[["status"]]
     if (!st %in% status_shortlist) {
-      vocab <- setdiff(unique(am$status), NA)
+      vocab <- pin$status_vocab
       if (!st %in% vocab)
         stop(sprintf(
           "status '%s' is not in the aedes_main vocabulary. Known values (%d): %s",
@@ -321,6 +326,15 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
             call. = FALSE)
     ids  <- ids[keep]
     indf <- indf[keep, , drop = FALSE]
+  }
+
+  # Never touch neurons whose only rows are duplicate/bad_nucleus/not_a_neuron
+  # (and never append a fresh row for them either).
+  skip <- .aedes_skip_unusable(ids, pin)
+  if (any(skip)) {
+    ids  <- ids[!skip]
+    indf <- indf[!skip, , drop = FALSE]
+    if (!length(ids)) return(list())
   }
 
   # Split existing vs missing (order-preserving via match).

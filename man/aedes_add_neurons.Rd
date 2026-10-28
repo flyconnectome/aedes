@@ -112,6 +112,11 @@ Auto-fill columns (\code{soma_xyz}, \code{nucleus_id}, \code{side}, \code{point_
 overwrite a non-NA value on an existing row. Values passed via \code{...}
 always win over the auto-fill and always overwrite on existing rows.
 
+Rows with status \code{duplicate}, \code{bad_nucleus} or \code{not_a_neuron} are never
+updated: a neuron that also has a normal row is matched to that row, and
+one whose only rows have these statuses is skipped with a message rather
+than added again.
+
 Computing a new row's \code{supervoxel_id} needs a \code{point_xyz} (the auto key
 point, or one supplied by the caller). Any new id for which no key point
 could be computed and none was supplied is still added, but with a warning

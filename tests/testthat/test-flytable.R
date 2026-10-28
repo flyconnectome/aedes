@@ -157,3 +157,19 @@ test_that("write_info writes a stable local info file", {
 
   expect_equal(md5_1, md5_2)
 })
+
+test_that(".aedes_pin_meta sets aside duplicate/bad_nucleus/not_a_neuron rows", {
+  live <- live_aedes_main()
+  skip_if(!length(live$single) || !length(live$only) || !length(live$mixed),
+          "no usable/unusable rows to exercise")
+  ids <- c(live$single[1], live$only[1], live$mixed[1])
+  pin <- .aedes_pin_meta(ids)
+  expect_equal(as.character(pin$ids), ids)
+  expect_false(any(.aedes_is_unusable(pin$am$status)))
+  # a neuron with a normal row resolves to it, even if it also has unusable rows
+  expect_true(all(ids[c(1, 3)] %in% pin$am$root_id))
+  expect_false(any(ids[c(1, 3)] %in% pin$unusable_ids))
+  # one with only unusable rows is recognised rather than looking new
+  expect_true(ids[2] %in% pin$unusable_ids)
+  expect_true(any(.aedes_is_unusable(pin$status_vocab)))
+})

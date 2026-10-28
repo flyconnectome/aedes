@@ -75,3 +75,33 @@ test_that("aedes_set_group joins the group named by a query", {
   expect_equal(p$group_new, refgroup)
   expect_true(p$changed)
 })
+
+test_that("aedes_set_group skips unusable rows and ignores them as members", {
+  live <- live_aedes_main()
+  ungrouped <- live$single[is.na(live_usable_row(live, live$single)$group)]
+  skip_if(!length(ungrouped) || !length(live$only),
+          "no usable/unusable rows to exercise")
+
+  u <- live$only[1]
+  expect_message(
+    p <- aedes_set_group(c(ungrouped[1], u), join_existing = TRUE,
+                         dryrun = TRUE, annotator = FALSE),
+    "Skipping 1 id")
+  expect_identical(as.character(p$root_id), ungrouped[1])
+  expect_error(suppressMessages(
+    aedes_set_group(u, dryrun = TRUE, annotator = FALSE)), "No valid ids")
+
+  # a neuron whose unusable row sits in another group is a member of its
+  # usable row's group only
+  am <- live$am[live$am$root_id %in% live$mixed, , drop = FALSE]
+  g_ok <- tapply(am$group[!am$unusable], am$root_id[!am$unusable],
+                 function(g) g[1])
+  g_bad <- tapply(am$group[am$unusable], am$root_id[am$unusable],
+                  function(g) g[1])
+  m <- names(g_ok)[!is.na(g_ok) & !is.na(g_bad[names(g_ok)]) &
+                     g_ok != g_bad[names(g_ok)]]
+  skip_if(!length(m), "no neuron with unusable rows in another group")
+  p <- aedes_set_group(m[1], join_existing = TRUE, dryrun = TRUE,
+                       annotator = FALSE)
+  expect_identical(p$group_old, as.integer(g_ok[[m[1]]]))
+})

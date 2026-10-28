@@ -25,6 +25,10 @@
 #'   also backs [aedes_set_meta()]; the same pinned table snapshot is reused so
 #'   the returned preview matches what is written.
 #'
+#'   Rows with status `duplicate`, `bad_nucleus` or `not_a_neuron` are never
+#'   written and do not count as group members; neurons with only such rows are
+#'   skipped with a message.
+#'
 #' @param ids Neurons to group, in any form understood by [aedes_ids()]
 #'   (including a query string).
 #' @param group Optional explicit target. A positive whole number forces that
@@ -98,6 +102,7 @@ aedes_set_group <- function(ids, group = NULL, join_existing = NA,
   am <- pin$am
   ts <- pin$ts
   rids <- unique(pin$ids)
+  rids <- rids[!.aedes_skip_unusable(rids, pin)]
   if (!length(rids)) stop("No valid ids.", call. = FALSE)
 
   idx <- match(rids, as.character(am$root_id))
