@@ -169,7 +169,8 @@ populate_chunkedgraph_ops_cache <- function(
     ll <- pbapply::pblapply(sops, .chunkedgraph_operation_details, acc = acc,
                             chunksize = Inf, return.data.frame = FALSE,
                             pyjson = pyjson, ...)
-    l2 <- unlist(ll, recursive = FALSE, use.names = TRUE)
+    # unname so that operation ids are not prefixed with chunk ids
+    l2 <- unlist(unname(ll), recursive = FALSE, use.names = TRUE)
     if (return.data.frame) {
       return(.operation_details_list_to_df(l2))
     } else {
@@ -208,42 +209,59 @@ populate_chunkedgraph_ops_cache <- function(
 
 #' Use binary search to find the last edit operation ID for a CAVE dataset
 #'
+#' @details Operation ids are not contiguous (gaps of up to ~20 ids are seen in
+#'   practice), so the search asks whether *any* operation exists in a window
+#'   of `window` ids starting at each probe point.
+#'
 #' @param datastack_name CAVE datastack name.
 #' @param start Start index for search (must exist).
 #' @param stop Finish index for search (must not exist).
+#' @param window Number of consecutive ids checked at each probe point. Must
+#'   be larger than the biggest gap between existing operation ids.
 #'
 #' @return An integer operation ID.
 #' @keywords internal
-last_chunkedgraph_edit <- function(datastack_name, start = 1e5, stop = 1e6) {
+last_chunkedgraph_edit <- function(datastack_name, start = 1e5, stop = 1e6,
+                                   window = 100) {
   acc <- fafbseg::flywire_cave_client(datastack_name = datastack_name)
-  .last_chunkedgraph_edit(start = start, stop = stop, acc = acc)
+  .last_chunkedgraph_edit(start = start, stop = stop, acc = acc,
+                          window = window)
 }
 
 #' @noRd
-.last_chunkedgraph_edit <- function(start, stop, acc) {
+.last_chunkedgraph_edit <- function(start, stop, acc, window = 100) {
   message("start=", start, " stop=", stop)
-  if (!.chunkedgraph_edit_exists(start, acc))
+  if (!.chunkedgraph_edit_exists(start, acc, window))
     stop("Couldn't verify start operation exists!")
-  if (.chunkedgraph_edit_exists(stop, acc))
+  if (.chunkedgraph_edit_exists(stop, acc, window))
     stop("stop operation actually exists! It should be > the latest operation id")
   pivot <- ceiling(mean(c(start, stop)))
   if (pivot == start || pivot == stop)
-    return(start)
-  if (.chunkedgraph_edit_exists(pivot, acc))
-    .last_chunkedgraph_edit(pivot, stop, acc)
+    return(max(.chunkedgraph_existing_ops(start, acc, window)))
+  if (.chunkedgraph_edit_exists(pivot, acc, window))
+    .last_chunkedgraph_edit(pivot, stop, acc, window)
   else
-    .last_chunkedgraph_edit(start, pivot, acc)
+    .last_chunkedgraph_edit(start, pivot, acc, window)
 }
 
 #' @noRd
-.chunkedgraph_edit_exists <- function(op, acc) {
+.chunkedgraph_edit_exists <- function(op, acc, window = 1) {
+  ids <- .chunkedgraph_existing_ops(op, acc, window)
+  if (is.null(ids)) return(NA)
+  length(ids) > 0
+}
+
+#' Existing operation ids in `op:(op + window - 1)` (`NULL` on error)
+#' @noRd
+.chunkedgraph_existing_ops <- function(op, acc, window = 1) {
+  ops <- seq(as.integer(op), length.out = window)
   v <- tryCatch(
     reticulate::py_call(acc$chunkedgraph$get_operation_details,
-                        operation_ids = list(as.integer(op))),
+                        operation_ids = as.list(ops)),
     error = function(e) NULL
   )
-  if (is.null(v)) return(NA)
-  length(v) > 0
+  if (is.null(v)) return(NULL)
+  as.integer(unlist(reticulate::iterate(v$keys())))
 }
 
 #' Fetch all edit operations for a CAVE dataset

@@ -39,6 +39,7 @@ Suggests:
     jsonlite,
     Morpho,
     gifski,
+    ggplot2,
     knitr,
     RcppSimdJson,
     rgl,
