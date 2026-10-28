@@ -100,8 +100,14 @@ test_that("aedes_add_neurons collapses ids that resolve to one neuron", {
 
   # Recycled scalar annotations: the duplicate is dropped with a warning. Catch
   # the first condition so a service failure in pinning skips rather than fails.
+  # Rows other annotators add without a supervoxel_id (awaiting the server
+  # backfill) make the table remap warn; that is not the condition under test.
   scalar <- tryCatch(
-    do.call(aedes_add_neurons, c(list(c(rid, rid)), common)),
+    withCallingHandlers(
+      do.call(aedes_add_neurons, c(list(c(rid, rid)), common)),
+      warning = function(w)
+        if (grepl("bad supervoxel info", conditionMessage(w)))
+          invokeRestart("muffleWarning")),
     warning = function(w) list(kind = "warning", msg = conditionMessage(w)),
     error   = function(e) list(kind = "error",   msg = conditionMessage(e)))
   skip_if(scalar$kind == "error", scalar$msg)
