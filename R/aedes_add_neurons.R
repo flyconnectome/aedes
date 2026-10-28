@@ -73,7 +73,10 @@
 #'   Recycled across all input ids. Values here always win over the auto-fill
 #'   below.
 #' @param soma If `TRUE` (the default), auto-fill `soma_xyz` and `nucleus_id`
-#'   from [aedes_soma_position()].
+#'   from [aedes_soma_position()] using its `"auto"` cascade. A method name
+#'   (e.g. `soma = "nucleus"`) restricts the auto-fill to that method, so that
+#'   neurons without a nucleus match are left blank rather than given an
+#'   L2-derived estimate. `FALSE` disables the auto-fill.
 #' @param side If `TRUE` (the default), auto-fill `side` from
 #'   [aedes_point_side()] applied to the soma; falls back to the L2 key point
 #'   (with a warning) for ids where the soma cascade returns nothing. A
@@ -185,6 +188,18 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
   # `side` is likewise dual-mode: TRUE/FALSE toggles auto-fill, whereas a
   # character value (e.g. side = "L") is the column value itself, exactly as
   # if it had been passed via `...` (and so suppresses the auto-fill).
+  # `soma` is TRUE/FALSE or an aedes_soma_position() method name.
+  soma_methods <- eval(formals(aedes_soma_position)$method)
+  if (is.character(soma) && length(soma) == 1L && soma %in% soma_methods) {
+    soma_method <- soma
+    soma <- TRUE
+  } else if (is.logical(soma) && length(soma) == 1L && !is.na(soma)) {
+    soma_method <- "auto"
+  } else {
+    stop("`soma` must be a single TRUE/FALSE, or one of the ",
+         "aedes_soma_position() methods: ",
+         paste0('"', soma_methods, '"', collapse = ", "), ".", call. = FALSE)
+  }
   if (is.character(side)) {
     extra$side <- side
     side <- FALSE
@@ -357,7 +372,7 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
   auto_nucleus  <- rep(NA_integer_,   length(ids))
   auto_side_vec <- rep(NA_character_, length(ids))
   if (do_soma || do_side) {
-    sp_nm <- aedes_soma_position(ids, units = "nm",
+    sp_nm <- aedes_soma_position(ids, method = soma_method, units = "nm",
                                  version = ts$version, timestamp = ts$timestamp)
     ok <- !is.na(sp_nm$position) & nzchar(sp_nm$position)
     if (do_soma) {

@@ -136,3 +136,25 @@ test_that("aedes_add_neurons never updates or re-adds unusable-only ids", {
   expect_identical(res$up[["_id"]], live_usable_row(live, a)[["_id"]])
   expect_null(res$new)
 })
+
+test_that("aedes_add_neurons validates soma and passes a method through", {
+  args <- list("648518347399768369", superclass = "descending_neuron",
+               status = "to_review", initials = "XX", annotator = FALSE,
+               side = FALSE)
+  for (bad in list("foo", NA, c(TRUE, FALSE), 1))
+    expect_error(do.call(aedes_add_neurons, c(args, soma = list(bad))),
+                 "`soma` must be")
+
+  # an empty soma_xyz is filled by the named method, so the nucleus and L2
+  # estimates for the same neuron differ (the L2 one always finds a soma)
+  live <- live_aedes_main()
+  empty <- function(x) is.na(x) | !nzchar(as.character(x))
+  am <- live_usable_row(live, live$single)
+  am <- am[empty(am$soma_xyz) & empty(am$nucleus_id) & !empty(am$point_xyz), ]
+  skip_if(!nrow(am), "no row without a soma to exercise")
+  args[[1]] <- am$root_id[1]
+  nuc <- do.call(aedes_add_neurons, c(args, soma = "nucleus"))
+  l2 <- do.call(aedes_add_neurons, c(args, soma = "l2"))
+  expect_false(empty(l2$up$soma_xyz))
+  expect_false(identical(nuc$up$soma_xyz, l2$up$soma_xyz))
+})

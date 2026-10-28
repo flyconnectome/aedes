@@ -33,7 +33,10 @@ Recycled across all input ids. Values here always win over the auto-fill
 below.}
 
 \item{soma}{If \code{TRUE} (the default), auto-fill \code{soma_xyz} and \code{nucleus_id}
-from \code{\link[=aedes_soma_position]{aedes_soma_position()}}.}
+from \code{\link[=aedes_soma_position]{aedes_soma_position()}} using its \code{"auto"} cascade. A method name
+(e.g. \code{soma = "nucleus"}) restricts the auto-fill to that method, so that
+neurons without a nucleus match are left blank rather than given an
+L2-derived estimate. \code{FALSE} disables the auto-fill.}
 
 \item{side}{If \code{TRUE} (the default), auto-fill \code{side} from
 \code{\link[=aedes_point_side]{aedes_point_side()}} applied to the soma; falls back to the L2 key point

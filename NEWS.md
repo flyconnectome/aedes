@@ -19,6 +19,9 @@ points on the neuron, soma location, side of brain etc.
 * `aedes_set_group(group = "<query>")` resolves the example neurons at the
   same pinned timestamp as the rest of the call, so recently edited examples
   are found.
+* `aedes_add_neurons(soma=)` also accepts an `aedes_soma_position()` method
+  name, e.g. `soma = "nucleus"` to fill soma/nucleus only from the nucleus
+  table.
 * New `aedes_set_meta()` bulk-updates existing flytable rows. (#10)
 * New `aedes_set_group()` sets group to lowest serial_id (but maintains selected
   serial number if joining an existing group in the table). (#10)
