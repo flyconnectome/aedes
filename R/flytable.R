@@ -140,10 +140,18 @@ aedes_sequential_update <- function(df, version = NULL, timestamp = NULL) {
 #' `ts` is shared with the id resolution so both sides agree. Shared by
 #' [aedes_add_neurons()] and `.aedes_update_existing()`.
 #'
+#' Rows whose status is one of `.aedes_unusable_status` (duplicate,
+#' bad_nucleus, not_a_neuron) are never written to. They are left out of `am`,
+#' so a neuron that also has a normal row always resolves to that row. Root ids
+#' that *only* match such rows are listed in `unusable_ids`; callers skip them
+#' (rather than, for example, appending a second row for the same neuron).
+#'
 #' @param ids Root ids in any form understood by [fafbseg::flywire_ids()].
 #' @return A list with `ids` (latest root ids, 1:1 with and in the same order
 #'   as the input -- not deduplicated, so distinct inputs that resolve to one
-#'   neuron appear more than once), `am` (the mapped table) and `ts` (the pinned
+#'   neuron appear more than once), `am` (the mapped table, usable rows only),
+#'   `unusable_ids` (root ids present only in unusable rows), `status_vocab`
+#'   (all status values in the full table) and `ts` (the pinned
 #'   version/timestamp from [aedes_get_version()]).
 #' @noRd
 .aedes_pin_meta <- function(ids) {
@@ -152,8 +160,37 @@ aedes_sequential_update <- function(df, version = NULL, timestamp = NULL) {
   # keep `ids` paired with any per-row metadata; deduplication is the caller's
   # concern, applied on the assembled frame.
   lids <- with_aedes(fafbseg::flywire_latestid(ids, timestamp = ts$timestamp))
-  am <- aedes_meta(timestamp = ts$timestamp, expiry = 0)
-  list(ids = lids, am = am, ts = ts)
+  # Read every row (cam_meta drops duplicate/bad_nucleus by default) so that
+  # ids whose only rows are unusable can be recognised rather than looking new.
+  am <- aedes_meta(timestamp = ts$timestamp, expiry = 0,
+                   drop_status = character(0))
+  unusable <- .aedes_is_unusable(am$status)
+  rid <- as.character(am$root_id)
+  list(ids = lids, am = am[!unusable, , drop = FALSE],
+       unusable_ids = setdiff(rid[unusable], rid[!unusable]),
+       status_vocab = setdiff(unique(am$status), NA),
+       ts = ts)
+}
+
+# Statuses marking aedes_main rows that write paths must never touch.
+.aedes_unusable_status <- c("duplicate", "bad_nucleus", "not_a_neuron")
+
+.aedes_is_unusable <- function(status) {
+  !is.na(status) & tolower(trimws(status)) %in% .aedes_unusable_status
+}
+
+# Report (as a message) and return which `ids` must be skipped because their
+# only aedes_main rows are unusable (see .aedes_pin_meta()).
+.aedes_skip_unusable <- function(ids, pin) {
+  skip <- as.character(ids) %in% pin$unusable_ids
+  if (any(skip)) {
+    sk <- unique(as.character(ids)[skip])
+    message("Skipping ", length(sk), " id(s) whose aedes_main row(s) are ",
+            "marked ", paste(.aedes_unusable_status, collapse = "/"), ": ",
+            paste(utils::head(sk, 5L), collapse = ", "),
+            if (length(sk) > 5L) sprintf(" (+%d more)", length(sk) - 5L))
+  }
+  skip
 }
 
 #' Update existing aedes_main rows from a data.frame of column values

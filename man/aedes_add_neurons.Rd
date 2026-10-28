@@ -33,7 +33,10 @@ Recycled across all input ids. Values here always win over the auto-fill
 below.}
 
 \item{soma}{If \code{TRUE} (the default), auto-fill \code{soma_xyz} and \code{nucleus_id}
-from \code{\link[=aedes_soma_position]{aedes_soma_position()}}.}
+from \code{\link[=aedes_soma_position]{aedes_soma_position()}} using its \code{"auto"} cascade. A method name
+(e.g. \code{soma = "nucleus"}) restricts the auto-fill to that method, so that
+neurons without a nucleus match are left blank rather than given an
+L2-derived estimate. \code{FALSE} disables the auto-fill.}
 
 \item{side}{If \code{TRUE} (the default), auto-fill \code{side} from
 \code{\link[=aedes_point_side]{aedes_point_side()}} applied to the soma; falls back to the L2 key point
@@ -111,6 +114,11 @@ a warning naming the affected ids is issued.
 Auto-fill columns (\code{soma_xyz}, \code{nucleus_id}, \code{side}, \code{point_xyz}) never
 overwrite a non-NA value on an existing row. Values passed via \code{...}
 always win over the auto-fill and always overwrite on existing rows.
+
+Rows with status \code{duplicate}, \code{bad_nucleus} or \code{not_a_neuron} are never
+updated: a neuron that also has a normal row is matched to that row, and
+one whose only rows have these statuses is skipped with a message rather
+than added again.
 
 Computing a new row's \code{supervoxel_id} needs a \code{point_xyz} (the auto key
 point, or one supplied by the caller). Any new id for which no key point

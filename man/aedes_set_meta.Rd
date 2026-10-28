@@ -56,9 +56,11 @@ only column you need to touch is \code{group}.
 }
 \details{
 Rows with status \code{bad_nucleus}, \code{duplicate} or \code{not_a_neuron} are
-dropped before updating; any remaining \code{root_id} not found in \code{aedes_main}
-is an error (nothing is written). Writes go through the shared update engine,
-which pins a single timestamp so join-by-\code{root_id} is reliable.
+never updated: a neuron that also has a normal row is matched to that row,
+and one whose only rows have these statuses is skipped with a message. Any
+remaining \code{root_id} not found in \code{aedes_main} is an error (nothing is
+written). Writes go through the shared update engine, which pins a single
+timestamp so join-by-\code{root_id} is reliable.
 }
 \examples{
 \dontrun{

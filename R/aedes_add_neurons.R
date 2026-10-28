@@ -26,6 +26,11 @@
 #'   overwrite a non-NA value on an existing row. Values passed via `...`
 #'   always win over the auto-fill and always overwrite on existing rows.
 #'
+#'   Rows with status `duplicate`, `bad_nucleus` or `not_a_neuron` are never
+#'   updated: a neuron that also has a normal row is matched to that row, and
+#'   one whose only rows have these statuses is skipped with a message rather
+#'   than added again.
+#'
 #'   Computing a new row's `supervoxel_id` needs a `point_xyz` (the auto key
 #'   point, or one supplied by the caller). Any new id for which no key point
 #'   could be computed and none was supplied is still added, but with a warning
@@ -68,7 +73,10 @@
 #'   Recycled across all input ids. Values here always win over the auto-fill
 #'   below.
 #' @param soma If `TRUE` (the default), auto-fill `soma_xyz` and `nucleus_id`
-#'   from [aedes_soma_position()].
+#'   from [aedes_soma_position()] using its `"auto"` cascade. A method name
+#'   (e.g. `soma = "nucleus"`) restricts the auto-fill to that method, so that
+#'   neurons without a nucleus match are left blank rather than given an
+#'   L2-derived estimate. `FALSE` disables the auto-fill.
 #' @param side If `TRUE` (the default), auto-fill `side` from
 #'   [aedes_point_side()] applied to the soma; falls back to the L2 key point
 #'   (with a warning) for ids where the soma cascade returns nothing. A
@@ -180,6 +188,18 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
   # `side` is likewise dual-mode: TRUE/FALSE toggles auto-fill, whereas a
   # character value (e.g. side = "L") is the column value itself, exactly as
   # if it had been passed via `...` (and so suppresses the auto-fill).
+  # `soma` is TRUE/FALSE or an aedes_soma_position() method name.
+  soma_methods <- eval(formals(aedes_soma_position)$method)
+  if (is.character(soma) && length(soma) == 1L && soma %in% soma_methods) {
+    soma_method <- soma
+    soma <- TRUE
+  } else if (is.logical(soma) && length(soma) == 1L && !is.na(soma)) {
+    soma_method <- "auto"
+  } else {
+    stop("`soma` must be a single TRUE/FALSE, or one of the ",
+         "aedes_soma_position() methods: ",
+         paste0('"', soma_methods, '"', collapse = ", "), ".", call. = FALSE)
+  }
   if (is.character(side)) {
     extra$side <- side
     side <- FALSE
@@ -278,7 +298,7 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
   if (!is.null(extra[["status"]])) {
     st <- extra[["status"]]
     if (!st %in% status_shortlist) {
-      vocab <- setdiff(unique(am$status), NA)
+      vocab <- pin$status_vocab
       if (!st %in% vocab)
         stop(sprintf(
           "status '%s' is not in the aedes_main vocabulary. Known values (%d): %s",
@@ -323,6 +343,15 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
     indf <- indf[keep, , drop = FALSE]
   }
 
+  # Never touch neurons whose only rows are duplicate/bad_nucleus/not_a_neuron
+  # (and never append a fresh row for them either).
+  skip <- .aedes_skip_unusable(ids, pin)
+  if (any(skip)) {
+    ids  <- ids[!skip]
+    indf <- indf[!skip, , drop = FALSE]
+    if (!length(ids)) return(list())
+  }
+
   # Split existing vs missing (order-preserving via match).
   iidx  <- match(ids, am$root_id)
   is_upd <- !is.na(iidx)
@@ -343,7 +372,7 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
   auto_nucleus  <- rep(NA_integer_,   length(ids))
   auto_side_vec <- rep(NA_character_, length(ids))
   if (do_soma || do_side) {
-    sp_nm <- aedes_soma_position(ids, units = "nm",
+    sp_nm <- aedes_soma_position(ids, method = soma_method, units = "nm",
                                  version = ts$version, timestamp = ts$timestamp)
     ok <- !is.na(sp_nm$position) & nzchar(sp_nm$position)
     if (do_soma) {

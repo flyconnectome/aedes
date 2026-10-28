@@ -143,9 +143,11 @@ aedes_ids <- function(ids, ignore.case = FALSE, fixed = FALSE, unique = FALSE,
 #'   only column you need to touch is `group`.
 #'
 #' @details Rows with status `bad_nucleus`, `duplicate` or `not_a_neuron` are
-#'   dropped before updating; any remaining `root_id` not found in `aedes_main`
-#'   is an error (nothing is written). Writes go through the shared update engine,
-#'   which pins a single timestamp so join-by-`root_id` is reliable.
+#'   never updated: a neuron that also has a normal row is matched to that row,
+#'   and one whose only rows have these statuses is skipped with a message. Any
+#'   remaining `root_id` not found in `aedes_main` is an error (nothing is
+#'   written). Writes go through the shared update engine, which pins a single
+#'   timestamp so join-by-`root_id` is reliable.
 #'
 #' @param ids root_ids in any form understood by [aedes_ids()] (including a query
 #'   string); or, when `df` is `NULL`, a data.frame of metadata that itself
@@ -222,14 +224,10 @@ aedes_set_meta <- function(ids = NULL, df = NULL, dryrun = TRUE,
   # `pin$ids` is already `df$root_id` brought to the pinned timestamp, 1:1.
   if (update_roots) df$root_id <- pin$ids
 
-  # Status hygiene: never edit these rows via this path.
-  status <- am$status[match(df$root_id, as.character(am$root_id))]
-  bad <- status %in% c("bad_nucleus", "duplicate", "not_a_neuron")
-  if (any(bad)) {
-    message("Dropping ", sum(bad),
-            " row(s) with status bad_nucleus/duplicate/not_a_neuron.")
-    df <- df[!bad, , drop = FALSE]
-  }
+  # Status hygiene: never edit duplicate/bad_nucleus/not_a_neuron rows. `am`
+  # already excludes them, so a neuron with a normal row resolves to it; ids
+  # whose only rows are unusable are skipped here.
+  df <- df[!.aedes_skip_unusable(df$root_id, pin), , drop = FALSE]
 
   # All-or-nothing: refuse to write if any id is absent from aedes_main.
   present <- df$root_id %in% as.character(am$root_id)
