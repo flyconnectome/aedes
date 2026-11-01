@@ -129,7 +129,11 @@ columns.</p>
 <span><span class="co">#&gt; 12 648518347592047808     38439    R 36155        36155</span></span>
 <span></span>
 <span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">multi_connection_table</a></span><span class="op">(</span><span class="va">ids</span>, partners <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"in"</span>, <span class="st">"out"</span><span class="op">)</span>, threshold <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>                            group <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<span>                            group <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in fafbseg::cam_meta(ids = ids, ignore.case = ignore.case, fixed = fixed, : Dropping 1 rows containing duplicate root_ids!</span></span>
+<span><span class="co">#&gt; You can inspect all 2 rows with duplicate ids by doing:</span></span>
+<span><span class="co">#&gt; attr(df, 'duprows')</span></span>
+<span><span class="co">#&gt; on your returned data frame (replacing df as appropriate).</span></span></code></pre></div>
 <p>Partner neurons without a label in the chosen column cannot act as
 shared features and are dropped. We can check what fraction of the
 partner synapses each column covers:</p>
@@ -144,7 +148,7 @@ partner synapses each column covers:</p>
 <span><span class="va">cov</span></span>
 <span><span class="co">#&gt;   partners  type group pgroup</span></span>
 <span><span class="co">#&gt; 1   inputs 0.002 0.161  0.161</span></span>
-<span><span class="co">#&gt; 2  outputs 0.008 0.607  0.615</span></span></code></pre></div>
+<span><span class="co">#&gt; 2  outputs 0.008 0.612  0.621</span></span></code></pre></div>
 <p>Cell types cover under 1% of partner synapses, so
 <code>group = "type"</code> is not useful here. Using
 <code>pgroup</code> rather than <code>group</code> raises coverage of
@@ -157,7 +161,7 @@ of the input partners are not yet in FlyTable at all.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span><span class="va">x</span>, group <span class="op">=</span> <span class="st">"group"</span>, labRow <span class="op">=</span> <span class="st">"{side}_{serial_id}"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =</span></span>
-<span><span class="co">#&gt; "pre_key", : Dropping: 1104/1715 neurons representing 11653/29629 synapses due</span></span>
+<span><span class="co">#&gt; "pre_key", : Dropping: 1094/1715 neurons representing 11489/29629 synapses due</span></span>
 <span><span class="co">#&gt; to missing ids!</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =</span></span>
 <span><span class="co">#&gt; groupcol, : Dropping: 4259/4477 neurons representing 49906/59474 synapses due</span></span>
@@ -170,7 +174,7 @@ of the input partners are not yet in FlyTable at all.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span><span class="va">x</span>, group <span class="op">=</span> <span class="st">"pgroup"</span>, labRow <span class="op">=</span> <span class="st">"{side}_{serial_id}"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =</span></span>
-<span><span class="co">#&gt; "pre_key", : Dropping: 1088/1715 neurons representing 11404/29629 synapses due</span></span>
+<span><span class="co">#&gt; "pre_key", : Dropping: 1078/1715 neurons representing 11240/29629 synapses due</span></span>
 <span><span class="co">#&gt; to missing ids!</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =</span></span>
 <span><span class="co">#&gt; groupcol, : Dropping: 4256/4477 neurons representing 49876/59474 synapses due</span></span>
@@ -222,7 +226,7 @@ consistent where it matters.</p>
 <code class="sourceCode R"><span><span class="va">x</span><span class="op">$</span><span class="va">pgroup2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/aedes_predict_group.html">aedes_predict_group</a></span><span class="op">(</span><span class="va">x</span>, badtypes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">NA</span>, <span class="st">""</span>, <span class="st">"undefined"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span><span class="va">x</span>, group <span class="op">=</span> <span class="st">"pgroup2"</span>, labRow <span class="op">=</span> <span class="st">"{side}_{serial_id}"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =</span></span>
-<span><span class="co">#&gt; "pre_key", : Dropping: 1088/1715 neurons representing 11404/29629 synapses due</span></span>
+<span><span class="co">#&gt; "pre_key", : Dropping: 1078/1715 neurons representing 11240/29629 synapses due</span></span>
 <span><span class="co">#&gt; to missing ids!</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =</span></span>
 <span><span class="co">#&gt; groupcol, : Dropping: 4256/4477 neurons representing 49876/59474 synapses due</span></span>

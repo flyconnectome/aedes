@@ -71,6 +71,10 @@ cf_meta(ids) %>% select(id, serial_id, side, group, nblast_group)
 
 x <- multi_connection_table(ids, partners = c("in", "out"), threshold = 5,
                             group = FALSE)
+#> Warning in fafbseg::cam_meta(ids = ids, ignore.case = ignore.case, fixed = fixed, : Dropping 1 rows containing duplicate root_ids!
+#> You can inspect all 2 rows with duplicate ids by doing:
+#> attr(df, 'duprows')
+#> on your returned data frame (replacing df as appropriate).
 ```
 
 Partner neurons without a label in the chosen column cannot act as
@@ -89,7 +93,7 @@ cov <- x %>%
 cov
 #>   partners  type group pgroup
 #> 1   inputs 0.002 0.161  0.161
-#> 2  outputs 0.008 0.607  0.615
+#> 2  outputs 0.008 0.612  0.621
 ```
 
 Cell types cover under 1% of partner synapses, so `group = "type"` is
@@ -103,7 +107,7 @@ of the input partners are not yet in FlyTable at all.
 
 cf_cosine_plot(x, group = "group", labRow = "{side}_{serial_id}")
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =
-#> "pre_key", : Dropping: 1104/1715 neurons representing 11653/29629 synapses due
+#> "pre_key", : Dropping: 1094/1715 neurons representing 11489/29629 synapses due
 #> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
 #> groupcol, : Dropping: 4259/4477 neurons representing 49906/59474 synapses due
@@ -118,7 +122,7 @@ cf_cosine_plot(x, group = "group", labRow = "{side}_{serial_id}")
 
 cf_cosine_plot(x, group = "pgroup", labRow = "{side}_{serial_id}")
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =
-#> "pre_key", : Dropping: 1088/1715 neurons representing 11404/29629 synapses due
+#> "pre_key", : Dropping: 1078/1715 neurons representing 11240/29629 synapses due
 #> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
 #> groupcol, : Dropping: 4256/4477 neurons representing 49876/59474 synapses due
@@ -171,7 +175,7 @@ You can also compute predicted groups yourself, e.g. to use a custom
 x$pgroup2 <- aedes_predict_group(x, badtypes = c(NA, "", "undefined"))
 cf_cosine_plot(x, group = "pgroup2", labRow = "{side}_{serial_id}")
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =
-#> "pre_key", : Dropping: 1088/1715 neurons representing 11404/29629 synapses due
+#> "pre_key", : Dropping: 1078/1715 neurons representing 11240/29629 synapses due
 #> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
 #> groupcol, : Dropping: 4256/4477 neurons representing 49876/59474 synapses due
