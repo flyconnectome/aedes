@@ -58,3 +58,9 @@ test_that("aedes_cfpartners adds partner metadata at the query time", {
   expect_equal(res$type, c("a", "b"))
   expect_equal(res$post_id, c("2", "3"))
 })
+
+test_that("aedes_explicit_ids ignores stray separators", {
+  ids = c("648518347520775720", "648518347533370843")
+  expect_equal(aedes_explicit_ids(",648518347520775720, 648518347533370843,"), ids)
+  expect_equal(aedes_explicit_ids(" 648518347520775720 648518347533370843 "), ids)
+})

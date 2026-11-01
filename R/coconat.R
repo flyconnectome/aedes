@@ -122,7 +122,8 @@ aedes_explicit_ids <- function(ids) {
     if (grepl("^https?://", ids))
       ids = fafbseg::ngl_segments(ids, must_work = FALSE)
     else if (grepl("^[\\s,0-9]+$", ids, perl = TRUE))
-      ids = strsplit(trimws(ids), "[\\s,]+", perl = TRUE)[[1]]
+      ids = strsplit(trimws(ids, whitespace = "[\\s,]"), "[\\s,]+",
+                     perl = TRUE)[[1]]
     else return(NULL)
   }
   if (!length(ids)) return(NULL)
