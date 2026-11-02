@@ -27,7 +27,7 @@ aedes_add_neurons(
   soma = TRUE,
   side = TRUE,
   status = c("adequate", "to_review", "needs_extending", "incomplete", "missing soma"),
-  required = c("superclass", "status", "initials"),
+  required = c("superclass", "status"),
   initials = getOption("aedes.initials"),
   annotator = TRUE,
   proofreader = FALSE,
@@ -81,24 +81,24 @@ aedes_add_neurons(
 
 - required:
 
-  Columns that must be supplied (via `...`, or via `status` /
-  `initials`). Defaults to `c("superclass", "status", "initials")`. Set
-  to `character(0)` to skip the check.
+  Columns that must be supplied (via `...`, or via `status`). Defaults
+  to `c("superclass", "status")`. Set to `character(0)` to skip the
+  check.
 
 - initials:
 
-  Curator initials for the single-string `initials` column. Defaults to
-  `getOption("aedes.initials")`; set once per session with
-  `options(aedes.initials = "XY")`. Passed through `...` semantics – an
-  explicit `initials = ...` in `...` wins over the option.
+  Curator initials written to the `annotator` / `proofreader` columns
+  when those arguments are `TRUE`. Defaults to
+  `getOption("aedes.initials")`; give a value to override it for this
+  call.
 
 - annotator:
 
   Multi-select `annotator` column write policy. `TRUE` (the default)
-  appends `getOption("aedes.initials")` to the cell; `FALSE` leaves the
-  column alone; a character vector (or comma-joined string) appends
-  those tokens explicitly. On existing rows the tokens are merged with
-  the current cell contents (unique, sorted).
+  appends `initials` to the cell; `FALSE` leaves the column alone; a
+  character vector (or comma-joined string) appends those tokens
+  explicitly. On existing rows the tokens are merged with the current
+  cell contents (unique, sorted).
 
 - proofreader:
 
@@ -196,8 +196,8 @@ rows already present in `aedes_main`;
 
 ``` r
 if (FALSE) { # \dontrun{
-# Set your curator initials once per session (used for the annotator column
-# and the required `initials` column on new rows)
+# Set your curator initials once per session (appended to the `annotator`
+# column)
 options(aedes.initials = "GJ")
 
 # Dry run first: see the frames that would be written. Two new neurons,

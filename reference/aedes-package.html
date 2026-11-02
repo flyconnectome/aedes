@@ -59,10 +59,10 @@ default they return exactly what is in FlyTable. Accepts
 <code>"latest"</code>, an integer materialisation version or an explicit
 timestamp. Set with <code><a href="aedes_set_version.html">aedes_set_version</a></code> or
 <code>options(aedes.version = ...)</code>, e.g. in your <code>.Rprofile</code>.</p></li>
-<li><p><code>aedes.initials</code> Curator initials used to auto-fill the
-single-string <code>initials</code> column and, when
-<code>annotator = TRUE</code> / <code>proofreader = TRUE</code>, appended to the
-corresponding multi-select column. Consumed by
+<li><p><code>aedes.initials</code> Default curator initials appended to the
+<code>annotator</code> / <code>proofreader</code> multi-select columns when
+<code>annotator = TRUE</code> / <code>proofreader = TRUE</code> (overridden by the
+<code>initials</code> argument of <code><a href="aedes_add_neurons.html">aedes_add_neurons</a></code>). Consumed by
 <code><a href="aedes_add_neurons.html">aedes_add_neurons</a></code>, <code><a href="aedes_set_meta.html">aedes_set_meta</a></code> and
 <code><a href="aedes_set_group.html">aedes_set_group</a></code>. Set once per session with
 <code>options(aedes.initials = "XY")</code>.</p></li>

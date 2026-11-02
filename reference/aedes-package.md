@@ -20,9 +20,10 @@ a dataset supported by coconatfly.
   timestamp. Set with [`aedes_set_version`](aedes_set_version.md) or
   `options(aedes.version = ...)`, e.g. in your `.Rprofile`.
 
-- `aedes.initials` Curator initials used to auto-fill the single-string
-  `initials` column and, when `annotator = TRUE` / `proofreader = TRUE`,
-  appended to the corresponding multi-select column. Consumed by
+- `aedes.initials` Default curator initials appended to the `annotator`
+  / `proofreader` multi-select columns when `annotator = TRUE` /
+  `proofreader = TRUE` (overridden by the `initials` argument of
+  [`aedes_add_neurons`](aedes_add_neurons.md)). Consumed by
   [`aedes_add_neurons`](aedes_add_neurons.md),
   [`aedes_set_meta`](aedes_set_meta.md) and
   [`aedes_set_group`](aedes_set_group.md). Set once per session with
