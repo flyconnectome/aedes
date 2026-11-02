@@ -3,6 +3,9 @@
 #' @description `aedes_voxdims()` returns image voxel dimensions used to scale
 #'   between raw and nm coordinates.
 #'
+#' @details See the Axis conventions section of [aedes_neuropil_mesh] for the
+#'   anatomical directions of the x, y and z axes (the volume is mirrored).
+#'
 #' @param url Optional Neuroglancer URL containing voxel size metadata.
 #'   Defaults to the active Aedes sample URL.
 #' @return For `aedes_voxdims()`, a numeric 3-vector.

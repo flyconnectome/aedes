@@ -29,6 +29,10 @@ For \code{aedes_raw2nm()} and \code{aedes_nm2raw()}, an N x 3 numeric matrix.
 \code{aedes_voxdims()} returns image voxel dimensions used to scale
 between raw and nm coordinates.
 }
+\details{
+See the Axis conventions section of \link{aedes_neuropil_mesh} for the
+anatomical directions of the x, y and z axes (the volume is mirrored).
+}
 \examples{
 \dontrun{
 aedes_voxdims()
