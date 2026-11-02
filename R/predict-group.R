@@ -9,10 +9,10 @@
 #' @details All returned ids are `serial_id` values, so they share one
 #'   namespace:
 #'
-#'   * typed neurons get the smallest `serial_id` among the rows in `x` with
-#'   the same type (so type-derived ids depend on which rows are supplied).
-#'   A trailing `?` is removed before grouping, so e.g. `KC4?` joins `KC4`.
-#'   Types listed in `badtypes` are ignored.
+#'   * typed neurons get the smallest `serial_id` of any neuron in the
+#'   `aedes_main` FlyTable with the same type, so the id does not depend on
+#'   which rows are supplied. A trailing `?` is removed before grouping, so
+#'   e.g. `KC4?` joins `KC4`. Types listed in `badtypes` are ignored.
 #'   * untyped neurons use their `group` column (itself the smallest
 #'   `serial_id` of the group's founding members, see [aedes_set_group()]).
 #'   A `group` of `0` is treated as ungrouped.
@@ -78,13 +78,22 @@ aedes_predict_group <- function(x,
            .nblast = parse_nblast_group(.data$nblast_group),
            .type = sub("\\?$", "", .data$type),
            .type = ifelse(.data$.type %in% badtypes, NA_character_, .data$.type)) %>%
-    dplyr::group_by(.data$.type) %>%
-    mutate(.tgroup = if (is.na(.data$.type[1])) NA_real_ else min(.data$.sid)) %>%
-    dplyr::ungroup() %>%
+    dplyr::left_join(aedes_type_serials(), by = ".type") %>%
     mutate(.pg = dplyr::coalesce(.data$.tgroup, .data$.grp, .data$.nblast,
                                  if (isTRUE(singletons)) .data$.sid
                                  else NA_real_)) %>%
     dplyr::pull(.data$.pg)
+}
+
+# Smallest serial_id for each type (trailing ? removed) across the whole
+# aedes_main table, so that type-derived group ids are stable across queries.
+aedes_type_serials <- function() {
+  aedes_meta(expiry = 300) %>%
+    mutate(.type = sub("\\?$", "", .data$type),
+           .sid = as.numeric(.data$serial_id)) %>%
+    dplyr::filter(!is.na(.data$.type)) %>%
+    dplyr::group_by(.data$.type) %>%
+    dplyr::summarise(.tgroup = min(.data$.sid, na.rm = TRUE))
 }
 
 # Parse nblast_group values of the form CNNNNN or NNNNN (NNNNN being a

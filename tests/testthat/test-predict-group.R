@@ -8,6 +8,8 @@ test_that("aedes_predict_group prefers type, group, nblast cluster", {
     nblast_group = c("C10001", NA, NA, "C10001", NA, "C10007", "10003",
                      "C10007", "XC10007", NA)
   )
+  # type ids come from the full aedes_main table; here that is just df
+  local_mocked_bindings(aedes_meta = function(...) df)
   expect_equal(aedes_predict_group(df),
                c(10002, 10002, 10002, 10003, 10003, 10007, 10003, 10007,
                  NA, NA))
@@ -28,6 +30,17 @@ test_that("aedes_predict_group prefers type, group, nblast cluster", {
   expect_equal(aedes_predict_group(df2), aedes_predict_group(df))
 
   expect_error(aedes_predict_group(df[c("type", "group")]), "serial_id")
+})
+
+test_that("aedes_predict_group takes type ids from the full table", {
+  full <- data.frame(
+    serial_id = c("12204", "13839", "13900", "14000", "14100"),
+    type = c("KC4", "KC4", "KC4?", "MBON1", NA),
+    group = NA, nblast_group = NA
+  )
+  local_mocked_bindings(aedes_meta = function(...) full)
+  # a subset (e.g. partners) lacking the lowest KC4 still gets 12204
+  expect_equal(aedes_predict_group(full[2:5, ]), c(12204, 12204, 14000, NA))
 })
 
 test_that("parse_nblast_group handles C prefix, plain ids, whitespace and ?", {
