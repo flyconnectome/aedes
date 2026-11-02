@@ -14,10 +14,10 @@
 #'   timestamp. Set with \code{\link{aedes_set_version}} or
 #'   \code{options(aedes.version = ...)}, e.g. in your \code{.Rprofile}.
 #'
-#'   \item{\code{aedes.initials}} Curator initials used to auto-fill the
-#'   single-string \code{initials} column and, when
-#'   \code{annotator = TRUE} / \code{proofreader = TRUE}, appended to the
-#'   corresponding multi-select column. Consumed by
+#'   \item{\code{aedes.initials}} Default curator initials appended to the
+#'   \code{annotator} / \code{proofreader} multi-select columns when
+#'   \code{annotator = TRUE} / \code{proofreader = TRUE} (overridden by the
+#'   \code{initials} argument of \code{\link{aedes_add_neurons}}). Consumed by
 #'   \code{\link{aedes_add_neurons}}, \code{\link{aedes_set_meta}} and
 #'   \code{\link{aedes_set_group}}. Set once per session with
 #'   \code{options(aedes.initials = "XY")}.

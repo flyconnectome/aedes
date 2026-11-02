@@ -86,15 +86,14 @@
 #'   in the signature for tab-completion. Any other value is live-checked
 #'   against the vocabulary already present in `aedes_main`; unknown values
 #'   error. Must be supplied unless `"status"` is removed from `required`.
-#' @param required Columns that must be supplied (via `...`, or via `status` /
-#'   `initials`). Defaults to `c("superclass", "status", "initials")`. Set to
-#'   `character(0)` to skip the check.
-#' @param initials Curator initials for the single-string `initials` column.
-#'   Defaults to `getOption("aedes.initials")`; set once per session with
-#'   `options(aedes.initials = "XY")`. Passed through `...` semantics -- an
-#'   explicit `initials = ...` in `...` wins over the option.
+#' @param required Columns that must be supplied (via `...`, or via `status`).
+#'   Defaults to `c("superclass", "status")`. Set to `character(0)` to skip the
+#'   check.
+#' @param initials Curator initials written to the `annotator` / `proofreader`
+#'   columns when those arguments are `TRUE`. Defaults to
+#'   `getOption("aedes.initials")`; give a value to override it for this call.
 #' @param annotator Multi-select `annotator` column write policy. `TRUE`
-#'   (the default) appends `getOption("aedes.initials")` to the cell; `FALSE`
+#'   (the default) appends `initials` to the cell; `FALSE`
 #'   leaves the column alone; a character vector (or comma-joined string)
 #'   appends those tokens explicitly. On existing rows the tokens are merged
 #'   with the current cell contents (unique, sorted).
@@ -124,8 +123,8 @@
 #' @export
 #' @examples
 #' \dontrun{
-#' # Set your curator initials once per session (used for the annotator column
-#' # and the required `initials` column on new rows)
+#' # Set your curator initials once per session (appended to the `annotator`
+#' # column)
 #' options(aedes.initials = "GJ")
 #'
 #' # Dry run first: see the frames that would be written. Two new neurons,
@@ -175,7 +174,7 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
                               status = c("adequate", "to_review",
                                          "needs_extending", "incomplete",
                                          "missing soma"),
-                              required = c("superclass", "status", "initials"),
+                              required = c("superclass", "status"),
                               initials = getOption("aedes.initials"),
                               annotator = TRUE, proofreader = FALSE,
                               wipe = FALSE, group = FALSE) {
@@ -264,8 +263,8 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
          paste(utils::head(ids[bad], 5L), collapse = ", "),
          if (sum(bad) > 5L) sprintf(" (+%d more)", sum(bad) - 5L), ".",
          call. = FALSE)
-  ann_toks <- .aedes_resolve_initials(annotator,  "annotator")
-  prf_toks <- .aedes_resolve_initials(proofreader, "proofreader")
+  ann_toks <- .aedes_resolve_initials(annotator,  "annotator", initials)
+  prf_toks <- .aedes_resolve_initials(proofreader, "proofreader", initials)
 
   # Unmodified multi-value default => caller didn't supply status.
   status_shortlist <- eval(formals(aedes_add_neurons)$status)
@@ -278,15 +277,6 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
       stop("`status` must be a single non-NA string.", call. = FALSE)
     extra[["status"]] <- status
   }
-  # `initials` from options if not already in `...`.
-  if (is.null(extra[["initials"]]) && !is.null(initials)) {
-    if (!is.character(initials) || length(initials) != 1L || is.na(initials))
-      stop("`initials` must be a single non-NA string ",
-           "(set via options(aedes.initials = ...) or the `initials` arg).",
-           call. = FALSE)
-    extra[["initials"]] <- initials
-  }
-
   # pin a single timestamp for both the supplied ids and the flytable rows,
   # reading aedes_main fresh and bringing it to the same timestamp
   pin <- .aedes_pin_meta(ids)
@@ -313,11 +303,8 @@ aedes_add_neurons <- function(ids, dryrun = TRUE, ...,
     miss <- setdiff(required, names(extra))
     if (length(miss))
       stop("Missing required column(s): ", paste(miss, collapse = ", "),
-           ". Pass via `...`, e.g. `superclass = \"cb_intrinsic\"`",
-           if ("initials" %in% miss)
-             " -- for `initials` you can also set once with ",
-             "options(aedes.initials = \"XY\")",
-           ".", call. = FALSE)
+           ". Pass via `...`, e.g. `superclass = \"cb_intrinsic\"`.",
+           call. = FALSE)
   }
 
   # Base input frame with caller-supplied columns.
