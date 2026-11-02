@@ -113,10 +113,12 @@ fewer, e.g. on a shared machine.</p>
 <p>When no <code>snapshot</code> is given, the newest one at or before the requested
 time is used: <code>timestamp</code> or the time of <code>version</code> when given, otherwise
 the <code>aedes.version</code> option (see <code><a href="aedes_set_version.html">aedes_set_version()</a></code>). So by default
-(<code>"now"</code>) this is the newest snapshot, while for <code>"latest"</code> it is the
-snapshot of the newest materialisation version. <code><a href="aedes_partner_summary.html">aedes_partner_summary()</a></code>
-answers queries for later times by fetching the edits made since the
-snapshot from CAVE (see its details).</p>
+(<code>"now"</code>) this is the newest published or full snapshot (local
+checkpoints from <code><a href="aedes_update_snapshot.html">aedes_update_snapshot()</a></code> are only chosen for their exact
+time), while for <code>"latest"</code> it is the snapshot of the newest
+materialisation version. <code><a href="aedes_partner_summary.html">aedes_partner_summary()</a></code> answers queries for
+later times by fetching the edits made since the snapshot from CAVE (see
+its details).</p>
 <p>The <code>aedes.version</code> option is only changed when you give <code>version</code> or
 <code>timestamp</code>, so that metadata and root ids from other aedes functions
 match the synapse data.</p>

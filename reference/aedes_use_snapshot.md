@@ -67,8 +67,10 @@ When no `snapshot` is given, the newest one at or before the requested
 time is used: `timestamp` or the time of `version` when given, otherwise
 the `aedes.version` option (see
 [`aedes_set_version()`](aedes_set_version.md)). So by default (`"now"`)
-this is the newest snapshot, while for `"latest"` it is the snapshot of
-the newest materialisation version.
+this is the newest published or full snapshot (local checkpoints from
+[`aedes_update_snapshot()`](aedes_update_snapshot.md) are only chosen
+for their exact time), while for `"latest"` it is the snapshot of the
+newest materialisation version.
 [`aedes_partner_summary()`](aedes_partner_summary.md) answers queries
 for later times by fetching the edits made since the snapshot from CAVE
 (see its details).

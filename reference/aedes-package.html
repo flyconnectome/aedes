@@ -50,7 +50,9 @@
     <p></p><ul><li><p><code>aedes.version</code> Default materialisation selector used by
 <code><a href="aedes_get_version.html">aedes_get_version</a></code> (and, transitively, everything that pins a
 timestamp – <code><a href="aedes_partner_summary.html">aedes_partner_summary</a></code>,
-<code><a href="aedes_use_snapshot.html">aedes_use_snapshot</a></code> and the coconatfly functions).
+<code><a href="aedes_use_snapshot.html">aedes_use_snapshot</a></code> and the coconatfly functions). The
+FlyTable write functions and <code><a href="aedes_soma_position.html">aedes_soma_position</a></code> always use
+the current state.
 <code><a href="aedes_meta.html">aedes_meta</a></code> and <code><a href="aedes_meta.html">aedes_ids</a></code> do not use it: by
 default they return exactly what is in FlyTable. Accepts
 <code>"now"</code> (set when the package loads, unless already set),

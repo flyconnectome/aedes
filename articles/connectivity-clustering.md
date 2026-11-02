@@ -55,6 +55,8 @@ fetch connectivity each time, we fetch a connection table once with
 
 ids <- cf_ids(aedes = "group:36155")
 cf_meta(ids) %>% select(id, serial_id, side, group, nblast_group)
+#> Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =
+#> aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info
 #>                    id serial_id side group nblast_group
 #> 1  648518347546516862     36155    R 36155        36155
 #> 2  648518347589781091     36156    L 36155        36155
@@ -71,6 +73,14 @@ cf_meta(ids) %>% select(id, serial_id, side, group, nblast_group)
 
 x <- multi_connection_table(ids, partners = c("in", "out"), threshold = 5,
                             group = FALSE)
+#> Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =
+#> aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info
+#> Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =
+#> aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info
+#> Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =
+#> aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info
+#> Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =
+#> aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info
 #> Warning in fafbseg::cam_meta(ids = ids, ignore.case = ignore.case, fixed = fixed, : Dropping 1 rows containing duplicate root_ids!
 #> You can inspect all 2 rows with duplicate ids by doing:
 #> attr(df, 'duprows')
@@ -112,6 +122,8 @@ cf_cosine_plot(x, group = "group", labRow = "{side}_{serial_id}")
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
 #> groupcol, : Dropping: 4259/4477 neurons representing 49906/59474 synapses due
 #> to missing ids!
+#> Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =
+#> aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info
 ```
 
 ![](connectivity-clustering_files/figure-html/cluster-group-1.png)
@@ -127,6 +139,8 @@ cf_cosine_plot(x, group = "pgroup", labRow = "{side}_{serial_id}")
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
 #> groupcol, : Dropping: 4256/4477 neurons representing 49876/59474 synapses due
 #> to missing ids!
+#> Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =
+#> aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info
 ```
 
 ![](connectivity-clustering_files/figure-html/cluster-pgroup-1.png)
@@ -180,6 +194,8 @@ cf_cosine_plot(x, group = "pgroup2", labRow = "{side}_{serial_id}")
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
 #> groupcol, : Dropping: 4256/4477 neurons representing 49876/59474 synapses due
 #> to missing ids!
+#> Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =
+#> aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info
 ```
 
 ![](connectivity-clustering_files/figure-html/custom-1.png)

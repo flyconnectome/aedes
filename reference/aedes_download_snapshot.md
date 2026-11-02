@@ -3,12 +3,12 @@
 `aedes_download_snapshot()` downloads the newest published synapse
 snapshots into your snapshot folder; select one with
 [`aedes_use_snapshot()`](aedes_use_snapshot.md) to use it. The first
-download fetches the static data (about 1.7 GB) and a full snapshot
+download fetches the static data (about 1.6 GB) and a full snapshot
 (about 0.6 GB); later ones usually just fetch a few small checkpoints.
 
 `aedes_publish_snapshot()` is for whoever maintains the snapshots: it
-makes the newest snapshot in `root`, and the earlier checkpoints it is
-built on, available for download from a folder served over https.
+makes the snapshots in `root` that share the newest base available for
+download from a folder served over https.
 
 ## Usage
 

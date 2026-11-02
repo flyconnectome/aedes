@@ -59,12 +59,26 @@ See <code>data-raw/aedes_neuropil_mesh.R</code> for the regeneration script.</p>
     <h2 id="format">Format<a class="anchor" aria-label="anchor" href="#format"></a></h2>
     <p>An object of class <code>mesh3d</code> (inherits from <code>shape3d</code>) of length 6.</p>
     </div>
+    <div class="section level2">
+    <h2 id="axis-conventions">Axis conventions<a class="anchor" aria-label="anchor" href="#axis-conventions"></a></h2>
+    <p>The Aedes volume was accidentally mirrored
+during acquisition, so its axes do not follow the usual conventions
+(e.g. those of FAFB/FlyWire). In raw and nm coordinates alike, +x points
+towards the animal's left, +y ventral and +z anterior. This is a
+mirror-handed frame, so renderings of the data are mirror images of the
+real brain, and the <code>side</code> column in <code><a href="aedes_meta.html">aedes_meta()</a></code> has left at high x.</p>
+<p>View presets that assume FAFB axes therefore give misleading names: for
+example <code>nat::nview3d("posterior")</code> gives a frontal view of Aedes (z
+increasing towards the viewer) and <code>nat::nview3d("frontal")</code> a posterior
+one.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/natverse/nat" class="external-link">nat</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">wire3d</span><span class="op">(</span><span class="va">aedes_neuropil_mesh</span>, col<span class="op">=</span><span class="st">'grey'</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/pkg/nat/man/nview3d.html" class="external-link">nview3d</a></span><span class="op">(</span><span class="st">'posterior'</span><span class="op">)</span>  <span class="co"># a frontal view, see Axis conventions</span></span></span>
 <span class="r-in"><span><span class="co"># negative implies outside the mesh</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/pkg/nat/man/pointsinside.html" class="external-link">pointsinside</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2e5</span>, <span class="fl">3e5</span>, <span class="fl">1e5</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>             surf <span class="op">=</span> <span class="va">aedes_neuropil_mesh</span>, rval <span class="op">=</span> <span class="st">"dist"</span><span class="op">)</span></span></span>

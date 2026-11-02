@@ -11,12 +11,13 @@ a dataset supported by coconatfly.
   everything that pins a timestamp –
   [`aedes_partner_summary`](aedes_partner_summary.md),
   [`aedes_use_snapshot`](aedes_use_snapshot.md) and the coconatfly
-  functions). [`aedes_meta`](aedes_meta.md) and
-  [`aedes_ids`](aedes_meta.md) do not use it: by default they return
-  exactly what is in FlyTable. Accepts `"now"` (set when the package
-  loads, unless already set), `"latest"`, an integer materialisation
-  version or an explicit timestamp. Set with
-  [`aedes_set_version`](aedes_set_version.md) or
+  functions). The FlyTable write functions and
+  [`aedes_soma_position`](aedes_soma_position.md) always use the current
+  state. [`aedes_meta`](aedes_meta.md) and [`aedes_ids`](aedes_meta.md)
+  do not use it: by default they return exactly what is in FlyTable.
+  Accepts `"now"` (set when the package loads, unless already set),
+  `"latest"`, an integer materialisation version or an explicit
+  timestamp. Set with [`aedes_set_version`](aedes_set_version.md) or
   `options(aedes.version = ...)`, e.g. in your `.Rprofile`.
 
 - `aedes.initials` Curator initials used to auto-fill the single-string

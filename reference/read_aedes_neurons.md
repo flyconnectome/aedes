@@ -44,7 +44,7 @@ read_aedes_neurons(
   Reroot strategy passed through to
   [`aedes_soma_position()`](aedes_soma_position.md). With `"auto"` (the
   default) each neuron is handled by the first source that succeeds in
-  the cascade: FlyTable `soma_xyz` → FlyWire nucleus → `"l2+mesh"` (a
+  the cascade: FlyTable `soma_xyz` → Aedes nucleus → `"l2+mesh"` (a
   combined L2-attribute + neuropil signed-distance score for any neuron
   that has no FlyTable or nucleus soma; only used if a `mesh` is
   available). Restrict to a single value to disable the cascade.

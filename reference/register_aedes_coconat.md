@@ -29,7 +29,7 @@ for how to handle this.
 
 2.  use the latest materialisation version (`version='latest'`)
 
-3.  map ids to the current time (`version='now'`)
+3.  map ids to the current time (`timestamp='now'`)
 
 Option 3 is the default (see
 [`aedes_set_version()`](aedes_set_version.md)). Option 2 can make

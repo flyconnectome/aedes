@@ -1,11 +1,14 @@
 # Return metadata about Aedes neurons from FlyTable
 
 By default `aedes_meta()` and `aedes_ids()` tell you exactly what is in
-FlyTable: its rows and root ids as stored there. Unlike most aedes
-functions they do not follow the `aedes.version` option (see
-[`aedes_set_version()`](aedes_set_version.md)). You can still time
-travel by giving a `version` (e.g. `"latest"`) or a `timestamp` (e.g.
-`"now"`), which maps the root ids to that time.
+FlyTable: its rows and root ids as stored there (except rows with status
+`duplicate` or `bad_nucleus`, which
+[`fafbseg::cam_meta()`](https://rdrr.io/pkg/fafbseg/man/cam_meta.html)
+drops by default; pass `drop_status = character(0)` to keep them).
+Unlike most aedes functions they do not follow the `aedes.version`
+option (see [`aedes_set_version()`](aedes_set_version.md)). You can
+still time travel by giving a `version` (e.g. `"latest"`) or a
+`timestamp` (e.g. `"now"`), which maps the root ids to that time.
 
 ## Usage
 

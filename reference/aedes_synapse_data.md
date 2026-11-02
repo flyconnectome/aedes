@@ -52,15 +52,16 @@ A lazy `tbl`.
 
 ## Details
 
-The table has columns `id`, `pre_root` and `post_root` (as `integer64`).
-With `details = TRUE` it also has `pre_sv`, `post_sv`,
+The table has columns `id` (integer), `pre_root` and `post_root`
+(`integer64`). With `details = TRUE` it also has `pre_sv`, `post_sv`,
 `pre_x`...`post_z` (raw voxel coordinates of the pre and postsynaptic
 points) and `size`, from `static.parquet`. Use the midpoint of the pre
 and post points where you need one location per synapse.
 
-Rows are sorted by `pre_root`, so filtering on a few `pre_root` values
-lets DuckDB skip most of the file. Snapshots with a `by_post.parquet`
-also keep a copy sorted by `post_root`, which `side = "post"` reads. Use
+The root id files are sorted by `pre_root`, so filtering on a few
+`pre_root` values lets DuckDB skip most of the file. Snapshots with a
+`by_post.parquet` also keep a copy sorted by `post_root`, which
+`side = "post"` reads. Use
 [`bit64::as.integer64()`](https://bit64.r-lib.org/reference/as.integer64.character.html)
 for root ids in filters.
 
@@ -83,7 +84,7 @@ checkpoint for later sessions.
 ``` r
 if (FALSE) { # \dontrun{
 library(dplyr)
-ids <- aedes_ids("class:DNa")
+ids <- bit64::as.integer64(aedes_ids("class:DNa"))
 aedes_synapse_data("post") %>%
   filter(post_root %in% ids) %>%
   count(pre_root, sort = TRUE) %>%

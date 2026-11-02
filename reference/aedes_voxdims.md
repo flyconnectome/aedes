@@ -35,6 +35,12 @@ For `aedes_voxdims()`, a numeric 3-vector.
 
 For `aedes_raw2nm()` and `aedes_nm2raw()`, an N x 3 numeric matrix.
 
+## Details
+
+See the Axis conventions section of
+[aedes_neuropil_mesh](aedes_neuropil_mesh.md) for the anatomical
+directions of the x, y and z axes (the volume is mirrored).
+
 ## Examples
 
 ``` r

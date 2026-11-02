@@ -113,7 +113,8 @@ server fails) just run <code>aedes_build_snapshot()</code> again with the
 same <code>version</code> to carry on. Nothing is visible as a snapshot until it is
 complete and has been checked: the synapses of <code>n_verify</code> neurons of
 different sizes are compared with a CAVE query at the same version, and a
-snapshot with any difference is moved to <code>&lt;root&gt;/.failed</code> instead.</p>
+snapshot that disagrees (other than stale CAVE roots that the chunkedgraph
+confirms) is moved to <code>&lt;root&gt;/.failed</code> instead.</p>
 <p>Later snapshots are built as small checkpoints on top of this one by
 <code><a href="aedes_update_snapshot.html">aedes_update_snapshot()</a></code>.</p>
     </div>

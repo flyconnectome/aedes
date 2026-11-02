@@ -34,8 +34,8 @@ aedes_soma_side(
 
 - threshold:
 
-  Absolute X displacement (nm) below which `position` reports a soma as
-  midline (`"M"`). Default `0`. Ignored by `manual`.
+  Distance from the midline (nm) below which `position` reports a soma
+  as midline (`"M"`). Default `0`. Ignored by `manual`.
 
 - mesh, chunksize, cl:
 
@@ -84,7 +84,7 @@ Methods:
 ``` r
 if (FALSE) { # \dontrun{
 aedes_soma_side("class:DNa")
-aedes_soma_side("648518347465408914") # known L
+aedes_soma_side("648518347644413663") # known L
 aedes_soma_side("class:DNa", method = "position")
 } # }
 ```

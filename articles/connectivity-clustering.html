@@ -114,6 +114,8 @@ columns.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ids</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_ids.html" class="external-link">cf_ids</a></span><span class="op">(</span>aedes <span class="op">=</span> <span class="st">"group:36155"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_meta.html" class="external-link">cf_meta</a></span><span class="op">(</span><span class="va">ids</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">id</span>, <span class="va">serial_id</span>, <span class="va">side</span>, <span class="va">group</span>, <span class="va">nblast_group</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =</span></span>
+<span><span class="co">#&gt; aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info</span></span>
 <span><span class="co">#&gt;                    id serial_id side group nblast_group</span></span>
 <span><span class="co">#&gt; 1  648518347546516862     36155    R 36155        36155</span></span>
 <span><span class="co">#&gt; 2  648518347589781091     36156    L 36155        36155</span></span>
@@ -130,6 +132,14 @@ columns.</p>
 <span></span>
 <span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">multi_connection_table</a></span><span class="op">(</span><span class="va">ids</span>, partners <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"in"</span>, <span class="st">"out"</span><span class="op">)</span>, threshold <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>                            group <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =</span></span>
+<span><span class="co">#&gt; aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info</span></span>
+<span><span class="co">#&gt; Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =</span></span>
+<span><span class="co">#&gt; aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info</span></span>
+<span><span class="co">#&gt; Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =</span></span>
+<span><span class="co">#&gt; aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info</span></span>
+<span><span class="co">#&gt; Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =</span></span>
+<span><span class="co">#&gt; aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info</span></span>
 <span><span class="co">#&gt; Warning in fafbseg::cam_meta(ids = ids, ignore.case = ignore.case, fixed = fixed, : Dropping 1 rows containing duplicate root_ids!</span></span>
 <span><span class="co">#&gt; You can inspect all 2 rows with duplicate ids by doing:</span></span>
 <span><span class="co">#&gt; attr(df, 'duprows')</span></span>
@@ -165,7 +175,9 @@ of the input partners are not yet in FlyTable at all.</p>
 <span><span class="co">#&gt; to missing ids!</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =</span></span>
 <span><span class="co">#&gt; groupcol, : Dropping: 4259/4477 neurons representing 49906/59474 synapses due</span></span>
-<span><span class="co">#&gt; to missing ids!</span></span></code></pre></div>
+<span><span class="co">#&gt; to missing ids!</span></span>
+<span><span class="co">#&gt; Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =</span></span>
+<span><span class="co">#&gt; aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info</span></span></code></pre></div>
 <p><img src="connectivity-clustering_files/figure-html/cluster-group-1.png" class="r-plt" alt="" width="700"></p>
 </div>
 <div class="section level2">
@@ -178,7 +190,9 @@ of the input partners are not yet in FlyTable at all.</p>
 <span><span class="co">#&gt; to missing ids!</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =</span></span>
 <span><span class="co">#&gt; groupcol, : Dropping: 4256/4477 neurons representing 49876/59474 synapses due</span></span>
-<span><span class="co">#&gt; to missing ids!</span></span></code></pre></div>
+<span><span class="co">#&gt; to missing ids!</span></span>
+<span><span class="co">#&gt; Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =</span></span>
+<span><span class="co">#&gt; aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info</span></span></code></pre></div>
 <p><img src="connectivity-clustering_files/figure-html/cluster-pgroup-1.png" class="r-plt" alt="" width="700"></p>
 <p>At the time of writing (September 2026) both groupings split the 12
 neurons into six left/right pairs, which is reassuring. With
@@ -230,7 +244,9 @@ consistent where it matters.</p>
 <span><span class="co">#&gt; to missing ids!</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =</span></span>
 <span><span class="co">#&gt; groupcol, : Dropping: 4256/4477 neurons representing 49876/59474 synapses due</span></span>
-<span><span class="co">#&gt; to missing ids!</span></span></code></pre></div>
+<span><span class="co">#&gt; to missing ids!</span></span>
+<span><span class="co">#&gt; Warning in fafbseg::flywire_updateids(aedes_main$root_id, svids =</span></span>
+<span><span class="co">#&gt; aedes_main$supervoxel_id, : unable to update 2 ids with bad supervoxel info</span></span></code></pre></div>
 <p><img src="connectivity-clustering_files/figure-html/custom-1.png" class="r-plt" alt="" width="700"></p>
 </div>
 <div class="section level2">

@@ -82,10 +82,10 @@ for the full column description.
 ## Details
 
 With `method = "auto"` (the default) the local snapshot is used when one
-is selected, the requested time is not before the snapshot, and `...`
-contains nothing other than `remove_autapses`; otherwise CAVE is
-queried. `method = "local"` gives an error rather than falling back to
-CAVE.
+is selected, the requested time is not before the oldest snapshot in the
+selected snapshot's folder, and `...` contains nothing other than
+`remove_autapses`; otherwise CAVE is queried. `method = "local"` gives
+an error rather than falling back to CAVE.
 
 The time of a local query is `timestamp` (or the time of `version`) when
 given, otherwise that of the `aedes.version` option (see
@@ -104,10 +104,10 @@ seconds old. Small queries may instead update just their own synapses
 when that is cheaper (tuned by the `aedes.synapse_head_ratio` and
 `aedes.synapse_head_min_sv` options).
 
-The local and CAVE results should agree, apart from CAVE's default cleft
-score filtering and any root 0 (unassigned) partners, which the local
-method drops. The local result has `snapshot`, `timestamp` (the time it
-is valid for) and `method` attributes.
+The local and CAVE results should agree, apart from any
+`cleft.threshold` filtering (CAVE only) and any root 0 (unassigned)
+partners, which the local method drops. The local result has `snapshot`,
+`timestamp` (the time it is valid for) and `method` attributes.
 
 ## See also
 
@@ -119,20 +119,25 @@ is valid for) and `method` attributes.
 
 ``` r
 if (FALSE) { # \dontrun{
-# downstream partners of a neuron, keeping only strong connections
-aedes_partner_summary("720575940...", threshold = 4)
+# downstream partners of the two MBON11 neurons, keeping only strong
+# connections
+mbon11 <- aedes_ids("type:MBON11")
+aedes_partner_summary(mbon11, threshold = 4)
 
 # inputs instead of outputs
-aedes_partner_summary("720575940...", partners = "inputs")
+aedes_partner_summary(mbon11, partners = "inputs")
 
-# Power-user: query a specific CAVE materialisation rather than 'now'
-aedes_partner_summary("720575940...", version = 1000)
-aedes_partner_summary("720575940...", timestamp = "2024-01-01")
+# Power-user: query a specific CAVE materialisation rather than 'now'.
+# Aedes materialisations expire (there is no long-term support version), so
+# list those currently available with
+# aedes_cave_client()$materialize$get_versions()
+aedes_partner_summary(mbon11, version = "latest")
+# CAVE timestamps must not pre-date the oldest available materialisation
+aedes_partner_summary(mbon11, timestamp = Sys.time() - 7*24*3600)
 
 # Power-user: include autapses (self-connections). MBON11 is strongly
 # autaptic, so its own root id appears among its downstream partners when
 # remove_autapses = FALSE (the fafbseg default drops these).
-mbon11 <- aedes_ids("cell_type:MBON11")
 aedes_partner_summary(mbon11, remove_autapses = FALSE)
 
 # answer from a local synapse snapshot

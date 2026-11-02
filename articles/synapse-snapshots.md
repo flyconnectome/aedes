@@ -27,14 +27,15 @@ The first time,
 download a snapshot (consisting of about 1.6 GB of static synapse data
 (e.g. XYZ locations) that never changes and 0.5 GB of materialisation
 information that matches each row of that synapse table to current
-root_ids). After that, new checkpoints (a few MB) are downloaded
-automatically every day when you use the snapshot and deltas up to the
-current time can be computed on your machine. Collectively this allows
-rapid time travel to arbitrary timepoints in the evolving connectome
-connectivity graph. In particular this allows users to access both the
-latest CAVE materialisation version (e.g. `519`) and the current time
-(`"now"`) for up-to-the-second queries. We find this very useful during
-simultaneous proofreading and typing.
+root_ids). After that, new checkpoints (a few MB) are checked for and
+downloaded automatically (at most every 6 hours) when you use the
+snapshot and deltas up to the current time can be computed on your
+machine. Collectively this allows rapid time travel to arbitrary
+timepoints in the evolving connectome connectivity graph. In particular
+this allows users to access both the latest CAVE materialisation version
+(e.g. `519`) and the current time (`"now"`) for up-to-the-second
+queries. We find this very useful during simultaneous proofreading and
+typing.
 
 ## Key Points
 
@@ -112,8 +113,8 @@ rest:
 
 - **build** the static data and a first base with
   [`aedes_build_snapshot()`](../reference/aedes_build_snapshot.md)
-- **make** daily checkpoints and occasional new bases with a cron job
-  (`inst/scripts/synsnap-cron.sh`)
+- **make** daily checkpoints with a cron job
+  (`inst/scripts/synsnap-cron.sh`), and occasionally a new base by hand
 - **distribute** them with
   [`aedes_publish_snapshot()`](../reference/aedes_download_snapshot.md)
 
@@ -134,11 +135,12 @@ aedes_use_snapshot()
 the version you have chosen for other aedes functions (see
 [`aedes_set_version()`](../reference/aedes_set_version.md)). By default
 this is `"now"` (the package says so when it loads), so you get the
-newest snapshot, which is then brought up to the present on the fly.
-With `aedes_set_version("latest")` you get the snapshot made at the
-newest CAVE materialisation version instead. You can also ask for a
-specific `version` or `timestamp`; this also changes the default for the
-other aedes functions so that metadata and connectivity match.
+newest published (or full) snapshot, which is then brought up to the
+present on the fly. With `aedes_set_version("latest")` you get the
+snapshot made at the newest CAVE materialisation version instead. You
+can also ask for a specific `version` or `timestamp`; this also changes
+the default for the other aedes functions so that metadata and
+connectivity match.
 
 ``` r
 
@@ -521,11 +523,12 @@ neurons.
 
 A checkpoint records only the synapses whose root ids changed since its
 parent: for each one the new root id of each side that changed, and the
-old one. Its parent is the newest snapshot at or before its own time, so
-the checkpoints form a chain back to the base. Reading a checkpoint
-reads the base and the logs of every checkpoint in its chain, keeping
-the newest root id for each synapse (below). DuckDB does this in a
-fraction of a second for a few neurons even with months of daily logs.
+old one. Its parent is the newest snapshot at or before its own time
+(for a local checkpoint, the newest published or full snapshot), so the
+checkpoints form a chain back to the base. Reading a checkpoint reads
+the base and the logs of every checkpoint in its chain, keeping the
+newest root id for each synapse (below). DuckDB does this in a fraction
+of a second for a few neurons even with months of daily logs.
 
 ![Reading a checkpoint through its chain](synsnap-read.svg)
 

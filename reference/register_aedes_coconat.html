@@ -69,7 +69,7 @@ coconatfly."></head><body>
     <p>The aedes dataset is continually evolving. You have three main choices for
 how to handle this.</p><ol><li><p>use a specific numeric version (aka materialisation) of the segmentation.</p></li>
 <li><p>use the latest materialisation version (<code>version='latest'</code>)</p></li>
-<li><p>map ids to the current time (<code>version='now'</code>)</p></li>
+<li><p>map ids to the current time (<code>timestamp='now'</code>)</p></li>
 </ol><p>Option 3 is the default (see <code><a href="aedes_set_version.html">aedes_set_version()</a></code>). Option 2 can make
 queries more stable, but note that 'latest' can be several days old.</p>
 <p>Metadata returned for aedes neurons includes a <code>pgroup</code> column from

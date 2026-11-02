@@ -96,23 +96,22 @@ table.
 if (FALSE) { # \dontrun{
 options(aedes.initials = "GJ")
 
-# Update a handful of neurons: two columns, recycled across all ids.
-ids <- c("648518347569414567", "648518347399768369")
+# Update a handful of neurons: one row per id (`status` is recycled).
+ids <- c("648518347644413663", "648518347482127812")
 aedes_set_meta(ids,
-               data.frame(cell_type = c("KCa'b'", "KCg"),
-                          status    = "adequate"))
+               data.frame(type   = c("KC1", "KC2"),
+                          status = "adequate"))
 
 # Or pass a single data.frame that already carries `root_id`
 df <- data.frame(root_id   = ids,
-                 cell_type = c("KCa'b'", "KCg"),
+                 type      = c("KC1", "KC2"),
                  status    = "adequate",
                  stringsAsFactors = FALSE)
 aedes_set_meta(df)                       # dry run (default)
 aedes_set_meta(df, dryrun = FALSE)       # commit
 
-# Query-string ids also work: update every ALPN with a note
-aedes_set_meta("class:ALPN",
-               data.frame(notes = "reviewed 2026-09"),
-               dryrun = FALSE)
+# Query-string ids also work: preview giving every ALPN (~580 neurons) a
+# note (dry run; this would overwrite any existing notes)
+aedes_set_meta("class:ALPN", data.frame(notes = "reviewed 2026-09"))
 } # }
 ```

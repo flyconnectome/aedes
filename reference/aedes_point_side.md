@@ -66,7 +66,7 @@ from the midline in nm.
 Points on the left have `dist = (mirror_x - x)/2 < 0`; points on the
 right have `dist > 0`. The sign convention was calibrated against root
 id `648518347465408914` (`soma_xyz = "33038,5956,3550"` in raw voxels,
-side = `"L"`). Points with `|dist| <= threshold` are reported as midline
+side = `"L"`). Points with `|dist| < threshold` are reported as midline
 (`"M"`). With `threshold = 0` a point exactly on the midline is reported
 as `"R"`.
 

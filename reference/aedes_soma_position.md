@@ -1,7 +1,7 @@
 # Look up the soma position for one or more Aedes neurons
 
 Returns the recorded soma position (in nm) for each input root id, using
-FlyTable annotations and/or the FlyWire nucleus segmentation.
+FlyTable annotations and/or the Aedes nucleus segmentation.
 
 ## Usage
 
@@ -51,12 +51,11 @@ aedes_soma_position(
 
   How to handle root ids with more than one *distinct-position* nucleus
   in the nucleus segmentation. `"largest"` (the default) returns one row
-  per input id, picking the nucleus with the largest `volume` (or the
-  first row when no `volume` column is available). `"all"` returns every
-  candidate row, so an ambiguous root id contributes more than one row.
-  Either way, bookkeeping duplicates (rows with identical position for
-  the same root id) are silently collapsed, and `n_nuclei` records how
-  many distinct-position candidates were considered.
+  per input id, picking the nucleus with the largest `volume`. `"all"`
+  returns every candidate row, so an ambiguous root id contributes more
+  than one row. Either way, bookkeeping duplicates (rows with identical
+  position for the same root id) are silently collapsed, and `n_nuclei`
+  records how many distinct-position candidates were considered.
 
 - mesh:
 
@@ -96,17 +95,19 @@ the requested `units`; convert back with
 for that root id, or `NA` when the soma came from elsewhere / was not
 found); and `nucleus_id` (the `nuclei_v1_aedes` primary key, from
 FlyTable when `source = "flytable"` or from the chosen nucleus row when
-`source = "nucleus"`). L2-derived rows also include `soma_score`
-(absolute, cross-neuron-comparable; squared Mahalanobis distance of the
-chunk's shape features from the KC positive cloud, plus a KDE-based
-penalty on signed neuropil distance – *lower = more soma-like*; see
+`source = "nucleus"`); plus `soma_score` (absolute,
+cross-neuron-comparable; squared Mahalanobis distance of the chunk's
+shape features from the KC positive cloud, plus a KDE-based penalty on
+signed neuropil distance – *lower = more soma-like*; see
 [aedes_soma_l2_stats](aedes_soma_l2_stats.md)), `dist_npil_nm` (signed
 distance to the neuropil mesh, in nm; positive inside, negative outside
 – soma rows are in cortex so this is usually negative), and `l2_id` (the
-selected L2 chunk). These columns are `NA` for non-L2 sources. With
-`nuclei = "largest"` there is one row per input id in input order; with
-`nuclei = "all"` rows are ordered by input id but ambiguous ids
-contribute multiple rows (sorted by descending volume).
+selected L2 chunk). When `mesh` is supplied these last three columns are
+filled for every source (for FlyTable and nucleus rows they are computed
+at the recorded soma point); otherwise they are `NA` except for
+L2-derived rows. With `nuclei = "largest"` there is one row per input id
+in input order; with `nuclei = "all"` rows are ordered by input id but
+ambiguous ids contribute multiple rows (sorted by descending volume).
 
 ## See also
 
