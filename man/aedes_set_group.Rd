@@ -57,7 +57,8 @@ A preview data.frame with one row per selected neuron: \code{root_id},
 write.
 }
 \description{
-Writes only the \code{group} column of the \code{aedes_main} FlyTable,
+Writes the \code{group} column of the \code{aedes_main} FlyTable (plus
+the \code{annotator}/\code{proofreader} initials of rows whose group changes),
 assigning a shared \code{group} id to a set of neurons -- the convenient way
 to build serial / cell-type groups and, via \code{join_existing}, to add
 neurons to a group that already exists. For editing arbitrary metadata
@@ -79,9 +80,10 @@ query instead.
 When some selected neurons already belong to a group, \code{join_existing}
 decides what happens (see the argument). Reassigning neurons out of a group
 whose other members were not supplied emits a warning, since it splits that
-group. Only the \code{group} column is written, via the shared update engine that
-also backs \code{\link[=aedes_set_meta]{aedes_set_meta()}}; the same pinned table snapshot is reused so
-the returned preview matches what is written.
+group. Only the \code{group} column (and the \code{annotator}/\code{proofreader} columns,
+see those arguments) is written, via the shared update engine that also
+backs \code{\link[=aedes_set_meta]{aedes_set_meta()}}; the same pinned table snapshot is reused so the
+returned preview matches what is written.
 
 Rows with status \code{duplicate}, \code{bad_nucleus} or \code{not_a_neuron} are never
 written and do not count as group members; neurons with only such rows are
@@ -93,18 +95,18 @@ options(aedes.initials = "GJ")
 
 # Mint a fresh group from a set of ungrouped neurons: the resulting
 # `group` id is min(serial_id) of the members.
-ids <- c("648518347569414567", "648518347399768369")
+ids <- c("648518347644413663", "648518347482127812")
 aedes_set_group(ids)                       # dry run: preview only
 aedes_set_group(ids, dryrun = FALSE)       # commit
 
 # Add another neuron to an existing group. When some selected neurons
 # are already grouped, join_existing is required (NA = refuse to guess).
-aedes_set_group(c(ids, "648518347123456789"),
+aedes_set_group(c(ids, "648518347542391554"),
                 join_existing = TRUE, dryrun = FALSE)
 
 # Join by example: adopt the group of the neurons a query matches.
-aedes_set_group("648518347999999999",
-                group = "type:G59_SN", dryrun = FALSE)
+aedes_set_group("648518347584655910",
+                group = "type:G04_SN", dryrun = FALSE)
 
 # Ungroup (clears the FlyTable cell)
 aedes_set_group(ids, group = NA, dryrun = FALSE)

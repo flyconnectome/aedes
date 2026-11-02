@@ -23,7 +23,7 @@
 #' @export
 #' @examples
 #' \dontrun{
-#' aedes_key_point('648518347569414567')
+#' aedes_key_point('648518347644413663')
 #' }
 aedes_key_point <- function(ids, raw = TRUE, reroot = TRUE, ...) {
   ids <- aedes_ids(ids)

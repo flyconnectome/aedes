@@ -22,10 +22,12 @@
 #'   When no `snapshot` is given, the newest one at or before the requested
 #'   time is used: `timestamp` or the time of `version` when given, otherwise
 #'   the `aedes.version` option (see [aedes_set_version()]). So by default
-#'   (`"now"`) this is the newest snapshot, while for `"latest"` it is the
-#'   snapshot of the newest materialisation version. [aedes_partner_summary()]
-#'   answers queries for later times by fetching the edits made since the
-#'   snapshot from CAVE (see its details).
+#'   (`"now"`) this is the newest published or full snapshot (local
+#'   checkpoints from [aedes_update_snapshot()] are only chosen for their exact
+#'   time), while for `"latest"` it is the snapshot of the newest
+#'   materialisation version. [aedes_partner_summary()] answers queries for
+#'   later times by fetching the edits made since the snapshot from CAVE (see
+#'   its details).
 #'
 #'   The `aedes.version` option is only changed when you give `version` or
 #'   `timestamp`, so that metadata and root ids from other aedes functions
@@ -99,11 +101,11 @@ aedes_snapshot_check <- function(root) {
   if (dir.exists(root) && nrow(synsnap_tags(root))) return(invisible(TRUE))
   msg <- paste0("No local synapse snapshot in ", root, ".")
   if (rlang::is_interactive() &&
-      isTRUE(ask_yes_no(paste(msg, "Download one now (about 2.3 GB)?")))) {
+      isTRUE(ask_yes_no(paste(msg, "Download one now (about 2.1 GB)?")))) {
     aedes_download_snapshot(root = root)
     return(invisible(TRUE))
   }
-  stop(msg, " Download one with aedes_download_snapshot() (about 2.3 GB, ",
+  stop(msg, " Download one with aedes_download_snapshot() (about 2.1 GB, ",
        "needs access to the aedes CAVE datastack) or see ",
        "vignette(\"synapse-snapshots\", package = \"aedes\")", call. = FALSE)
 }
@@ -238,14 +240,14 @@ aedes_snapshot_active <- function(snapshot = getOption("aedes.synapse_snapshot")
 #' until you [dplyr::collect()] the result. This needs a local snapshot; there
 #' is no CAVE equivalent.
 #'
-#' @details The table has columns `id`, `pre_root` and `post_root` (as
-#'   `integer64`). With `details = TRUE` it also has `pre_sv`, `post_sv`,
+#' @details The table has columns `id` (integer), `pre_root` and `post_root`
+#'   (`integer64`). With `details = TRUE` it also has `pre_sv`, `post_sv`,
 #'   `pre_x`...`post_z` (raw voxel coordinates of the pre and postsynaptic
 #'   points) and `size`, from `static.parquet`. Use the
 #'   midpoint of the pre and post points where you need one location per
 #'   synapse.
 #'
-#'   Rows are sorted by `pre_root`, so filtering on a few `pre_root` values
+#'   The root id files are sorted by `pre_root`, so filtering on a few `pre_root` values
 #'   lets DuckDB skip most of the file. Snapshots with a `by_post.parquet`
 #'   also keep a copy sorted by `post_root`, which `side = "post"` reads. Use
 #'   [bit64::as.integer64()] for root ids in filters.
@@ -273,7 +275,7 @@ aedes_snapshot_active <- function(snapshot = getOption("aedes.synapse_snapshot")
 #' @examples
 #' \dontrun{
 #' library(dplyr)
-#' ids <- aedes_ids("class:DNa")
+#' ids <- bit64::as.integer64(aedes_ids("class:DNa"))
 #' aedes_synapse_data("post") %>%
 #'   filter(post_root %in% ids) %>%
 #'   count(pre_root, sort = TRUE) %>%

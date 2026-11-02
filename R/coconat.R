@@ -12,7 +12,7 @@
 #'
 #' 1. use a specific numeric version (aka materialisation) of the segmentation.
 #' 2. use the latest materialisation version (`version='latest'`)
-#' 3. map ids to the current time (`version='now'`)
+#' 3. map ids to the current time (`timestamp='now'`)
 #'
 #' Option 3 is the default (see [aedes_set_version()]). Option 2 can make
 #' queries more stable, but note that 'latest' can be several days old.

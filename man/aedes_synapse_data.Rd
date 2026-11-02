@@ -38,14 +38,14 @@ until you \code{\link[dplyr:collect]{dplyr::collect()}} the result. This needs a
 is no CAVE equivalent.
 }
 \details{
-The table has columns \code{id}, \code{pre_root} and \code{post_root} (as
-\code{integer64}). With \code{details = TRUE} it also has \code{pre_sv}, \code{post_sv},
+The table has columns \code{id} (integer), \code{pre_root} and \code{post_root}
+(\code{integer64}). With \code{details = TRUE} it also has \code{pre_sv}, \code{post_sv},
 \code{pre_x}...\code{post_z} (raw voxel coordinates of the pre and postsynaptic
 points) and \code{size}, from \code{static.parquet}. Use the
 midpoint of the pre and post points where you need one location per
 synapse.
 
-Rows are sorted by \code{pre_root}, so filtering on a few \code{pre_root} values
+The root id files are sorted by \code{pre_root}, so filtering on a few \code{pre_root} values
 lets DuckDB skip most of the file. Snapshots with a \code{by_post.parquet}
 also keep a copy sorted by \code{post_root}, which \code{side = "post"} reads. Use
 \code{\link[bit64:as.integer64]{bit64::as.integer64()}} for root ids in filters.
@@ -60,7 +60,7 @@ for the rest of the session, where later calls for times up to
 \examples{
 \dontrun{
 library(dplyr)
-ids <- aedes_ids("class:DNa")
+ids <- bit64::as.integer64(aedes_ids("class:DNa"))
 aedes_synapse_data("post") \%>\%
   filter(post_root \%in\% ids) \%>\%
   count(pre_root, sort = TRUE) \%>\%

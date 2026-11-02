@@ -9,7 +9,7 @@
   <!-- static data -->
   <rect x="20" y="15" width="760" height="78" rx="6" fill="#eef2f7" stroke="#8a9bb3"/>
   <text x="34" y="37" font-weight="bold">static.parquet</text>
-  <text x="140" y="37" fill="#444">one row per synapse · fixed once synapses are detected · 1.7 GB</text>
+  <text x="140" y="37" fill="#444">one row per synapse · fixed once synapses are detected · 1.6 GB</text>
   <g font-family="Menlo, monospace" font-size="12">
     <rect x="34" y="50" width="60" height="28" fill="#fff" stroke="#8a9bb3"/><text x="64" y="69" text-anchor="middle">id</text>
     <rect x="94" y="50" width="90" height="28" fill="#fff" stroke="#8a9bb3"/><text x="139" y="69" text-anchor="middle">pre_sv</text>

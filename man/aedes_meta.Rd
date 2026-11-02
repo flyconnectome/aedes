@@ -68,7 +68,9 @@ vector of root IDs.
 }
 \description{
 By default \code{aedes_meta()} and \code{aedes_ids()} tell you exactly
-what is in FlyTable: its rows and root ids as stored there. Unlike most
+what is in FlyTable: its rows and root ids as stored there (except rows
+with status \code{duplicate} or \code{bad_nucleus}, which \code{\link[fafbseg:cam_meta]{fafbseg::cam_meta()}} drops
+by default; pass \code{drop_status = character(0)} to keep them). Unlike most
 aedes functions they do not follow the \code{aedes.version} option (see
 \code{\link[=aedes_set_version]{aedes_set_version()}}). You can still time travel by giving a \code{version}
 (e.g. \code{"latest"}) or a \code{timestamp} (e.g. \code{"now"}), which maps the root

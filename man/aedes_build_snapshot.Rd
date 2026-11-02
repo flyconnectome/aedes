@@ -51,7 +51,8 @@ server fails) just run \code{aedes_build_snapshot()} again with the
 same \code{version} to carry on. Nothing is visible as a snapshot until it is
 complete and has been checked: the synapses of \code{n_verify} neurons of
 different sizes are compared with a CAVE query at the same version, and a
-snapshot with any difference is moved to \verb{<root>/.failed} instead.
+snapshot that disagrees (other than stale CAVE roots that the chunkedgraph
+confirms) is moved to \verb{<root>/.failed} instead.
 
 Later snapshots are built as small checkpoints on top of this one by
 \code{\link[=aedes_update_snapshot]{aedes_update_snapshot()}}.

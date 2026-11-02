@@ -36,8 +36,8 @@ returned (unless \code{units = "raw"}).}
 
 \item{nuclei}{How to handle root ids with more than one \emph{distinct-position}
 nucleus in the nucleus segmentation. \code{"largest"} (the default) returns
-one row per input id, picking the nucleus with the largest \code{volume} (or
-the first row when no \code{volume} column is available). \code{"all"} returns
+one row per input id, picking the nucleus with the largest \code{volume}.
+\code{"all"} returns
 every candidate row, so an ambiguous root id contributes more than one
 row. Either way, bookkeeping duplicates (rows with identical position
 for the same root id) are silently collapsed, and \code{n_nuclei} records how
@@ -69,7 +69,7 @@ in the requested \code{units}; convert back with \code{\link[nat:xyzmatrix]{nat:
 root id, or \code{NA} when the soma came from elsewhere / was not found); and
 \code{nucleus_id} (the \code{nuclei_v1_aedes} primary key, from FlyTable when
 \code{source = "flytable"} or from the chosen nucleus row when
-\code{source = "nucleus"}). L2-derived rows also include
+\code{source = "nucleus"}); plus
 \code{soma_score} (absolute, cross-neuron-comparable; squared Mahalanobis
 distance of the chunk's shape features from the KC positive cloud, plus
 a KDE-based penalty on signed neuropil distance --
@@ -77,14 +77,16 @@ a KDE-based penalty on signed neuropil distance --
 \code{dist_npil_nm} (signed distance to the neuropil mesh, in nm; positive
 inside, negative outside -- soma rows are in cortex so this is usually
 negative), and \code{l2_id} (the selected L2 chunk).
-These columns are \code{NA} for non-L2 sources. With \code{nuclei = "largest"}
+When \code{mesh} is supplied these last three columns are filled for every
+source (for FlyTable and nucleus rows they are computed at the recorded
+soma point); otherwise they are \code{NA} except for L2-derived rows. With \code{nuclei = "largest"}
 there is one row per input id in input order; with \code{nuclei = "all"} rows
 are ordered by input id but ambiguous ids contribute multiple rows
 (sorted by descending volume).
 }
 \description{
 Returns the recorded soma position (in nm) for each input root id, using
-FlyTable annotations and/or the FlyWire nucleus segmentation.
+FlyTable annotations and/or the Aedes nucleus segmentation.
 }
 \examples{
 \dontrun{

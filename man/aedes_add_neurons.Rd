@@ -85,7 +85,8 @@ A list. With \code{dryrun = TRUE} it has elements \code{up} (rows that would
 be updated) and/or \code{new} (rows that would be appended). With
 \code{dryrun = FALSE} it has \code{new} (the appended rows, so the caller can see the
 chosen \code{point_xyz}/\code{supervoxel_id}) and, when \code{group = TRUE}, \code{group} (the
-\code{\link[=aedes_set_group]{aedes_set_group()}} preview).
+\code{\link[=aedes_set_group]{aedes_set_group()}} preview); updated rows are not returned on a live
+write, so the list is empty when no rows are appended.
 }
 \description{
 Upserts rows in the \code{aedes_main} FlyTable: absent \code{root_id}s
@@ -127,8 +128,8 @@ and a blank \code{supervoxel_id}/\code{point_xyz} (its \code{root_id} is written
 regardless).
 
 With \code{group = TRUE} and \code{dryrun = FALSE} the freshly-added neurons are
-passed to \code{\link[=aedes_set_group]{aedes_set_group()}} after insertion, minting (or joining) a group
-for them in the same call -- deferred because the group id is derived from
+passed to \code{\link[=aedes_set_group]{aedes_set_group()}} after insertion, minting a fresh group for
+them in the same call -- deferred because the group id is derived from
 the \code{serial_id}s FlyTable assigns on insert. Passing an explicit group id
 instead (\verb{group = <serial_id>}) needs no such round trip: the id is written
 into the \code{group} column and uploaded with the rows, and so also shows up in
@@ -162,40 +163,40 @@ options(aedes.initials = "GJ")
 # both central brain intrinsic neurons of class KC. status is required;
 # the shortlist in the signature gives tab-completion.
 aedes_add_neurons(
-  c("648518347569414567", "648518347399768369"),
+  c("648518347644413663", "648518347482127812"),
   superclass = "cb_intrinsic", class = "KC", status = "adequate")
 
 # Commit for real
 aedes_add_neurons(
-  c("648518347569414567", "648518347399768369"),
+  c("648518347644413663", "648518347482127812"),
   dryrun = FALSE, superclass = "cb_intrinsic", class = "KC",
   status = "adequate")
 
 # Add the two neurons and immediately group them together (a fresh group is
 # minted from the serial_ids FlyTable assigns on insert)
 aedes_add_neurons(
-  c("648518347569414567", "648518347399768369"),
+  c("648518347644413663", "648518347482127812"),
   dryrun = FALSE, superclass = "cb_intrinsic", class = "KC",
   status = "adequate", group = TRUE)
 
 # Add them to an existing group by giving its serial_id-style id explicitly
 aedes_add_neurons(
-  c("648518347569414567", "648518347399768369"),
+  c("648518347644413663", "648518347482127812"),
   dryrun = FALSE, superclass = "cb_intrinsic", class = "KC",
   status = "adequate", group = 12345)
 
 # Skip soma/side auto-fill (e.g. neurons with no soma in the volume)
-aedes_add_neurons("648518347569414567",
+aedes_add_neurons("648518347644413663",
                   superclass = "cb_intrinsic", class = "KC",
                   status = "missing soma",
                   soma = FALSE, side = FALSE)
 
-# Per-row metadata via a data.frame: one `cell_type` per id.
+# Per-row metadata via a data.frame: one `type` per id.
 df <- data.frame(
-  root_id    = c("648518347569414567", "648518347399768369"),
+  root_id    = c("648518347644413663", "648518347482127812"),
   superclass = "cb_intrinsic",
   class      = "KC",
-  cell_type  = c("KCa'b'", "KCg"),
+  type       = c("KC1", "KC2"),
   status     = "adequate",
   stringsAsFactors = FALSE)
 aedes_add_neurons(df)

@@ -54,7 +54,7 @@ lies on.
 Points on the left have \code{dist = (mirror_x - x)/2 < 0}; points
 on the right have \code{dist > 0}. The sign convention was calibrated
 against root id \code{648518347465408914} (\code{soma_xyz = "33038,5956,3550"}
-in raw voxels, side = \code{"L"}). Points with \code{|dist| <= threshold}
+in raw voxels, side = \code{"L"}). Points with \code{|dist| < threshold}
 are reported as midline (\code{"M"}). With \code{threshold = 0} a point
 exactly on the midline is reported as \code{"R"}.
 }

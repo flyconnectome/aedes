@@ -68,7 +68,7 @@
   <path d="M204,250 L266,250" stroke="#555" stroke-width="2" fill="none" marker-end="url(#a)"/>
   <text x="235" y="240" text-anchor="middle" font-size="11" fill="#555">edits</text>
   <path d="M464,250 L592,250" stroke="#4f7f4f" stroke-width="2" fill="none" marker-end="url(#g)"/>
-  <text x="526" y="226" text-anchor="middle" font-size="11" fill="#2f5f2f">2.3 GB once,</text>
+  <text x="526" y="226" text-anchor="middle" font-size="11" fill="#2f5f2f">2.1 GB once,</text>
   <text x="526" y="240" text-anchor="middle" font-size="11" fill="#2f5f2f">then ~1 MB/day</text>
   <text x="526" y="268" text-anchor="middle" font-size="11" fill="#2f5f2f">automatic</text>
 
