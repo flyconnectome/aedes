@@ -11,7 +11,7 @@ aedes_add_neurons(
   soma = TRUE,
   side = TRUE,
   status = c("adequate", "to_review", "needs_extending", "incomplete", "missing soma"),
-  required = c("superclass", "status", "initials"),
+  required = c("superclass", "status"),
   initials = getOption("aedes.initials"),
   annotator = TRUE,
   proofreader = FALSE,
@@ -49,17 +49,16 @@ in the signature for tab-completion. Any other value is live-checked
 against the vocabulary already present in \code{aedes_main}; unknown values
 error. Must be supplied unless \code{"status"} is removed from \code{required}.}
 
-\item{required}{Columns that must be supplied (via \code{...}, or via \code{status} /
-\code{initials}). Defaults to \code{c("superclass", "status", "initials")}. Set to
-\code{character(0)} to skip the check.}
+\item{required}{Columns that must be supplied (via \code{...}, or via \code{status}).
+Defaults to \code{c("superclass", "status")}. Set to \code{character(0)} to skip the
+check.}
 
-\item{initials}{Curator initials for the single-string \code{initials} column.
-Defaults to \code{getOption("aedes.initials")}; set once per session with
-\code{options(aedes.initials = "XY")}. Passed through \code{...} semantics -- an
-explicit \code{initials = ...} in \code{...} wins over the option.}
+\item{initials}{Curator initials written to the \code{annotator} / \code{proofreader}
+columns when those arguments are \code{TRUE}. Defaults to
+\code{getOption("aedes.initials")}; give a value to override it for this call.}
 
 \item{annotator}{Multi-select \code{annotator} column write policy. \code{TRUE}
-(the default) appends \code{getOption("aedes.initials")} to the cell; \code{FALSE}
+(the default) appends \code{initials} to the cell; \code{FALSE}
 leaves the column alone; a character vector (or comma-joined string)
 appends those tokens explicitly. On existing rows the tokens are merged
 with the current cell contents (unique, sorted).}
@@ -154,8 +153,8 @@ invalid ids (\code{0}, \code{NA} or malformed) are rejected up front.
 }
 \examples{
 \dontrun{
-# Set your curator initials once per session (used for the annotator column
-# and the required `initials` column on new rows)
+# Set your curator initials once per session (appended to the `annotator`
+# column)
 options(aedes.initials = "GJ")
 
 # Dry run first: see the frames that would be written. Two new neurons,

@@ -95,7 +95,7 @@ test_that("aedes_add_neurons collapses ids that resolve to one neuron", {
             rid == "0", "Skipping: unable to resolve test root id")
 
   common <- list(dryrun = TRUE, superclass = "visual_projection",
-                 status = "adequate", initials = "XX",
+                 status = "adequate",
                  soma = FALSE, side = FALSE, annotator = FALSE)
 
   # Recycled scalar annotations: the duplicate is dropped with a warning. Catch
@@ -131,7 +131,7 @@ test_that("aedes_add_neurons never updates or re-adds unusable-only ids", {
   a <- live$single[1]
   u <- live$only[1]
   common <- list(dryrun = TRUE, superclass = "descending_neuron",
-                 status = "to_review", initials = "XX", annotator = FALSE,
+                 status = "to_review", annotator = FALSE,
                  soma = FALSE, side = FALSE)
   expect_message(res <- do.call(aedes_add_neurons, c(list(u), common)),
                  "Skipping 1 id")
@@ -145,7 +145,7 @@ test_that("aedes_add_neurons never updates or re-adds unusable-only ids", {
 
 test_that("aedes_add_neurons validates soma and passes a method through", {
   args <- list("648518347399768369", superclass = "descending_neuron",
-               status = "to_review", initials = "XX", annotator = FALSE,
+               status = "to_review", annotator = FALSE,
                side = FALSE)
   for (bad in list("foo", NA, c(TRUE, FALSE), 1))
     expect_error(do.call(aedes_add_neurons, c(args, soma = list(bad))),
@@ -163,4 +163,13 @@ test_that("aedes_add_neurons validates soma and passes a method through", {
   l2 <- do.call(aedes_add_neurons, c(args, soma = "l2"))
   expect_false(empty(l2$up$soma_xyz))
   expect_false(identical(nuc$up$soma_xyz, l2$up$soma_xyz))
+})
+
+test_that("initials arg overrides aedes.initials for TRUE annotator/proofreader", {
+  withr::local_options(aedes.initials = "GJ")
+  expect_equal(.aedes_resolve_initials(TRUE, "annotator"), "GJ")
+  expect_equal(.aedes_resolve_initials(TRUE, "annotator", "XY"), "XY")
+  expect_equal(.aedes_resolve_initials("AB,CD", "annotator", "XY"), c("AB", "CD"))
+  expect_null(.aedes_resolve_initials(FALSE, "proofreader", "XY"))
+  expect_error(.aedes_resolve_initials(TRUE, "proofreader", NULL), "initials")
 })

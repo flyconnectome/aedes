@@ -50,18 +50,20 @@ aedes_sequential_update <- function(df, version = NULL, timestamp = NULL) {
 
 #' Resolve an annotator/proofreader argument to the tokens to append
 #'
-#' Accepts `TRUE` (use `getOption("aedes.initials")`), `FALSE`/`NULL` (no-op),
+#' Accepts `TRUE` (use `initials`, by default `getOption("aedes.initials")`),
+#' `FALSE`/`NULL` (no-op),
 #' or a character vector of one or more initials (comma-joined strings are
 #' split, symmetric with how a multi-select cell reads back). Returns `NULL`
 #' when nothing should be written to the column, or a non-empty character
 #' vector of tokens to append.
 #' @noRd
-.aedes_resolve_initials <- function(x, argname) {
+.aedes_resolve_initials <- function(x, argname,
+                                    initials = getOption("aedes.initials")) {
   if (isFALSE(x) || is.null(x)) return(NULL)
   if (isTRUE(x)) {
-    ini <- getOption("aedes.initials")
+    ini <- initials
     if (!is.character(ini) || length(ini) != 1L || is.na(ini) || !nzchar(ini))
-      stop("`", argname, " = TRUE` needs `aedes.initials` set. Set once with ",
+      stop("`", argname, " = TRUE` needs curator initials. Set once with ",
            "options(aedes.initials = \"XY\") or pass ", argname,
            " = \"XY\" explicitly.", call. = FALSE)
     x <- ini
