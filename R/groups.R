@@ -1,6 +1,7 @@
 #' Group aedes neurons together in FlyTable
 #'
-#' @description Writes only the `group` column of the `aedes_main` FlyTable,
+#' @description Writes the `group` column of the `aedes_main` FlyTable (plus
+#'   the `annotator`/`proofreader` initials of rows whose group changes),
 #'   assigning a shared `group` id to a set of neurons -- the convenient way
 #'   to build serial / cell-type groups and, via `join_existing`, to add
 #'   neurons to a group that already exists. For editing arbitrary metadata
@@ -21,9 +22,10 @@
 #'   When some selected neurons already belong to a group, `join_existing`
 #'   decides what happens (see the argument). Reassigning neurons out of a group
 #'   whose other members were not supplied emits a warning, since it splits that
-#'   group. Only the `group` column is written, via the shared update engine that
-#'   also backs [aedes_set_meta()]; the same pinned table snapshot is reused so
-#'   the returned preview matches what is written.
+#'   group. Only the `group` column (and the `annotator`/`proofreader` columns,
+#'   see those arguments) is written, via the shared update engine that also
+#'   backs [aedes_set_meta()]; the same pinned table snapshot is reused so the
+#'   returned preview matches what is written.
 #'
 #'   Rows with status `duplicate`, `bad_nucleus` or `not_a_neuron` are never
 #'   written and do not count as group members; neurons with only such rows are
@@ -70,18 +72,18 @@
 #'
 #' # Mint a fresh group from a set of ungrouped neurons: the resulting
 #' # `group` id is min(serial_id) of the members.
-#' ids <- c("648518347569414567", "648518347399768369")
+#' ids <- c("648518347644413663", "648518347482127812")
 #' aedes_set_group(ids)                       # dry run: preview only
 #' aedes_set_group(ids, dryrun = FALSE)       # commit
 #'
 #' # Add another neuron to an existing group. When some selected neurons
 #' # are already grouped, join_existing is required (NA = refuse to guess).
-#' aedes_set_group(c(ids, "648518347123456789"),
+#' aedes_set_group(c(ids, "648518347542391554"),
 #'                 join_existing = TRUE, dryrun = FALSE)
 #'
 #' # Join by example: adopt the group of the neurons a query matches.
-#' aedes_set_group("648518347999999999",
-#'                 group = "type:G59_SN", dryrun = FALSE)
+#' aedes_set_group("648518347584655910",
+#'                 group = "type:G04_SN", dryrun = FALSE)
 #'
 #' # Ungroup (clears the FlyTable cell)
 #' aedes_set_group(ids, group = NA, dryrun = FALSE)
@@ -138,7 +140,7 @@ aedes_set_group <- function(ids, group = NULL, join_existing = NA,
       if (is.na(gint))
         stop("`group` is too large to be a group id (group ids are ",
              "serial_id-style). To join the group of a particular neuron, ",
-             "pass a query such as `group = \"type:G59_SN\"`, or look its ",
+             "pass a query such as `group = \"type:G04_SN\"`, or look its ",
              "group up with aedes_meta().", call. = FALSE)
       # 0 in particular is not a group id: FlyTable records ungrouped neurons
       # as an empty cell, so unsetting must write NA rather than a literal 0,

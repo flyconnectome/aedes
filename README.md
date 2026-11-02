@@ -32,7 +32,7 @@ phase as we develop a robust community and infrastructure.
 ## Implementation Details
 
 The package is delivered as a thin wrapper around
-[fafbseg](https://natverse.org/natverse/fafbseg) with optional
+[fafbseg](https://natverse.org/fafbseg) with optional
 registration for [coconatfly](https://natverse.org/coconatfly). This
 will be familiar to users of the
 [fancr](https://github.com/flyconnectome/fancr) and

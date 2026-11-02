@@ -28,7 +28,7 @@ read_aedes_neurons(
 
 \item{method}{Reroot strategy passed through to \code{\link[=aedes_soma_position]{aedes_soma_position()}}.
 With \code{"auto"} (the default) each neuron is handled by the first source
-that succeeds in the cascade: FlyTable \code{soma_xyz} → FlyWire nucleus →
+that succeeds in the cascade: FlyTable \code{soma_xyz} → Aedes nucleus →
 \code{"l2+mesh"} (a combined L2-attribute + neuropil signed-distance score
 for any neuron that has no FlyTable or nucleus soma; only used if a
 \code{mesh} is available). Restrict to a single value to disable the cascade.

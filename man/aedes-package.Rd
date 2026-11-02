@@ -14,7 +14,9 @@ Access to the in progress Aedes aegypti dataset. Organised as a thin wrapper aro
 \item{\code{aedes.version}} Default materialisation selector used by
 \code{\link{aedes_get_version}} (and, transitively, everything that pins a
 timestamp -- \code{\link{aedes_partner_summary}},
-\code{\link{aedes_use_snapshot}} and the coconatfly functions).
+\code{\link{aedes_use_snapshot}} and the coconatfly functions). The
+FlyTable write functions and \code{\link{aedes_soma_position}} always use
+the current state.
 \code{\link{aedes_meta}} and \code{\link{aedes_ids}} do not use it: by
 default they return exactly what is in FlyTable. Accepts
 \code{"now"} (set when the package loads, unless already set),

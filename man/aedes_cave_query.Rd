@@ -72,6 +72,6 @@ Query Aedes tables in the CAVE annotation system
 }
 \examples{
 \dontrun{
-aedes_cave_query(table = "aedes_main", limit = 1)
+aedes_cave_query(table = "nuclei_v1_aedes", limit = 1)
 }
 }

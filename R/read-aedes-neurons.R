@@ -6,7 +6,7 @@
 #' Look up the soma position for one or more Aedes neurons
 #'
 #' Returns the recorded soma position (in nm) for each input root id, using
-#' FlyTable annotations and/or the FlyWire nucleus segmentation.
+#' FlyTable annotations and/or the Aedes nucleus segmentation.
 #'
 #' @param ids Root IDs or a FlyTable query string accepted by [aedes_ids()].
 #' @param method One of `"auto"`, `"flytable"`, `"nucleus"`, `"l2+mesh"`,
@@ -27,8 +27,8 @@
 #'   returned (unless `units = "raw"`).
 #' @param nuclei How to handle root ids with more than one *distinct-position*
 #'   nucleus in the nucleus segmentation. `"largest"` (the default) returns
-#'   one row per input id, picking the nucleus with the largest `volume` (or
-#'   the first row when no `volume` column is available). `"all"` returns
+#'   one row per input id, picking the nucleus with the largest `volume`.
+#'   `"all"` returns
 #'   every candidate row, so an ambiguous root id contributes more than one
 #'   row. Either way, bookkeeping duplicates (rows with identical position
 #'   for the same root id) are silently collapsed, and `n_nuclei` records how
@@ -52,7 +52,7 @@
 #'   root id, or `NA` when the soma came from elsewhere / was not found); and
 #'   `nucleus_id` (the `nuclei_v1_aedes` primary key, from FlyTable when
 #'   `source = "flytable"` or from the chosen nucleus row when
-#'   `source = "nucleus"`). L2-derived rows also include
+#'   `source = "nucleus"`); plus
 #'   `soma_score` (absolute, cross-neuron-comparable; squared Mahalanobis
 #'   distance of the chunk's shape features from the KC positive cloud, plus
 #'   a KDE-based penalty on signed neuropil distance --
@@ -60,7 +60,9 @@
 #'   `dist_npil_nm` (signed distance to the neuropil mesh, in nm; positive
 #'   inside, negative outside -- soma rows are in cortex so this is usually
 #'   negative), and `l2_id` (the selected L2 chunk).
-#'   These columns are `NA` for non-L2 sources. With `nuclei = "largest"`
+#'   When `mesh` is supplied these last three columns are filled for every
+#'   source (for FlyTable and nucleus rows they are computed at the recorded
+#'   soma point); otherwise they are `NA` except for L2-derived rows. With `nuclei = "largest"`
 #'   there is one row per input id in input order; with `nuclei = "all"` rows
 #'   are ordered by input id but ambiguous ids contribute multiple rows
 #'   (sorted by descending volume).
@@ -261,7 +263,7 @@ aedes_soma_position <- function(ids,
 #'   contain a \code{root_id} column).
 #' @param method One of \code{"auto"} (default), \code{"manual"},
 #'   \code{"position"}. See Details.
-#' @param threshold Absolute X displacement (nm) below which \code{position}
+#' @param threshold Distance from the midline (nm) below which \code{position}
 #'   reports a soma as midline (\code{"M"}). Default \code{0}. Ignored by
 #'   \code{manual}.
 #' @param mesh,chunksize,cl Forwarded to \code{\link{aedes_soma_position}}.
@@ -277,7 +279,7 @@ aedes_soma_position <- function(ids,
 #' @examples
 #' \dontrun{
 #' aedes_soma_side("class:DNa")
-#' aedes_soma_side("648518347465408914") # known L
+#' aedes_soma_side("648518347644413663") # known L
 #' aedes_soma_side("class:DNa", method = "position")
 #' }
 aedes_soma_side <- function(ids,
@@ -429,7 +431,7 @@ aedes_root_point <- function(x, point = NULL,
 #' @param reroot Whether to reroot the returned neurons.
 #' @param method Reroot strategy passed through to [aedes_soma_position()].
 #'   With `"auto"` (the default) each neuron is handled by the first source
-#'   that succeeds in the cascade: FlyTable `soma_xyz` → FlyWire nucleus →
+#'   that succeeds in the cascade: FlyTable `soma_xyz` → Aedes nucleus →
 #'   `"l2+mesh"` (a combined L2-attribute + neuropil signed-distance score
 #'   for any neuron that has no FlyTable or nucleus soma; only used if a
 #'   `mesh` is available). Restrict to a single value to disable the cascade.

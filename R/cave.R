@@ -9,7 +9,7 @@
 #'
 #' @examples
 #' \dontrun{
-#' aedes_cave_query(table = "aedes_main", limit = 1)
+#' aedes_cave_query(table = "nuclei_v1_aedes", limit = 1)
 #' }
 aedes_cave_query <- function(table,
                              datastack_name = NULL,

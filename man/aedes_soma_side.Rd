@@ -23,7 +23,7 @@ contain a \code{root_id} column).}
 \item{method}{One of \code{"auto"} (default), \code{"manual"},
 \code{"position"}. See Details.}
 
-\item{threshold}{Absolute X displacement (nm) below which \code{position}
+\item{threshold}{Distance from the midline (nm) below which \code{position}
 reports a soma as midline (\code{"M"}). Default \code{0}. Ignored by
 \code{manual}.}
 
@@ -61,7 +61,7 @@ for bilaterally symmetric / unpaired neurons annotated as such.}
 \examples{
 \dontrun{
 aedes_soma_side("class:DNa")
-aedes_soma_side("648518347465408914") # known L
+aedes_soma_side("648518347644413663") # known L
 aedes_soma_side("class:DNa", method = "position")
 }
 }

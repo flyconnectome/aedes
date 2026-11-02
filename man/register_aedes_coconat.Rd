@@ -22,7 +22,7 @@ how to handle this.
 \enumerate{
 \item use a specific numeric version (aka materialisation) of the segmentation.
 \item use the latest materialisation version (\code{version='latest'})
-\item map ids to the current time (\code{version='now'})
+\item map ids to the current time (\code{timestamp='now'})
 }
 
 Option 3 is the default (see \code{\link[=aedes_set_version]{aedes_set_version()}}). Option 2 can make
