@@ -42,10 +42,10 @@ intended for grouping partner neurons in connectivity clustering, e.g. with
 All returned ids are \code{serial_id} values, so they share one
 namespace:
 \itemize{
-\item typed neurons get the smallest \code{serial_id} among the rows in \code{x} with
-the same type (so type-derived ids depend on which rows are supplied).
-A trailing \verb{?} is removed before grouping, so e.g. \verb{KC4?} joins \code{KC4}.
-Types listed in \code{badtypes} are ignored.
+\item typed neurons get the smallest \code{serial_id} of any neuron in the
+\code{aedes_main} FlyTable with the same type, so the id does not depend on
+which rows are supplied. A trailing \verb{?} is removed before grouping, so
+e.g. \verb{KC4?} joins \code{KC4}. Types listed in \code{badtypes} are ignored.
 \item untyped neurons use their \code{group} column (itself the smallest
 \code{serial_id} of the group's founding members, see \code{\link[=aedes_set_group]{aedes_set_group()}}).
 A \code{group} of \code{0} is treated as ungrouped.
