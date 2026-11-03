@@ -99,10 +99,10 @@ tend to pull left/right homologues apart.</p></dd>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>All returned ids are <code>serial_id</code> values, so they share one
-namespace:</p><ul><li><p>typed neurons get the smallest <code>serial_id</code> among the rows in <code>x</code> with
-the same type (so type-derived ids depend on which rows are supplied).
-A trailing <code>?</code> is removed before grouping, so e.g. <code>KC4?</code> joins <code>KC4</code>.
-Types listed in <code>badtypes</code> are ignored.</p></li>
+namespace:</p><ul><li><p>typed neurons get the smallest <code>serial_id</code> of any neuron in the
+<code>aedes_main</code> FlyTable with the same type, so the id does not depend on
+which rows are supplied. A trailing <code>?</code> is removed before grouping, so
+e.g. <code>KC4?</code> joins <code>KC4</code>. Types listed in <code>badtypes</code> are ignored.</p></li>
 <li><p>untyped neurons use their <code>group</code> column (itself the smallest
 <code>serial_id</code> of the group's founding members, see <code><a href="aedes_set_group.html">aedes_set_group()</a></code>).
 A <code>group</code> of <code>0</code> is treated as ungrouped.</p></li>

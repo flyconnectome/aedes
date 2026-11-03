@@ -51,10 +51,10 @@ ungroupable neurons unless `singletons = TRUE`).
 
 All returned ids are `serial_id` values, so they share one namespace:
 
-- typed neurons get the smallest `serial_id` among the rows in `x` with
-  the same type (so type-derived ids depend on which rows are supplied).
-  A trailing `?` is removed before grouping, so e.g. `KC4?` joins `KC4`.
-  Types listed in `badtypes` are ignored.
+- typed neurons get the smallest `serial_id` of any neuron in the
+  `aedes_main` FlyTable with the same type, so the id does not depend on
+  which rows are supplied. A trailing `?` is removed before grouping, so
+  e.g. `KC4?` joins `KC4`. Types listed in `badtypes` are ignored.
 
 - untyped neurons use their `group` column (itself the smallest
   `serial_id` of the group's founding members, see
