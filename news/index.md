@@ -1,5 +1,163 @@
 # Changelog
 
+## aedes 0.5
+
+This version adds local synapse snapshots: a downloadable copy of the
+full synapse table that
+[`aedes_partner_summary()`](../reference/aedes_partner_summary.md) (and
+so coconatfly) can query much faster than CAVE, at the latest
+materialisation or any later time including now. See the new synapse
+snapshots vignette. Note also that the default `aedes.version` is now
+`"now"`, and that `aedes_set_group(group = 0)` no longer ungroups (use
+`group = NA`).
+
+- New [`aedes_synapse_data()`](../reference/aedes_synapse_data.md), a
+  lazy DuckDB table of all synapses in a local snapshot, optionally with
+  supervoxel, position and size details.
+  ([\#27](https://github.com/flyconnectome/aedes/issues/27))
+- [`aedes_partner_summary()`](../reference/aedes_partner_summary.md)
+  gains `method = c("auto", "cave", "local")`; `auto` answers from a
+  local snapshot when one is selected.
+  ([\#27](https://github.com/flyconnectome/aedes/issues/27))
+- Local partner queries work at any time after the snapshot, including
+  `timestamp = "now"`, by bringing snapshot rows forward with CAVE edit
+  history. Results match CAVE.
+  ([\#29](https://github.com/flyconnectome/aedes/issues/29))
+- New [`aedes_use_snapshot()`](../reference/aedes_use_snapshot.md),
+  [`aedes_update_snapshot()`](../reference/aedes_update_snapshot.md),
+  [`aedes_build_snapshot()`](../reference/aedes_build_snapshot.md) and
+  [`aedes_snapshot_root()`](../reference/aedes_snapshot_root.md) to
+  select, update, build and locate snapshots.
+  [`aedes_use_snapshot()`](../reference/aedes_use_snapshot.md) follows
+  `aedes.version` when no tag is given.
+  ([\#32](https://github.com/flyconnectome/aedes/issues/32),
+  [\#33](https://github.com/flyconnectome/aedes/issues/33))
+- New
+  [`aedes_download_snapshot()`](../reference/aedes_download_snapshot.md)
+  and
+  [`aedes_publish_snapshot()`](../reference/aedes_download_snapshot.md).
+  The download address is worked out from CAVE, so no URL is needed.
+  ([\#33](https://github.com/flyconnectome/aedes/issues/33),
+  [\#34](https://github.com/flyconnectome/aedes/issues/34))
+- Snapshots are stored as an append-only chain of checkpoints, kept up
+  to date by a server cron job (`inst/scripts/synsnap-cron.sh`) that
+  makes one checkpoint a day. New `aedes.duckdb_threads` option.
+  ([\#30](https://github.com/flyconnectome/aedes/issues/30),
+  [\#35](https://github.com/flyconnectome/aedes/issues/35),
+  [\#36](https://github.com/flyconnectome/aedes/issues/36))
+- New checkpoints are downloaded automatically, checking the server at
+  most every `aedes.snapshot_check_hours` hours (default 6).
+  ([\#36](https://github.com/flyconnectome/aedes/issues/36))
+- `aedes_synapse_data(timestamp=)` brings a snapshot forward to the
+  requested time in memory, without writing to disk.
+  ([\#36](https://github.com/flyconnectome/aedes/issues/36),
+  [\#38](https://github.com/flyconnectome/aedes/issues/38))
+- Smaller snapshot files: one root id file, zstd level 19 parquet and no
+  centroid columns (`static.parquet` 2.9 GB to 1.8 GB).
+  ([\#28](https://github.com/flyconnectome/aedes/issues/28),
+  [\#31](https://github.com/flyconnectome/aedes/issues/31))
+- Fixes for empty integer64 lookups on older bit64
+  ([\#39](https://github.com/flyconnectome/aedes/issues/39)) and
+  downloads of manifests listing only full snapshots
+  ([\#40](https://github.com/flyconnectome/aedes/issues/40)).
+- [`aedes_predict_group()`](../reference/aedes_predict_group.md) takes
+  the type-derived id from the whole `aedes_main` table, so a neuron’s
+  `pgroup` no longer depends on which other neurons are in the query.
+  ([\#45](https://github.com/flyconnectome/aedes/issues/45))
+- Documentation audit: corrected examples and descriptions, the synapse
+  snapshot docs, and a new Axis conventions section in
+  `aedes_neuropil_mesh` documenting the mirrored Aedes axes.
+  ([\#44](https://github.com/flyconnectome/aedes/issues/44))
+- `aedes_add_neurons(initials=)` sets the initials written to
+  `annotator`/`proofreader`, and `initials` is no longer a required
+  column (`aedes_main` has none).
+  ([\#43](https://github.com/flyconnectome/aedes/issues/43))
+- [`aedes_set_meta()`](../reference/aedes_set_meta.md),
+  [`aedes_set_group()`](../reference/aedes_set_group.md) and
+  [`aedes_add_neurons()`](../reference/aedes_add_neurons.md) never
+  update rows marked `duplicate`, `bad_nucleus` or `not_a_neuron`: a
+  neuron that also has a normal row is matched to that row, while one
+  with only such rows is skipped with a message (and not re-added).
+  These rows no longer count as group members either.
+  ([\#42](https://github.com/flyconnectome/aedes/issues/42))
+- `aedes_set_group(group = "<query>")` resolves the example neurons at
+  the same pinned timestamp as the rest of the call, so recently edited
+  examples are found.
+  ([\#42](https://github.com/flyconnectome/aedes/issues/42))
+- `aedes_add_neurons(soma=)` also accepts an
+  [`aedes_soma_position()`](../reference/aedes_soma_position.md) method
+  name, e.g. `soma = "nucleus"` to fill soma/nucleus only from the
+  nucleus table.
+  ([\#42](https://github.com/flyconnectome/aedes/issues/42))
+- New proofreading edit history vignette. Fixes wrong operation ids in
+  the edit cache for multi-chunk fetches (existing caches should be
+  rebuilt) and the last-edit search stopping at gaps in operation ids.
+  ([\#41](https://github.com/flyconnectome/aedes/issues/41))
+- `aedes.version` now defaults to `"now"` (set on load unless already
+  set), and CAVE partner queries follow it.
+  [`aedes_ids()`](../reference/aedes_meta.md) /
+  [`aedes_meta()`](../reference/aedes_meta.md) return FlyTable ids as is
+  unless `version`/`timestamp` is given.
+  ([\#37](https://github.com/flyconnectome/aedes/issues/37))
+- `cf_ids(aedes=)` reports explicit ids that are replaced by older roots
+  to match a version or timestamp.
+  ([\#37](https://github.com/flyconnectome/aedes/issues/37))
+- New [`aedes_predict_group()`](../reference/aedes_predict_group.md)
+  returns a group id per neuron (from type, then group, then NBLAST
+  cluster) for partner grouping in connectivity clustering.
+  ([\#22](https://github.com/flyconnectome/aedes/issues/22))
+- coconatfly metadata includes this as a `pgroup` column, so
+  `cf_cosine_plot(group = "pgroup")` works directly; new connectivity
+  clustering vignette comparing `group` and `pgroup`.
+  ([\#25](https://github.com/flyconnectome/aedes/issues/25))
+- [`aedes_predict_group()`](../reference/aedes_predict_group.md) uses
+  `nblast_group` clusters of the form `CNNNNN` or `NNNNN`.
+  ([\#25](https://github.com/flyconnectome/aedes/issues/25),
+  [\#26](https://github.com/flyconnectome/aedes/issues/26))
+- [`aedes_ids()`](../reference/aedes_meta.md) /
+  [`aedes_meta()`](../reference/aedes_meta.md) accept neuroglancer URLs
+  and comma-separated id strings. Requires `fafbseg (>= 0.15.19)`.
+  ([\#24](https://github.com/flyconnectome/aedes/issues/24))
+- `aedes_add_neurons(side=)` also accepts a character side value,
+  written directly instead of auto-filling.
+  ([\#23](https://github.com/flyconnectome/aedes/issues/23))
+- Valid superclasses in
+  [`aedes_add_neurons()`](../reference/aedes_add_neurons.md) examples
+  and error hints.
+  ([\#21](https://github.com/flyconnectome/aedes/issues/21))
+- Group ids: `NA` is the ungrouped sentinel. **Breaking**:
+  `aedes_set_group(group = 0)` is now an error; use `group = NA`. Root
+  ids are rejected as group ids by
+  [`aedes_set_group()`](../reference/aedes_set_group.md) and
+  [`aedes_add_neurons()`](../reference/aedes_add_neurons.md), and
+  ungrouped neurons no longer read back as group `0`.
+  ([\#20](https://github.com/flyconnectome/aedes/issues/20))
+- coconatfly adapter
+  ([`cf_meta()`](https://natverse.org/coconatfly/reference/cf_meta.html)/[`cf_partners()`](https://natverse.org/coconatfly/reference/cf_partners.html)):
+  ungrouped neurons now reach coconatfly as an `integer64` `NA` group,
+  so `cf_cosine_plot(group="group")` drops them instead of collapsing
+  every ungrouped partner into one spurious shared feature column.
+  ([\#19](https://github.com/flyconnectome/aedes/issues/19))
+- [`aedes_add_neurons()`](../reference/aedes_add_neurons.md) writes
+  `root_id` and `supervoxel_id` for new rows, so re-adding a neuron
+  updates its row rather than creating a duplicate.
+  ([\#18](https://github.com/flyconnectome/aedes/issues/18))
+- [`aedes_add_neurons()`](../reference/aedes_add_neurons.md) gains a
+  `group` argument: `TRUE` groups the new neurons after insertion, or
+  give an explicit group id.
+  ([\#18](https://github.com/flyconnectome/aedes/issues/18))
+
+Committed directly to `main`:
+
+- `cf_ids(aedes=)` ignores leading/trailing commas in id lists.
+  (bade4c7)
+- Drop unused igraph from Imports. (a700e27)
+- Synapse snapshot vignette polishing and pkgdown image fix (8c3fad7,
+  f7006d6).
+
+**Full diff**:
+<https://github.com/flyconnectome/aedes/compare/v0.4...v0.5>
+
 ## aedes 0.4
 
 This version includes substantial improvements to the functions for
@@ -9,30 +167,6 @@ should now provide an efficient approach to add newrows including
 automatic definition of key points on the neuron, soma location, side of
 brain etc.
 
-- coconatfly adapter
-  ([`cf_meta()`](https://natverse.org/coconatfly/reference/cf_meta.html)/[`cf_partners()`](https://natverse.org/coconatfly/reference/cf_partners.html)):
-  ungrouped neurons now reach coconatfly as an `integer64` `NA` group,
-  so `cf_cosine_plot(group="group")` drops them instead of collapsing
-  every ungrouped partner into one spurious shared feature column. (An
-  `NA` group already came out of
-  [`aedes_meta()`](../reference/aedes_meta.md), but coconatfly re-runs
-  [`fafbseg::flywire_ids()`](https://rdrr.io/pkg/fafbseg/man/flywire_ids.html)
-  on the group column, which preserves an `integer64` `NA` yet maps a
-  numeric/character `NA` to `"0"`.)
-- [`aedes_set_meta()`](../reference/aedes_set_meta.md),
-  [`aedes_set_group()`](../reference/aedes_set_group.md) and
-  [`aedes_add_neurons()`](../reference/aedes_add_neurons.md) never
-  update rows marked `duplicate`, `bad_nucleus` or `not_a_neuron`: a
-  neuron that also has a normal row is matched to that row, while one
-  with only such rows is skipped with a message (and not re-added).
-  These rows no longer count as group members either.
-- `aedes_set_group(group = "<query>")` resolves the example neurons at
-  the same pinned timestamp as the rest of the call, so recently edited
-  examples are found.
-- `aedes_add_neurons(soma=)` also accepts an
-  [`aedes_soma_position()`](../reference/aedes_soma_position.md) method
-  name, e.g. `soma = "nucleus"` to fill soma/nucleus only from the
-  nucleus table.
 - New [`aedes_set_meta()`](../reference/aedes_set_meta.md) bulk-updates
   existing flytable rows.
   ([\#10](https://github.com/flyconnectome/aedes/issues/10))

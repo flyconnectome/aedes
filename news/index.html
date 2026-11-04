@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">aedes</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,16 +40,62 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5" id="aedes-05">aedes 0.5<a class="anchor" aria-label="anchor" href="#aedes-05"></a></h2>
+<p>This version adds local synapse snapshots: a downloadable copy of the full synapse table that <code><a href="../reference/aedes_partner_summary.html">aedes_partner_summary()</a></code> (and so coconatfly) can query much faster than CAVE, at the latest materialisation or any later time including now. See the new synapse snapshots vignette. Note also that the default <code>aedes.version</code> is now <code>"now"</code>, and that <code>aedes_set_group(group = 0)</code> no longer ungroups (use <code>group = NA</code>).</p>
+<ul><li>New <code><a href="../reference/aedes_synapse_data.html">aedes_synapse_data()</a></code>, a lazy DuckDB table of all synapses in a local snapshot, optionally with supervoxel, position and size details. (<a href="https://github.com/flyconnectome/aedes/issues/27" class="external-link">#27</a>)</li>
+<li>
+<code><a href="../reference/aedes_partner_summary.html">aedes_partner_summary()</a></code> gains <code>method = c("auto", "cave", "local")</code>; <code>auto</code> answers from a local snapshot when one is selected. (<a href="https://github.com/flyconnectome/aedes/issues/27" class="external-link">#27</a>)</li>
+<li>Local partner queries work at any time after the snapshot, including <code>timestamp = "now"</code>, by bringing snapshot rows forward with CAVE edit history. Results match CAVE. (<a href="https://github.com/flyconnectome/aedes/issues/29" class="external-link">#29</a>)</li>
+<li>New <code><a href="../reference/aedes_use_snapshot.html">aedes_use_snapshot()</a></code>, <code><a href="../reference/aedes_update_snapshot.html">aedes_update_snapshot()</a></code>, <code><a href="../reference/aedes_build_snapshot.html">aedes_build_snapshot()</a></code> and <code><a href="../reference/aedes_snapshot_root.html">aedes_snapshot_root()</a></code> to select, update, build and locate snapshots. <code><a href="../reference/aedes_use_snapshot.html">aedes_use_snapshot()</a></code> follows <code>aedes.version</code> when no tag is given. (<a href="https://github.com/flyconnectome/aedes/issues/32" class="external-link">#32</a>, <a href="https://github.com/flyconnectome/aedes/issues/33" class="external-link">#33</a>)</li>
+<li>New <code><a href="../reference/aedes_download_snapshot.html">aedes_download_snapshot()</a></code> and <code><a href="../reference/aedes_download_snapshot.html">aedes_publish_snapshot()</a></code>. The download address is worked out from CAVE, so no URL is needed. (<a href="https://github.com/flyconnectome/aedes/issues/33" class="external-link">#33</a>, <a href="https://github.com/flyconnectome/aedes/issues/34" class="external-link">#34</a>)</li>
+<li>Snapshots are stored as an append-only chain of checkpoints, kept up to date by a server cron job (<code>inst/scripts/synsnap-cron.sh</code>) that makes one checkpoint a day. New <code>aedes.duckdb_threads</code> option. (<a href="https://github.com/flyconnectome/aedes/issues/30" class="external-link">#30</a>, <a href="https://github.com/flyconnectome/aedes/issues/35" class="external-link">#35</a>, <a href="https://github.com/flyconnectome/aedes/issues/36" class="external-link">#36</a>)</li>
+<li>New checkpoints are downloaded automatically, checking the server at most every <code>aedes.snapshot_check_hours</code> hours (default 6). (<a href="https://github.com/flyconnectome/aedes/issues/36" class="external-link">#36</a>)</li>
+<li>
+<code>aedes_synapse_data(timestamp=)</code> brings a snapshot forward to the requested time in memory, without writing to disk. (<a href="https://github.com/flyconnectome/aedes/issues/36" class="external-link">#36</a>, <a href="https://github.com/flyconnectome/aedes/issues/38" class="external-link">#38</a>)</li>
+<li>Smaller snapshot files: one root id file, zstd level 19 parquet and no centroid columns (<code>static.parquet</code> 2.9 GB to 1.8 GB). (<a href="https://github.com/flyconnectome/aedes/issues/28" class="external-link">#28</a>, <a href="https://github.com/flyconnectome/aedes/issues/31" class="external-link">#31</a>)</li>
+<li>Fixes for empty integer64 lookups on older bit64 (<a href="https://github.com/flyconnectome/aedes/issues/39" class="external-link">#39</a>) and downloads of manifests listing only full snapshots (<a href="https://github.com/flyconnectome/aedes/issues/40" class="external-link">#40</a>).</li>
+<li>
+<code><a href="../reference/aedes_predict_group.html">aedes_predict_group()</a></code> takes the type-derived id from the whole <code>aedes_main</code> table, so a neuron’s <code>pgroup</code> no longer depends on which other neurons are in the query. (<a href="https://github.com/flyconnectome/aedes/issues/45" class="external-link">#45</a>)</li>
+<li>Documentation audit: corrected examples and descriptions, the synapse snapshot docs, and a new Axis conventions section in <code>aedes_neuropil_mesh</code> documenting the mirrored Aedes axes. (<a href="https://github.com/flyconnectome/aedes/issues/44" class="external-link">#44</a>)</li>
+<li>
+<code>aedes_add_neurons(initials=)</code> sets the initials written to <code>annotator</code>/<code>proofreader</code>, and <code>initials</code> is no longer a required column (<code>aedes_main</code> has none). (<a href="https://github.com/flyconnectome/aedes/issues/43" class="external-link">#43</a>)</li>
+<li>
+<code><a href="../reference/aedes_set_meta.html">aedes_set_meta()</a></code>, <code><a href="../reference/aedes_set_group.html">aedes_set_group()</a></code> and <code><a href="../reference/aedes_add_neurons.html">aedes_add_neurons()</a></code> never update rows marked <code>duplicate</code>, <code>bad_nucleus</code> or <code>not_a_neuron</code>: a neuron that also has a normal row is matched to that row, while one with only such rows is skipped with a message (and not re-added). These rows no longer count as group members either. (<a href="https://github.com/flyconnectome/aedes/issues/42" class="external-link">#42</a>)</li>
+<li>
+<code>aedes_set_group(group = "&lt;query&gt;")</code> resolves the example neurons at the same pinned timestamp as the rest of the call, so recently edited examples are found. (<a href="https://github.com/flyconnectome/aedes/issues/42" class="external-link">#42</a>)</li>
+<li>
+<code>aedes_add_neurons(soma=)</code> also accepts an <code><a href="../reference/aedes_soma_position.html">aedes_soma_position()</a></code> method name, e.g. <code>soma = "nucleus"</code> to fill soma/nucleus only from the nucleus table. (<a href="https://github.com/flyconnectome/aedes/issues/42" class="external-link">#42</a>)</li>
+<li>New proofreading edit history vignette. Fixes wrong operation ids in the edit cache for multi-chunk fetches (existing caches should be rebuilt) and the last-edit search stopping at gaps in operation ids. (<a href="https://github.com/flyconnectome/aedes/issues/41" class="external-link">#41</a>)</li>
+<li>
+<code>aedes.version</code> now defaults to <code>"now"</code> (set on load unless already set), and CAVE partner queries follow it. <code><a href="../reference/aedes_meta.html">aedes_ids()</a></code> / <code><a href="../reference/aedes_meta.html">aedes_meta()</a></code> return FlyTable ids as is unless <code>version</code>/<code>timestamp</code> is given. (<a href="https://github.com/flyconnectome/aedes/issues/37" class="external-link">#37</a>)</li>
+<li>
+<code>cf_ids(aedes=)</code> reports explicit ids that are replaced by older roots to match a version or timestamp. (<a href="https://github.com/flyconnectome/aedes/issues/37" class="external-link">#37</a>)</li>
+<li>New <code><a href="../reference/aedes_predict_group.html">aedes_predict_group()</a></code> returns a group id per neuron (from type, then group, then NBLAST cluster) for partner grouping in connectivity clustering. (<a href="https://github.com/flyconnectome/aedes/issues/22" class="external-link">#22</a>)</li>
+<li>coconatfly metadata includes this as a <code>pgroup</code> column, so <code>cf_cosine_plot(group = "pgroup")</code> works directly; new connectivity clustering vignette comparing <code>group</code> and <code>pgroup</code>. (<a href="https://github.com/flyconnectome/aedes/issues/25" class="external-link">#25</a>)</li>
+<li>
+<code><a href="../reference/aedes_predict_group.html">aedes_predict_group()</a></code> uses <code>nblast_group</code> clusters of the form <code>CNNNNN</code> or <code>NNNNN</code>. (<a href="https://github.com/flyconnectome/aedes/issues/25" class="external-link">#25</a>, <a href="https://github.com/flyconnectome/aedes/issues/26" class="external-link">#26</a>)</li>
+<li>
+<code><a href="../reference/aedes_meta.html">aedes_ids()</a></code> / <code><a href="../reference/aedes_meta.html">aedes_meta()</a></code> accept neuroglancer URLs and comma-separated id strings. Requires <code>fafbseg (&gt;= 0.15.19)</code>. (<a href="https://github.com/flyconnectome/aedes/issues/24" class="external-link">#24</a>)</li>
+<li>
+<code>aedes_add_neurons(side=)</code> also accepts a character side value, written directly instead of auto-filling. (<a href="https://github.com/flyconnectome/aedes/issues/23" class="external-link">#23</a>)</li>
+<li>Valid superclasses in <code><a href="../reference/aedes_add_neurons.html">aedes_add_neurons()</a></code> examples and error hints. (<a href="https://github.com/flyconnectome/aedes/issues/21" class="external-link">#21</a>)</li>
+<li>Group ids: <code>NA</code> is the ungrouped sentinel. <strong>Breaking</strong>: <code>aedes_set_group(group = 0)</code> is now an error; use <code>group = NA</code>. Root ids are rejected as group ids by <code><a href="../reference/aedes_set_group.html">aedes_set_group()</a></code> and <code><a href="../reference/aedes_add_neurons.html">aedes_add_neurons()</a></code>, and ungrouped neurons no longer read back as group <code>0</code>. (<a href="https://github.com/flyconnectome/aedes/issues/20" class="external-link">#20</a>)</li>
+<li>coconatfly adapter (<code><a href="https://natverse.org/coconatfly/reference/cf_meta.html" class="external-link">cf_meta()</a></code>/<code><a href="https://natverse.org/coconatfly/reference/cf_partners.html" class="external-link">cf_partners()</a></code>): ungrouped neurons now reach coconatfly as an <code>integer64</code> <code>NA</code> group, so <code>cf_cosine_plot(group="group")</code> drops them instead of collapsing every ungrouped partner into one spurious shared feature column. (<a href="https://github.com/flyconnectome/aedes/issues/19" class="external-link">#19</a>)</li>
+<li>
+<code><a href="../reference/aedes_add_neurons.html">aedes_add_neurons()</a></code> writes <code>root_id</code> and <code>supervoxel_id</code> for new rows, so re-adding a neuron updates its row rather than creating a duplicate. (<a href="https://github.com/flyconnectome/aedes/issues/18" class="external-link">#18</a>)</li>
+<li>
+<code><a href="../reference/aedes_add_neurons.html">aedes_add_neurons()</a></code> gains a <code>group</code> argument: <code>TRUE</code> groups the new neurons after insertion, or give an explicit group id. (<a href="https://github.com/flyconnectome/aedes/issues/18" class="external-link">#18</a>)</li>
+</ul><p>Committed directly to <code>main</code>:</p>
+<ul><li>
+<code>cf_ids(aedes=)</code> ignores leading/trailing commas in id lists. (bade4c7)</li>
+<li>Drop unused igraph from Imports. (a700e27)</li>
+<li>Synapse snapshot vignette polishing and pkgdown image fix (8c3fad7, f7006d6).</li>
+</ul><p><strong>Full diff</strong>: <a href="https://github.com/flyconnectome/aedes/compare/v0.4...v0.5" class="external-link uri">https://github.com/flyconnectome/aedes/compare/v0.4...v0.5</a></p>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.4" id="aedes-04">aedes 0.4<a class="anchor" aria-label="anchor" href="#aedes-04"></a></h2>
 <p>This version includes substantial improvements to the functions for handling flytable metadata (especially <code><a href="../reference/aedes_add_neurons.html">aedes_add_neurons()</a></code>), which should now provide an efficient approach to add newrows including automatic definition of key points on the neuron, soma location, side of brain etc.</p>
-<ul><li>coconatfly adapter (<code><a href="https://natverse.org/coconatfly/reference/cf_meta.html" class="external-link">cf_meta()</a></code>/<code><a href="https://natverse.org/coconatfly/reference/cf_partners.html" class="external-link">cf_partners()</a></code>): ungrouped neurons now reach coconatfly as an <code>integer64</code> <code>NA</code> group, so <code>cf_cosine_plot(group="group")</code> drops them instead of collapsing every ungrouped partner into one spurious shared feature column. (An <code>NA</code> group already came out of <code><a href="../reference/aedes_meta.html">aedes_meta()</a></code>, but coconatfly re-runs <code><a href="https://rdrr.io/pkg/fafbseg/man/flywire_ids.html" class="external-link">fafbseg::flywire_ids()</a></code> on the group column, which preserves an <code>integer64</code> <code>NA</code> yet maps a numeric/character <code>NA</code> to <code>"0"</code>.)</li>
-<li>
-<code><a href="../reference/aedes_set_meta.html">aedes_set_meta()</a></code>, <code><a href="../reference/aedes_set_group.html">aedes_set_group()</a></code> and <code><a href="../reference/aedes_add_neurons.html">aedes_add_neurons()</a></code> never update rows marked <code>duplicate</code>, <code>bad_nucleus</code> or <code>not_a_neuron</code>: a neuron that also has a normal row is matched to that row, while one with only such rows is skipped with a message (and not re-added). These rows no longer count as group members either.</li>
-<li>
-<code>aedes_set_group(group = "&lt;query&gt;")</code> resolves the example neurons at the same pinned timestamp as the rest of the call, so recently edited examples are found.</li>
-<li>
-<code>aedes_add_neurons(soma=)</code> also accepts an <code><a href="../reference/aedes_soma_position.html">aedes_soma_position()</a></code> method name, e.g. <code>soma = "nucleus"</code> to fill soma/nucleus only from the nucleus table.</li>
-<li>New <code><a href="../reference/aedes_set_meta.html">aedes_set_meta()</a></code> bulk-updates existing flytable rows. (<a href="https://github.com/flyconnectome/aedes/issues/10" class="external-link">#10</a>)</li>
+<ul><li>New <code><a href="../reference/aedes_set_meta.html">aedes_set_meta()</a></code> bulk-updates existing flytable rows. (<a href="https://github.com/flyconnectome/aedes/issues/10" class="external-link">#10</a>)</li>
 <li>New <code><a href="../reference/aedes_set_group.html">aedes_set_group()</a></code> sets group to lowest serial_id (but maintains selected serial number if joining an existing group in the table). (<a href="https://github.com/flyconnectome/aedes/issues/10" class="external-link">#10</a>)</li>
 <li>
 <code><a href="../reference/aedes_add_neurons.html">aedes_add_neurons()</a></code> enrichment: auto-fill <code>soma_xyz</code>/<code>nucleus_id</code>/<code>side</code>/<code>point_xyz</code> and require <code>superclass</code>/<code>status</code>/<code>initials</code> on new rows; also adds annotator/proofreader multi-select handling. (<a href="https://github.com/flyconnectome/aedes/issues/10" class="external-link">#10</a>)</li>
