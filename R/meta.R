@@ -82,7 +82,14 @@ aedes_meta <- function(ids = NULL, ignore.case = FALSE, fixed = FALSE, version =
 #'
 #' @details The package sets `"now"` when it loads, unless the `aedes.version`
 #'   option is already set (e.g. in your `.Rprofile`).
-#' @param which One of `"now"` or `"latest"` (or explicit selector).
+#'
+#'   `"now"` is the time of the outermost call to an aedes, coconat or
+#'   coconatfly function, so that all the steps of e.g.
+#'   `cf_cosine_plot(cf_ids(aedes = "/type:MBON.+"))` see the same time. To use
+#'   one time across several calls, set a fixed time, e.g.
+#'   `aedes_set_version(Sys.time())`.
+#' @param which One of `"now"` or `"latest"`, or a materialisation version
+#'   (number) or timestamp (`POSIXct`).
 #' @export
 aedes_set_version <- function(which = c("now", "latest")) {
   if (is.character(which) && length(which) > 1)
@@ -107,16 +114,33 @@ aedes_get_version <- function(which = getOption("aedes.version", default = "now"
   } else if (is.null(timestamp) && length(which) >= 1) {
     if (is.character(which) && length(which) > 1)
       which = match.arg(which, c("now", "latest"))
-    if (which == "latest" || is.numeric(which))
+    if (identical(which, "latest") || is.numeric(which))
       version = which
     else
       timestamp = which
   }
+  if (identical(timestamp, "now"))
+    timestamp = aedes_now()
   with_aedes(list(
     # TODO: use exported fafbseg::flywire_version when available
     version = fafbseg:::flywire_version(version = version),
     timestamp = fafbseg::flywire_timestamp(timestamp = timestamp)
   ))
+}
+
+# The time for "now": one for each outermost call to an aedes, coconat or
+# coconatfly function, so the steps of e.g. cf_cosine_plot(cf_ids(...)) agree.
+# It is kept in the frame of that call, so goes when the call returns.
+aedes_now <- function() {
+  for (i in seq_len(sys.nframe())) {
+    e = environment(sys.function(i))
+    if (!is.null(e) &&
+        environmentName(topenv(e)) %in% c("aedes", "coconat", "coconatfly")) {
+      fr = sys.frame(i)
+      return(fr$.aedes_now %||% (fr$.aedes_now <- Sys.time()))
+    }
+  }
+  Sys.time()
 }
 
 #' @rdname aedes_meta
