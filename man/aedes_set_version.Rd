@@ -7,7 +7,8 @@
 aedes_set_version(which = c("now", "latest"))
 }
 \arguments{
-\item{which}{One of \code{"now"} or \code{"latest"} (or explicit selector).}
+\item{which}{One of \code{"now"} or \code{"latest"}, or a materialisation version
+(number) or timestamp (\code{POSIXct}).}
 }
 \description{
 Set default version selection for Aedes helpers
@@ -15,4 +16,10 @@ Set default version selection for Aedes helpers
 \details{
 The package sets \code{"now"} when it loads, unless the \code{aedes.version}
 option is already set (e.g. in your \code{.Rprofile}).
+
+\code{"now"} is the time of the outermost call to an aedes, coconat or
+coconatfly function, so that all the steps of e.g.
+\code{cf_cosine_plot(cf_ids(aedes = "/type:MBON.+"))} see the same time. To use
+one time across several calls, set a fixed time, e.g.
+\code{aedes_set_version(Sys.time())}.
 }

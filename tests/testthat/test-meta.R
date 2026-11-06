@@ -156,3 +156,33 @@ test_that("aedes_set_meta skips ids whose only rows are unusable", {
     "Skipping 1 id")
   expect_equal(nrow(res), 0L)
 })
+
+# functions defined here count as aedes functions for aedes_now()
+aenv <- new.env(parent = asNamespace("aedes"))
+local(envir = aenv, {
+  inner <- function() {
+    Sys.sleep(0.01)
+    aedes_now()
+  }
+  outer <- function(x) c(inner(), x, inner())
+  versions <- function() list(aedes_get_version()$timestamp,
+                              aedes_get_version()$timestamp)
+})
+
+test_that("'now' is one time for each outermost aedes call", {
+  # including a lazy argument forced inside the outer call
+  res <- aenv$outer(aenv$inner())
+  expect_length(unique(res), 1L)
+  expect_gt(as.numeric(aenv$outer(1)[1]), as.numeric(res[1]))
+})
+
+test_that("aedes_get_version resolves 'now' once per call and accepts times", {
+  withr::local_options(aedes.version = "now")
+  res <- try(aenv$versions(), silent = TRUE)
+  skip_if(inherits(res, "try-error"), "Skipping: unable to choose aedes segmentation")
+  expect_identical(res[[1]], res[[2]])
+  t0 <- as.POSIXct("2026-10-01 12:00:00", tz = "UTC")
+  withr::local_options(aedes.version = t0)
+  expect_equal(aedes_get_version()$timestamp, t0)
+  expect_null(aedes_get_version()$version)
+})
