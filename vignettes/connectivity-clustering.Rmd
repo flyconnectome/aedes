@@ -161,6 +161,100 @@ x$pgroup2 <- aedes_predict_group(x, badtypes = c(NA, "", "undefined"))
 cf_cosine_plot(x, group = "pgroup2", labRow = "{side}_{serial_id}")
 ```
 
+## Advanced: splitting ipsilateral and contralateral connectivity
+
+Grouping partners by `pgroup` ignores which side of the brain they are on, so
+a neuron that contacts the left-side members of a partner group looks the same
+as one that contacts the right-side members. We do not normally want to
+separate partners by side (after all, this is precisely how connectivity
+clustering can identify left-right homologues), but for bilateral neurons it
+may be useful to distinguish ipsilateral from contralateral connectivity. This
+could be important e.g. for bilateral inhibitory neurons involved in steering.
+
+To keep the side information, we can give each partner group two labels,
+depending on whether the partner is on the same side of the brain as the query
+neuron (`NNNNNi`, ipsilateral) or on the opposite side (`NNNNNc`,
+contralateral).
+
+As an example we use the 19 lateral horn local neurons (class `LHLN`) in
+groups 30221 (16 bilateral, subclass `BR`) and 30225 (3 unilateral, subclass
+`IR`). These were originally annotated as two groups but do not split cleanly
+along those lines. Connections among the query neurons themselves can
+dominate the comparison when they are heavily interconnected, as these are, so
+we drop those first.
+
+```{r ipsi-contra, eval=live}
+ids_lh <- cf_ids(aedes = "group:30221|30225")
+x_lh <- multi_connection_table(ids_lh, threshold = 5, group = FALSE)
+
+qkeys <- keys(ids_lh)
+qside <- cf_meta(ids_lh) %>% select(query_key = key, query_side = side)
+
+x_lr <- x_lh %>%
+  # drop connections among the query neurons
+  filter(!(pre_key %in% qkeys & post_key %in% qkeys)) %>%
+  # the query neuron is postsynaptic for inputs, presynaptic for outputs
+  mutate(query_key = if_else(partners == "inputs", post_key, pre_key)) %>%
+  left_join(qside, by = "query_key") %>%
+  mutate(
+    lat = case_when(!side %in% c("L", "R") | !query_side %in% c("L", "R") ~ NA,
+                    side == query_side ~ "i",
+                    .default = "c"),
+    # keep NA so that unlabelled partners are dropped, not pooled
+    pgroup_lr = if_else(is.na(pgroup) | is.na(lat), NA, paste0(pgroup, lat)))
+x_lr
+```
+
+`multi_connection_table(group = FALSE)` returns one row per connection between
+a query neuron and a partner, with the partner's metadata (including `side` and
+`pgroup`). The `partners` column says whether the partner is an input or an
+output, and therefore whether the query neuron is in `post_key` or `pre_key`;
+we use that to look up the query neuron's soma side. Comparing the two sides
+gives an `i` or `c` suffix for the partner's `pgroup`, so each partner group
+becomes two separate features.
+
+Partners with no `pgroup` or no L/R side must stay `NA`, so that they are
+dropped like any other unlabelled partner. Pasting a suffix onto `NA` would
+make a string such as `"NAc"`, merging every unlabelled partner into one fake
+shared group that inflates similarity.
+
+We then cluster on the new column, labelling each neuron with its curated
+group so we can see how the two groups mix:
+
+```{r cluster-ipsi-contra, eval=live}
+cf_cosine_plot(x_lr, group = "pgroup_lr",
+               labRow = "{group}_{side}_{serial_id}")
+```
+
+```{r cluster-ipsi-contra-saved, eval=!live, echo=FALSE, out.width="80%"}
+knitr::include_graphics("figures/cosine-lhln-pgroup-lr.png")
+```
+
+Note that "side" means soma side. For bilateral neurons, an `i` partner shares
+the query neuron's soma side; that says nothing about where on the query
+neuron the synapse is. It is worth checking how much of the
+connectivity the split actually affects:
+
+```{r lr-weight, eval=live}
+lr_wt <- x_lr %>%
+  filter(!is.na(pgroup_lr)) %>%
+  count(partners, lat, wt = weight) %>%
+  as.data.frame()
+lr_wt
+```
+
+```{r lr-weight-saved, eval=!live, echo=FALSE}
+# saved results from November 2026
+lr_wt <- data.frame(partners = rep(c("inputs", "outputs"), each = 2),
+                    lat = c("c", "i", "c", "i"), n = c(21, 1319, 256, 866))
+lr_wt
+```
+
+At the time of writing (November 2026) only
+`r sum(lr_wt$n[lr_wt$lat == "c"])` of the `r sum(lr_wt$n)` synapses with
+labelled partners were contralateral, almost all of them outputs, so the
+split changes the clustering only modestly here.
+
 ## Rerunning this vignette
 
 The results above depend on the live FlyTable annotations and CAVE
@@ -183,7 +277,8 @@ connectivity, so they will change as proofreading and annotation progress.
   `vignette("connectivity-clustering")` from an installed package) the saved
   figures in `vignettes/figures/` are shown. To refresh them, also set
   `AEDES_SAVE_VIGNETTE_FIGURES=true` when rendering locally, then update the
-  saved coverage table and the "at the time of writing" text to match.
+  saved coverage and weight tables and the "at the time of writing" text to
+  match.
 
 ```{r save-figures, include=FALSE, eval=live && identical(Sys.getenv("AEDES_SAVE_VIGNETTE_FIGURES"), "true")}
 for (g in c("group", "pgroup")) {
@@ -193,4 +288,10 @@ for (g in c("group", "pgroup")) {
                  labCol = NA, margins = c(1, 7))
   dev.off()
 }
+png(file.path("figures", "cosine-lhln-pgroup-lr.png"),
+    width = 560, height = 500, res = 100)
+cf_cosine_plot(x_lr, group = "pgroup_lr",
+               labRow = "{group}_{side}_{serial_id}",
+               labCol = NA, margins = c(1, 9))
+dev.off()
 ```
