@@ -164,7 +164,7 @@ of the input partners are not yet in FlyTable at all.</p>
 <span><span class="co">#&gt; "pre_key", : Dropping: 1092/1715 neurons representing 11475/29629 synapses due</span></span>
 <span><span class="co">#&gt; to missing ids!</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =</span></span>
-<span><span class="co">#&gt; groupcol, : Dropping: 4259/4477 neurons representing 49906/59474 synapses due</span></span>
+<span><span class="co">#&gt; groupcol, : Dropping: 4259/4477 neurons representing 49907/59475 synapses due</span></span>
 <span><span class="co">#&gt; to missing ids!</span></span></code></pre></div>
 <p><img src="connectivity-clustering_files/figure-html/cluster-group-1.png" class="r-plt" alt="" width="700"></p>
 </div>
@@ -177,7 +177,7 @@ of the input partners are not yet in FlyTable at all.</p>
 <span><span class="co">#&gt; "pre_key", : Dropping: 1078/1715 neurons representing 11240/29629 synapses due</span></span>
 <span><span class="co">#&gt; to missing ids!</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =</span></span>
-<span><span class="co">#&gt; groupcol, : Dropping: 4256/4477 neurons representing 49876/59474 synapses due</span></span>
+<span><span class="co">#&gt; groupcol, : Dropping: 4256/4477 neurons representing 49877/59475 synapses due</span></span>
 <span><span class="co">#&gt; to missing ids!</span></span></code></pre></div>
 <p><img src="connectivity-clustering_files/figure-html/cluster-pgroup-1.png" class="r-plt" alt="" width="700"></p>
 <p>At the time of writing (September 2026) both groupings split the 12
@@ -229,9 +229,118 @@ consistent where it matters.</p>
 <span><span class="co">#&gt; "pre_key", : Dropping: 1078/1715 neurons representing 11240/29629 synapses due</span></span>
 <span><span class="co">#&gt; to missing ids!</span></span>
 <span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =</span></span>
-<span><span class="co">#&gt; groupcol, : Dropping: 4256/4477 neurons representing 49876/59474 synapses due</span></span>
+<span><span class="co">#&gt; groupcol, : Dropping: 4256/4477 neurons representing 49877/59475 synapses due</span></span>
 <span><span class="co">#&gt; to missing ids!</span></span></code></pre></div>
 <p><img src="connectivity-clustering_files/figure-html/custom-1.png" class="r-plt" alt="" width="700"></p>
+</div>
+<div class="section level2">
+<h2 id="advanced-splitting-ipsilateral-and-contralateral-connectivity">Advanced: splitting ipsilateral and contralateral connectivity<a class="anchor" aria-label="anchor" href="#advanced-splitting-ipsilateral-and-contralateral-connectivity"></a>
+</h2>
+<p>Grouping partners by <code>pgroup</code> ignores which side of the
+brain they are on, so a neuron that contacts the left-side members of a
+partner group looks the same as one that contacts the right-side
+members. We do not normally want to separate partners by side (after
+all, this is precisely how connectivity clustering can identify
+left-right homologues), but for bilateral neurons it may be useful to
+distinguish ipsilateral from contralateral connectivity. This could be
+important e.g. for bilateral inhibitory neurons involved in
+steering.</p>
+<p>To keep the side information, we can give each partner group two
+labels, depending on whether the partner is on the same side of the
+brain as the query neuron (<code>NNNNNi</code>, ipsilateral) or on the
+opposite side (<code>NNNNNc</code>, contralateral).</p>
+<p>As an example we use the 19 lateral horn local neurons (class
+<code>LHLN</code>) in groups 30221 (16 bilateral, subclass
+<code>BR</code>) and 30225 (3 unilateral, subclass <code>IR</code>).
+These were originally annotated as two groups but do not split cleanly
+along those lines. Connections among the query neurons themselves can
+dominate the comparison when they are heavily interconnected, as these
+are, so we drop those first.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ids_lh</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_ids.html" class="external-link">cf_ids</a></span><span class="op">(</span>aedes <span class="op">=</span> <span class="st">"group:30221|30225"</span><span class="op">)</span></span>
+<span><span class="va">x_lh</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">multi_connection_table</a></span><span class="op">(</span><span class="va">ids_lh</span>, threshold <span class="op">=</span> <span class="fl">5</span>, group <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">qkeys</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://natverse.org/coconatfly/reference/keys.html" class="external-link">keys</a></span><span class="op">(</span><span class="va">ids_lh</span><span class="op">)</span></span>
+<span><span class="va">qside</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_meta.html" class="external-link">cf_meta</a></span><span class="op">(</span><span class="va">ids_lh</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span>query_key <span class="op">=</span> <span class="va">key</span>, query_side <span class="op">=</span> <span class="va">side</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">x_lr</span> <span class="op">&lt;-</span> <span class="va">x_lh</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="co"># drop connections among the query neurons</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="op">!</span><span class="op">(</span><span class="va">pre_key</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">qkeys</span> <span class="op">&amp;</span> <span class="va">post_key</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">qkeys</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="co"># the query neuron is postsynaptic for inputs, presynaptic for outputs</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>query_key <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/if_else.html" class="external-link">if_else</a></span><span class="op">(</span><span class="va">partners</span> <span class="op">==</span> <span class="st">"inputs"</span>, <span class="va">post_key</span>, <span class="va">pre_key</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html" class="external-link">left_join</a></span><span class="op">(</span><span class="va">qside</span>, by <span class="op">=</span> <span class="st">"query_key"</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
+<span>    lat <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/case-and-replace-when.html" class="external-link">case_when</a></span><span class="op">(</span><span class="op">!</span><span class="va">side</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"L"</span>, <span class="st">"R"</span><span class="op">)</span> <span class="op">|</span> <span class="op">!</span><span class="va">query_side</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"L"</span>, <span class="st">"R"</span><span class="op">)</span> <span class="op">~</span> <span class="cn">NA</span>,</span>
+<span>                    <span class="va">side</span> <span class="op">==</span> <span class="va">query_side</span> <span class="op">~</span> <span class="st">"i"</span>,</span>
+<span>                    .default <span class="op">=</span> <span class="st">"c"</span><span class="op">)</span>,</span>
+<span>    <span class="co"># keep NA so that unlabelled partners are dropped, not pooled</span></span>
+<span>    pgroup_lr <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/if_else.html" class="external-link">if_else</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">pgroup</span><span class="op">)</span> <span class="op">|</span> <span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">lat</span><span class="op">)</span>, <span class="cn">NA</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">pgroup</span>, <span class="va">lat</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">x_lr</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 281 × 52</span></span></span>
+<span><span class="co">#&gt;    post_id  pre_id weight supervoxel_id serial_id point_xyz side  class subclass</span></span>
+<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int64&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int64&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span>    6<span style="color: #949494;">e</span>17    6<span style="color: #949494;">e</span>17     93 741706516442… 11451     17815,18… R     cb_i… ALPN    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span>    6<span style="color: #949494;">e</span>17    6<span style="color: #949494;">e</span>17     64 755076577165… 10959     27167.48… L     cb_i… ALPN    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span>    6<span style="color: #949494;">e</span>17    6<span style="color: #949494;">e</span>17     63 755076577164… 10957     27182.10… L     cb_i… ALPN    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span>    6<span style="color: #949494;">e</span>17    6<span style="color: #949494;">e</span>17     60 742410203885… 11419     17934,17… R     cb_i… ALPN    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span>    6<span style="color: #949494;">e</span>17    6<span style="color: #949494;">e</span>17     54 742410203885… 11419     17934,17… R     cb_i… ALPN    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span>    6<span style="color: #949494;">e</span>17    6<span style="color: #949494;">e</span>17     54 742410203885… 11419     17934,17… R     cb_i… ALPN    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span>    6<span style="color: #949494;">e</span>17    6<span style="color: #949494;">e</span>17     54 741706516442… 11451     17815,18… R     cb_i… ALPN    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span>    6<span style="color: #949494;">e</span>17    6<span style="color: #949494;">e</span>17     53 755076577165… 10959     27167.48… L     cb_i… ALPN    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span>    6<span style="color: #949494;">e</span>17    6<span style="color: #949494;">e</span>17     50 755076577165… 10959     27167.48… L     cb_i… ALPN    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span>    6<span style="color: #949494;">e</span>17    6<span style="color: #949494;">e</span>17     40 755076577165… 10959     27167.48… L     cb_i… ALPN    </span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 271 more rows</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 43 more variables: type &lt;chr&gt;, group &lt;chr&gt;, nblast_group &lt;chr&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   notes &lt;chr&gt;, proofreader &lt;chr&gt;, annotator &lt;chr&gt;, lineage &lt;chr&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   neuropils &lt;chr&gt;, status &lt;chr&gt;, axon_tract &lt;chr&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   neurotransmitter_verified &lt;chr&gt;, neurotransmitter_verified_source &lt;chr&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   soma_xyz &lt;chr&gt;, nucleus_id &lt;dbl&gt;, birthtime &lt;chr&gt;, nerve &lt;chr&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   lrcid &lt;chr&gt;, synonyms &lt;chr&gt;, flywire_type &lt;chr&gt;, instance &lt;chr&gt;, …</span></span></span></code></pre></div>
+<p><code>multi_connection_table(group = FALSE)</code> returns one row
+per connection between a query neuron and a partner, with the partner’s
+metadata (including <code>side</code> and <code>pgroup</code>). The
+<code>partners</code> column says whether the partner is an input or an
+output, and therefore whether the query neuron is in
+<code>post_key</code> or <code>pre_key</code>; we use that to look up
+the query neuron’s soma side. Comparing the two sides gives an
+<code>i</code> or <code>c</code> suffix for the partner’s
+<code>pgroup</code>, so each partner group becomes two separate
+features.</p>
+<p>Partners with no <code>pgroup</code> or no L/R side must stay
+<code>NA</code>, so that they are dropped like any other unlabelled
+partner. Pasting a suffix onto <code>NA</code> would make a string such
+as <code>"NAc"</code>, merging every unlabelled partner into one fake
+shared group that inflates similarity.</p>
+<p>We then cluster on the new column, labelling each neuron with its
+curated group so we can see how the two groups mix:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://natverse.org/coconatfly/reference/cf_cosine_plot.html" class="external-link">cf_cosine_plot</a></span><span class="op">(</span><span class="va">x_lr</span>, group <span class="op">=</span> <span class="st">"pgroup_lr"</span>,</span>
+<span>               labRow <span class="op">=</span> <span class="st">"{group}_{side}_{serial_id}"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =</span></span>
+<span><span class="co">#&gt; "pre_key", : Dropping: 83/195 neurons representing 701/1828 synapses due to</span></span>
+<span><span class="co">#&gt; missing ids!</span></span>
+<span><span class="co">#&gt; Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =</span></span>
+<span><span class="co">#&gt; groupcol, : Dropping: 27/86 neurons representing 200/1540 synapses due to</span></span>
+<span><span class="co">#&gt; missing ids!</span></span></code></pre></div>
+<p><img src="connectivity-clustering_files/figure-html/cluster-ipsi-contra-1.png" class="r-plt" alt="" width="700"></p>
+<p>Note that “side” means soma side. For bilateral neurons, an
+<code>i</code> partner shares the query neuron’s soma side; that says
+nothing about where on the query neuron the synapse is. It is worth
+checking how much of the connectivity the split actually affects:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">lr_wt</span> <span class="op">&lt;-</span> <span class="va">x_lr</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">pgroup_lr</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">count</a></span><span class="op">(</span><span class="va">partners</span>, <span class="va">lat</span>, wt <span class="op">=</span> <span class="va">weight</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">lr_wt</span></span>
+<span><span class="co">#&gt;   partners lat    n</span></span>
+<span><span class="co">#&gt; 1   inputs   c   21</span></span>
+<span><span class="co">#&gt; 2   inputs   i 1319</span></span>
+<span><span class="co">#&gt; 3  outputs   c  256</span></span>
+<span><span class="co">#&gt; 4  outputs   i  871</span></span></code></pre></div>
+<p>At the time of writing (November 2026) only 277 of the 2467 synapses
+with labelled partners were contralateral, almost all of them outputs,
+so the split changes the clustering only modestly here.</p>
 </div>
 <div class="section level2">
 <h2 id="rerunning-this-vignette">Rerunning this vignette<a class="anchor" aria-label="anchor" href="#rerunning-this-vignette"></a>
@@ -250,7 +359,7 @@ the repository’s Actions tab or with
 <li>
 <p><strong>Locally.</strong> With FlyTable and CAVE access set up,
 render the vignette with the live chunks enabled:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span>AEDES_LIVE_VIGNETTES <span class="op">=</span> <span class="st">"true"</span><span class="op">)</span></span>
 <span><span class="fu">rmarkdown</span><span class="fu">::</span><span class="fu"><a href="https://pkgs.rstudio.com/rmarkdown/reference/render.html" class="external-link">render</a></span><span class="op">(</span><span class="st">"vignettes/connectivity-clustering.Rmd"</span><span class="op">)</span></span></code></pre></div>
 </li>
@@ -259,8 +368,8 @@ render the vignette with the live chunks enabled:</p>
 <code><a href="../articles/connectivity-clustering.html">vignette("connectivity-clustering")</a></code> from an installed
 package) the saved figures in <code>vignettes/figures/</code> are shown.
 To refresh them, also set <code>AEDES_SAVE_VIGNETTE_FIGURES=true</code>
-when rendering locally, then update the saved coverage table and the “at
-the time of writing” text to match.</p></li>
+when rendering locally, then update the saved coverage and weight tables
+and the “at the time of writing” text to match.</p></li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

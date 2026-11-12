@@ -110,7 +110,7 @@ cf_cosine_plot(x, group = "group", labRow = "{side}_{serial_id}")
 #> "pre_key", : Dropping: 1092/1715 neurons representing 11475/29629 synapses due
 #> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
-#> groupcol, : Dropping: 4259/4477 neurons representing 49906/59474 synapses due
+#> groupcol, : Dropping: 4259/4477 neurons representing 49907/59475 synapses due
 #> to missing ids!
 ```
 
@@ -125,7 +125,7 @@ cf_cosine_plot(x, group = "pgroup", labRow = "{side}_{serial_id}")
 #> "pre_key", : Dropping: 1078/1715 neurons representing 11240/29629 synapses due
 #> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
-#> groupcol, : Dropping: 4256/4477 neurons representing 49876/59474 synapses due
+#> groupcol, : Dropping: 4256/4477 neurons representing 49877/59475 synapses due
 #> to missing ids!
 ```
 
@@ -178,11 +178,130 @@ cf_cosine_plot(x, group = "pgroup2", labRow = "{side}_{serial_id}")
 #> "pre_key", : Dropping: 1078/1715 neurons representing 11240/29629 synapses due
 #> to missing ids!
 #> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
-#> groupcol, : Dropping: 4256/4477 neurons representing 49876/59474 synapses due
+#> groupcol, : Dropping: 4256/4477 neurons representing 49877/59475 synapses due
 #> to missing ids!
 ```
 
 ![](connectivity-clustering_files/figure-html/custom-1.png)
+
+## Advanced: splitting ipsilateral and contralateral connectivity
+
+Grouping partners by `pgroup` ignores which side of the brain they are
+on, so a neuron that contacts the left-side members of a partner group
+looks the same as one that contacts the right-side members. We do not
+normally want to separate partners by side (after all, this is precisely
+how connectivity clustering can identify left-right homologues), but for
+bilateral neurons it may be useful to distinguish ipsilateral from
+contralateral connectivity. This could be important e.g. for bilateral
+inhibitory neurons involved in steering.
+
+To keep the side information, we can give each partner group two labels,
+depending on whether the partner is on the same side of the brain as the
+query neuron (`NNNNNi`, ipsilateral) or on the opposite side (`NNNNNc`,
+contralateral).
+
+As an example we use the 19 lateral horn local neurons (class `LHLN`) in
+groups 30221 (16 bilateral, subclass `BR`) and 30225 (3 unilateral,
+subclass `IR`). These were originally annotated as two groups but do not
+split cleanly along those lines. Connections among the query neurons
+themselves can dominate the comparison when they are heavily
+interconnected, as these are, so we drop those first.
+
+``` r
+
+ids_lh <- cf_ids(aedes = "group:30221|30225")
+x_lh <- multi_connection_table(ids_lh, threshold = 5, group = FALSE)
+
+qkeys <- keys(ids_lh)
+qside <- cf_meta(ids_lh) %>% select(query_key = key, query_side = side)
+
+x_lr <- x_lh %>%
+  # drop connections among the query neurons
+  filter(!(pre_key %in% qkeys & post_key %in% qkeys)) %>%
+  # the query neuron is postsynaptic for inputs, presynaptic for outputs
+  mutate(query_key = if_else(partners == "inputs", post_key, pre_key)) %>%
+  left_join(qside, by = "query_key") %>%
+  mutate(
+    lat = case_when(!side %in% c("L", "R") | !query_side %in% c("L", "R") ~ NA,
+                    side == query_side ~ "i",
+                    .default = "c"),
+    # keep NA so that unlabelled partners are dropped, not pooled
+    pgroup_lr = if_else(is.na(pgroup) | is.na(lat), NA, paste0(pgroup, lat)))
+x_lr
+#> # A tibble: 281 × 52
+#>    post_id  pre_id weight supervoxel_id serial_id point_xyz side  class subclass
+#>    <int64> <int64>  <int> <chr>         <chr>     <chr>     <chr> <chr> <chr>   
+#>  1    6e17    6e17     93 741706516442… 11451     17815,18… R     cb_i… ALPN    
+#>  2    6e17    6e17     64 755076577165… 10959     27167.48… L     cb_i… ALPN    
+#>  3    6e17    6e17     63 755076577164… 10957     27182.10… L     cb_i… ALPN    
+#>  4    6e17    6e17     60 742410203885… 11419     17934,17… R     cb_i… ALPN    
+#>  5    6e17    6e17     54 742410203885… 11419     17934,17… R     cb_i… ALPN    
+#>  6    6e17    6e17     54 742410203885… 11419     17934,17… R     cb_i… ALPN    
+#>  7    6e17    6e17     54 741706516442… 11451     17815,18… R     cb_i… ALPN    
+#>  8    6e17    6e17     53 755076577165… 10959     27167.48… L     cb_i… ALPN    
+#>  9    6e17    6e17     50 755076577165… 10959     27167.48… L     cb_i… ALPN    
+#> 10    6e17    6e17     40 755076577165… 10959     27167.48… L     cb_i… ALPN    
+#> # ℹ 271 more rows
+#> # ℹ 43 more variables: type <chr>, group <chr>, nblast_group <chr>,
+#> #   notes <chr>, proofreader <chr>, annotator <chr>, lineage <chr>,
+#> #   neuropils <chr>, status <chr>, axon_tract <chr>,
+#> #   neurotransmitter_verified <chr>, neurotransmitter_verified_source <chr>,
+#> #   soma_xyz <chr>, nucleus_id <dbl>, birthtime <chr>, nerve <chr>,
+#> #   lrcid <chr>, synonyms <chr>, flywire_type <chr>, instance <chr>, …
+```
+
+`multi_connection_table(group = FALSE)` returns one row per connection
+between a query neuron and a partner, with the partner’s metadata
+(including `side` and `pgroup`). The `partners` column says whether the
+partner is an input or an output, and therefore whether the query neuron
+is in `post_key` or `pre_key`; we use that to look up the query neuron’s
+soma side. Comparing the two sides gives an `i` or `c` suffix for the
+partner’s `pgroup`, so each partner group becomes two separate features.
+
+Partners with no `pgroup` or no L/R side must stay `NA`, so that they
+are dropped like any other unlabelled partner. Pasting a suffix onto
+`NA` would make a string such as `"NAc"`, merging every unlabelled
+partner into one fake shared group that inflates similarity.
+
+We then cluster on the new column, labelling each neuron with its
+curated group so we can see how the two groups mix:
+
+``` r
+
+cf_cosine_plot(x_lr, group = "pgroup_lr",
+               labRow = "{group}_{side}_{serial_id}")
+#> Warning in coconat::partner_summary2adjacency_matrix(x[["outputs"]], inputcol =
+#> "pre_key", : Dropping: 83/195 neurons representing 701/1828 synapses due to
+#> missing ids!
+#> Warning in coconat::partner_summary2adjacency_matrix(x[["inputs"]], inputcol =
+#> groupcol, : Dropping: 27/86 neurons representing 200/1540 synapses due to
+#> missing ids!
+```
+
+![](connectivity-clustering_files/figure-html/cluster-ipsi-contra-1.png)
+
+Note that “side” means soma side. For bilateral neurons, an `i` partner
+shares the query neuron’s soma side; that says nothing about where on
+the query neuron the synapse is. It is worth checking how much of the
+connectivity the split actually affects:
+
+``` r
+
+lr_wt <- x_lr %>%
+  filter(!is.na(pgroup_lr)) %>%
+  count(partners, lat, wt = weight) %>%
+  as.data.frame()
+lr_wt
+#>   partners lat    n
+#> 1   inputs   c   21
+#> 2   inputs   i 1319
+#> 3  outputs   c  256
+#> 4  outputs   i  871
+```
+
+At the time of writing (November 2026) only 277 of the 2467 synapses
+with labelled partners were contralateral, almost all of them outputs,
+so the split changes the clustering only modestly here.
 
 ## Rerunning this vignette
 
@@ -212,5 +331,5 @@ progress.
   from an installed package) the saved figures in `vignettes/figures/`
   are shown. To refresh them, also set
   `AEDES_SAVE_VIGNETTE_FIGURES=true` when rendering locally, then update
-  the saved coverage table and the “at the time of writing” text to
-  match.
+  the saved coverage and weight tables and the “at the time of writing”
+  text to match.
